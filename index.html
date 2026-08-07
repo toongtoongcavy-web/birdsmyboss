@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -43,7 +42,6 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #059669; }
-        .img-zoom { transition: transform 0.2s ease-in-out; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col md:flex-row">
@@ -94,7 +92,7 @@
         <!-- System Status Footer -->
         <div class="p-4 border-t border-slate-800 bg-slate-950/50">
             <div class="flex items-center justify-between text-xs text-slate-400">
-                <span class="flex items-center gap-1.5"><span id="db-status-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span> <span id="db-status-text">พร้อมใช้งาน</span></span>
+                <span class="flex items-center gap-1.5"><span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> <span id="db-status-text">กำลังเชื่อมต่อ Cloud...</span></span>
                 <button onclick="exportData()" class="text-emerald-400 hover:underline" title="สำรองข้อมูล"><i class="fa-solid fa-download mr-1"></i>สำรอง</button>
             </div>
             <button onclick="importDataTrigger()" class="mt-2 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-lg transition flex items-center justify-center space-x-1">
@@ -114,15 +112,12 @@
                 <h2 id="page-title" class="text-2xl font-bold text-slate-800">ภาพรวมฟาร์ม</h2>
                 <p id="page-subtitle" class="text-sm text-slate-500">ยินดีต้อนรับสู่ระบบจัดการฟาร์มนกกรีนชีคของคุณ</p>
             </div>
-            <div class="flex items-center space-x-3" id="topbar-actions">
-                <!-- Action buttons dynamic -->
-            </div>
+            <div class="flex items-center space-x-3" id="topbar-actions"></div>
         </header>
 
         <!-- Main Workspace -->
         <div class="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
             
-            <!-- Toast Notifications -->
             <div id="toast-container" class="fixed top-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
             <!-- TAB 1: DASHBOARD -->
@@ -336,6 +331,7 @@
         </div>
     </main>
 
+    <!-- MODALS -->
     <!-- MODAL: BIRD -->
     <div id="modal-bird" class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -571,24 +567,94 @@
         </div>
     </div>
 
-    <!-- Dynamic Storage Mode Script -->
+    <!-- Firebase Script Loader -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Config จากการตั้งค่าของคุณ BirdsMyBoss
+        const myFirebaseConfig = {
+            apiKey: "AIzaSyBohCYrkHMOPF3Yu0k3TAt8IeMYVL-ahzw",
+            authDomain: "birdsmyboss.firebaseapp.com",
+            databaseURL: "https://birdsmyboss-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "birdsmyboss",
+            storageBucket: "birdsmyboss.firebasestorage.app",
+            messagingSenderId: "626059198758",
+            appId: "1:626059198758:web:81dc5eb114cf964ec501e7",
+            measurementId: "G-CZ3C54MSL8"
+        };
+
+        const firebaseConfig = (typeof __firebase_config !== 'undefined' && __firebase_config)
+            ? JSON.parse(__firebase_config)
+            : myFirebaseConfig;
+
+        if (firebaseConfig.apiKey) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'birdsmyboss-app';
+
+                window.isCloudMode = true;
+
+                signInAnonymously(auth);
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        const statusDot = document.getElementById('db-status-dot');
+                        const statusText = document.getElementById('db-status-text');
+                        if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                        if (statusText) statusText.textContent = "Cloud DB ออนไลน์";
+
+                        ['birds', 'pairs', 'clutches', 'sales'].forEach(collName => {
+                            const colRef = collection(db, 'artifacts', appId, 'public', 'data', collName);
+                            onSnapshot(colRef, (snapshot) => {
+                                const items = [];
+                                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+                                window.appData[collName] = items;
+                                window.refreshUI();
+                            }, (err) => console.error("Cloud error:", err));
+                        });
+                    }
+                });
+
+                window.cloudSaveDoc = async function(coll, id, data) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
+                    await setDoc(docRef, data, { merge: true });
+                };
+
+                window.cloudDeleteDoc = async function(coll, id) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
+                    await deleteDoc(docRef);
+                };
+            } catch(e) {
+                console.warn("Cloud connection error, using LocalStorage fallback", e);
+                loadLocalStorage();
+            }
+        } else {
+            console.log("Using LocalStorage Mode.");
+            loadLocalStorage();
+        }
+    </script>
+
     <script>
         const LOCAL_STORAGE_KEY = 'gcc_aviary_data_v3';
         window.isCloudMode = false;
-
         window.appData = { birds: [], pairs: [], clutches: [], sales: [] };
 
-        // Fallback LocalStorage Load
         function loadLocalStorage() {
+            const statusDot = document.getElementById('db-status-dot');
+            const statusText = document.getElementById('db-status-text');
+            if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-blue-500";
+            if (statusText) statusText.textContent = "บันทึกในเครื่อง (Local)";
+
             const data = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (data) {
                 try {
                     window.appData = JSON.parse(data);
-                } catch(e) {
-                    console.error("Local data parse error", e);
-                }
+                } catch(e) { console.error(e); }
             } else {
-                // Seed initial data if fresh installation
                 window.appData = {
                     birds: [
                         { id: 'b1', ring: 'GCC-2024-M01', name: 'กัปตัน', gender: 'ผู้', color: 'Pineapple', bloodline: 'Split Dilute', status: 'จับคู่แล้ว', price: 2500, dob: '2023-02-10', notes: 'พ่อพันธุ์โครงสร้างใหญ่' },
@@ -610,7 +676,6 @@
             refreshUI();
         }
 
-        // Generic Save / Delete Interface for Both Modes
         window.saveDocument = function(collectionName, id, data) {
             if (window.isCloudMode && window.cloudSaveDoc) {
                 window.cloudSaveDoc(collectionName, id, data);
@@ -633,69 +698,7 @@
                 saveLocalStorage();
             }
         };
-    </script>
 
-    <!-- Optional Firebase Dynamic Load -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            try {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'gcc-aviary-app';
-
-                window.isCloudMode = true;
-
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        const statusDot = document.getElementById('db-status-dot');
-                        const statusText = document.getElementById('db-status-text');
-                        if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
-                        if (statusText) statusText.textContent = "Cloud DB ออนไลน์";
-
-                        ['birds', 'pairs', 'clutches', 'sales'].forEach(collName => {
-                            const colRef = collection(db, 'artifacts', appId, 'public', 'data', collName);
-                            onSnapshot(colRef, (snapshot) => {
-                                const items = [];
-                                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-                                window.appData[collName] = items;
-                                window.refreshUI();
-                            }, (err) => console.error("Cloud snapshot error:", err));
-                        });
-                    }
-                });
-
-                window.cloudSaveDoc = async function(coll, id, data) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
-                    await setDoc(docRef, data, { merge: true });
-                };
-
-                window.cloudDeleteDoc = async function(coll, id) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
-                    await deleteDoc(docRef);
-                };
-            } catch(e) {
-                console.warn("Cloud config error, fallback to LocalStorage", e);
-                loadLocalStorage();
-            }
-        } else {
-            loadLocalStorage();
-        }
-    </script>
-
-    <script>
-        // UI Navigation & View Logic
         window.onload = function() {
             switchTab('dashboard');
             const today = new Date().toISOString().split('T')[0];
@@ -1499,4 +1502,3 @@
 </body>
 </html>
 
-```
