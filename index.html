@@ -3,43 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการฟาร์มนกกรีนชีค (BirdsMyBoss)</title>
+    <title>ระบบจัดการฟาร์มนกกรีนชีค (Green-cheeked Conure Farm Management)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter & Prompt -->
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        navy: {
-                            900: '#0b1120',
-                            800: '#0f172a',
-                            700: '#1e293b',
-                            600: '#334155'
-                        },
-                        brand: {
-                            green: '#10b981',
-                            greenHover: '#059669',
-                            teal: '#0d9488',
-                            bg: '#f8fafc'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Prompt', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Google Fonts (Sarabun & Kanit) -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <style>
         body {
-            font-family: 'Prompt', sans-serif;
+            font-family: 'Sarabun', 'Kanit', sans-serif;
             background-color: #f8fafc;
-            color: #1e293b;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Kanit', sans-serif;
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar {
@@ -58,834 +42,14 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col md:flex-row antialiased">
-
-    <!-- Sidebar / Mobile Header -->
-    <aside class="w-full md:w-64 bg-navy-900 border-r border-navy-700 flex flex-col flex-shrink-0 z-20 text-slate-300">
-        <!-- Logo Header -->
-        <div class="p-4 border-b border-navy-700/80 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-brand-green flex items-center justify-center shadow-md shadow-emerald-900/30 text-white font-bold text-xl">
-                    <i class="fa-solid fa-dove"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-white text-lg leading-tight">GCC Aviary</h1>
-                    <p class="text-[11px] text-emerald-400 font-medium">ระบบจัดการนกกรีนชีค</p>
-                </div>
-            </div>
-            <!-- Mobile Menu Toggle Button -->
-            <button onclick="toggleMobileMenu()" class="md:hidden text-slate-400 hover:text-white p-2">
-                <i class="fa-solid fa-bars text-xl"></i>
-            </button>
-        </div>
-
-        <!-- Navigation Menu -->
-        <nav id="sidebar-nav" class="hidden md:flex flex-col p-3 space-y-1 flex-1 overflow-y-auto">
-            <button onclick="switchTab('overview')" id="nav-overview" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
-                <i class="fa-solid fa-chart-pie w-5 text-center text-emerald-400"></i>
-                <span>ภาพรวมฟาร์ม</span>
-            </button>
-            <button onclick="switchTab('birds')" id="nav-birds" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:bg-navy-800 hover:text-slate-100">
-                <i class="fa-solid fa-feather w-5 text-center text-emerald-400"></i>
-                <span>คลังนก / พ่อแม่พันธุ์</span>
-            </button>
-            <button onclick="switchTab('pairs')" id="nav-pairs" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:bg-navy-800 hover:text-slate-100">
-                <i class="fa-solid fa-heart w-5 text-center text-rose-400"></i>
-                <span>จับคู่ & บันทึกโอกาสสี</span>
-            </button>
-            <button onclick="switchTab('clutches')" id="nav-clutches" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:bg-navy-800 hover:text-slate-100">
-                <i class="fa-solid fa-egg w-5 text-center text-amber-400"></i>
-                <span>ประวัติการเกิด / ไข่</span>
-            </button>
-            <button onclick="switchTab('sales')" id="nav-sales" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:bg-navy-800 hover:text-slate-100">
-                <i class="fa-solid fa-receipt w-5 text-center text-teal-400"></i>
-                <span>ประวัติการขาย & ติดจอง</span>
-            </button>
-            <button onclick="switchTab('genetics')" id="nav-genetics" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:bg-navy-800 hover:text-slate-100">
-                <i class="fa-solid fa-dna w-5 text-center text-indigo-400"></i>
-                <span>ตารางพันธุกรรมสี</span>
-            </button>
-        </nav>
-
-        <!-- System Status Footer -->
-        <div class="p-4 border-t border-navy-700/80 bg-navy-950/80">
-            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
-                <span class="flex items-center gap-1.5">
-                    <span id="db-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span> 
-                    <span id="db-status-text" class="font-medium text-slate-300">กำลังเชื่อมต่อ Cloud...</span>
-                </span>
-                <button onclick="exportData()" class="text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1" title="สำรองข้อมูล">
-                    <i class="fa-solid fa-download"></i> สำรอง
-                </button>
-            </div>
-            <div id="cloud-err-msg" class="text-[11px] text-rose-300 mt-1 hidden bg-navy-800 p-2 rounded-lg border border-rose-500/30 leading-relaxed"></div>
-            <button onclick="retryCloudConnection()" id="btn-retry-cloud" class="mt-2 w-full py-1.5 bg-navy-800 hover:bg-navy-700 text-emerald-400 text-xs rounded-lg transition border border-emerald-500/30 hidden">
-                <i class="fa-solid fa-arrows-rotate mr-1"></i>ลองเชื่อมต่อ Cloud อีกครั้ง
-            </button>
-            <button onclick="importDataTrigger()" class="mt-2 w-full py-1.5 bg-navy-800 hover:bg-navy-700 text-slate-300 text-xs rounded-lg transition flex items-center justify-center space-x-1.5 border border-navy-700">
-                <i class="fa-solid fa-upload text-emerald-400"></i>
-                <span>นำเข้าข้อมูล (JSON)</span>
-            </button>
-            <input type="file" id="importFileInput" class="hidden" accept=".json" onchange="importData(event)">
-        </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
-        
-        <!-- Tab 1: Overview -->
-        <section id="tab-overview" class="tab-content space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        ภาพรวมฟาร์ม
-                    </h2>
-                    <p class="text-slate-500 text-sm">ยินดีต้อนรับสู่ระบบจัดการฟาร์มนกกรีนชีคของคุณ</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="openModal('modal-bird')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm transition flex items-center gap-2">
-                        <i class="fa-solid fa-plus"></i> เพิ่มนกใหม่
-                    </button>
-                    <button onclick="openModal('modal-pair')" class="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium rounded-xl text-sm shadow-sm transition flex items-center gap-2">
-                        <i class="fa-solid fa-heart text-rose-500"></i> จับคู่นก
-                    </button>
-                </div>
-            </div>
-
-            <!-- Dashboard Metric Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white border border-slate-200/80 p-4 rounded-2xl flex items-center space-x-4 shadow-sm">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-dove"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-slate-500 font-medium">นกทั้งหมดในฟาร์ม</p>
-                        <p id="stat-total-birds" class="text-2xl font-bold text-slate-900">0 ตัว</p>
-                    </div>
-                </div>
-                <div class="bg-white border border-slate-200/80 p-4 rounded-2xl flex items-center space-x-4 shadow-sm">
-                    <div class="w-12 h-12 rounded-xl bg-rose-100 text-rose-500 flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-heart"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-slate-500 font-medium">คู่ผสมพันธุ์ปัจจุบัน</p>
-                        <p id="stat-active-pairs" class="text-2xl font-bold text-slate-900">0 คู่</p>
-                    </div>
-                </div>
-                <div class="bg-white border border-slate-200/80 p-4 rounded-2xl flex items-center space-x-4 shadow-sm">
-                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-bookmark"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-slate-500 font-medium">นกติดจอง</p>
-                        <p id="stat-reserved-birds" class="text-2xl font-bold text-slate-900">0 ตัว</p>
-                    </div>
-                </div>
-                <div class="bg-white border border-slate-200/80 p-4 rounded-2xl flex items-center space-x-4 shadow-sm">
-                    <div class="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center text-xl">
-                        <i class="fa-solid fa-receipt"></i>
-                    </div>
-                    <div>
-                        <p class="text-xs text-slate-500 font-medium">ยอดขาย/มัดจำรวม</p>
-                        <p id="stat-total-sales" class="text-2xl font-bold text-slate-900">฿0</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Pairs Highlight & Quick Reference -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Pair Highlights -->
-                <div class="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-sm">
-                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-heart text-rose-500"></i> คู่ผสมที่กำลังจับคู่
-                        </h3>
-                        <button onclick="switchTab('pairs')" class="text-xs text-emerald-600 hover:text-emerald-700 font-medium">ดูทั้งหมด &rarr;</button>
-                    </div>
-                    <div id="overview-pairs-list" class="space-y-3">
-                        <!-- Dynamic Pairs Content -->
-                    </div>
-                </div>
-
-                <!-- Reference Mutation Panel -->
-                <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-navy-900 border border-indigo-700/50 rounded-2xl p-6 text-white space-y-4 shadow-md">
-                    <div class="inline-block px-2.5 py-1 bg-indigo-500/20 rounded-lg text-indigo-300 text-xs font-semibold border border-indigo-400/30">
-                        <i class="fa-solid fa-book-open mr-1"></i> Reference Chart
-                    </div>
-                    <h3 class="font-bold text-xl text-white">ตารางการถ่ายทอดสีนก</h3>
-                    <p class="text-xs text-slate-300 leading-relaxed">
-                        ดูตารางสรุปคู่ผสมตามหลักพันธุกรรม (Green Cheek Conure Color Inheritance Table)
-                    </p>
-                    <button onclick="switchTab('genetics')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-expand"></i> เปิดดูตารางพันธุกรรม
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Tab 2: Birds Inventory -->
-        <section id="tab-birds" class="tab-content space-y-6 hidden">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-feather text-emerald-600"></i> คลังนก / พ่อแม่พันธุ์
-                    </h2>
-                    <p class="text-slate-500 text-sm">จัดการข้อมูลนกในฟาร์ม ค้นหารหัส ห่วงขา และสถานะ</p>
-                </div>
-                <button onclick="openModal('modal-bird')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> เพิ่มข้อมูลนก
-                </button>
-            </div>
-
-            <!-- Filters & Search -->
-            <div class="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-3">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                    <input type="text" id="filter-bird-search" oninput="renderBirds()" placeholder="ค้นหารหัสห่วงขา, ชื่อ, หรือสี..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 text-slate-800">
-                </div>
-                <select id="filter-bird-gender" onchange="renderBirds()" class="bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-sm px-3 py-2 focus:outline-none focus:border-emerald-500">
-                    <option value="">ทุกเพศ</option>
-                    <option value="ผู้">เพศผู้ (Male)</option>
-                    <option value="เมีย">เพศเมีย (Female)</option>
-                    <option value="ไม่ระบุ">ไม่ระบุเพศ</option>
-                </select>
-                <select id="filter-bird-status" onchange="renderBirds()" class="bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-sm px-3 py-2 focus:outline-none focus:border-emerald-500">
-                    <option value="">ทุกสถานะ</option>
-                    <option value="โสด">โสด</option>
-                    <option value="จับคู่แล้ว">จับคู่แล้ว</option>
-                    <option value="ติดจอง">ติดจอง</option>
-                    <option value="ขายแล้ว">ขายแล้ว</option>
-                </select>
-            </div>
-
-            <!-- Birds Grid -->
-            <div id="birds-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Dynamic Birds List -->
-            </div>
-        </section>
-
-        <!-- Tab 3: Pairs & Breeding -->
-        <section id="tab-pairs" class="tab-content space-y-6 hidden">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-heart text-rose-500"></i> จับคู่ & บันทึกโอกาสสี
-                    </h2>
-                    <p class="text-slate-500 text-sm">จัดการกรงผสมและวิเคราะห์สายเลือดลูกนก</p>
-                </div>
-                <button onclick="openModal('modal-pair')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> เพิ่มคู่ผสมใหม่
-                </button>
-            </div>
-
-            <div id="pairs-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Dynamic Pairs Content -->
-            </div>
-        </section>
-
-        <!-- Tab 4: Clutches & Eggs -->
-        <section id="tab-clutches" class="tab-content space-y-6 hidden">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-egg text-amber-500"></i> ประวัติการเกิด / ไข่
-                    </h2>
-                    <p class="text-slate-500 text-sm">บันทึกการวางไข่ อัตราการฟัก และลูกนกในรัง</p>
-                </div>
-                <button onclick="openModal('modal-clutch')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> บันทึกคลัทช์/ไข่ใหม่
-                </button>
-            </div>
-
-            <div id="clutches-list" class="space-y-4">
-                <!-- Dynamic Clutches Content -->
-            </div>
-        </section>
-
-        <!-- Tab 5: Sales History -->
-        <section id="tab-sales" class="tab-content space-y-6 hidden">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <i class="fa-solid fa-receipt text-teal-600"></i> ประวัติการขาย & ติดจอง
-                    </h2>
-                    <p class="text-slate-500 text-sm">บันทึกรายการขาย ยอดมัดจำ และลูกค้า</p>
-                </div>
-                <button onclick="openModal('modal-sale')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> บันทึกการขายใหม่
-                </button>
-            </div>
-
-            <div class="bg-white border border-slate-200/80 rounded-2xl overflow-x-auto shadow-sm">
-                <table class="w-full text-left text-sm text-slate-700">
-                    <thead class="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
-                        <tr>
-                            <th class="p-3.5">วันที่</th>
-                            <th class="p-3.5">นก / รหัสห่วงขา</th>
-                            <th class="p-3.5">ชื่อลูกค้า</th>
-                            <th class="p-3.5">เบอร์ติดต่อ</th>
-                            <th class="p-3.5">ราคาขาย</th>
-                            <th class="p-3.5">มัดจำ</th>
-                            <th class="p-3.5">สถานะ</th>
-                            <th class="p-3.5 text-right">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sales-table-body" class="divide-y divide-slate-100">
-                        <!-- Dynamic Sales Content -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- Tab 6: Genetics Guide -->
-        <section id="tab-genetics" class="tab-content space-y-6 hidden">
-            <div>
-                <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-dna text-indigo-600"></i> ตารางพันธุกรรมสีนกกรีนชีค
-                </h2>
-                <p class="text-slate-500 text-sm">คู่มือตารางการผสมสายเลือดผ่าสี Green Cheek Conure Mutations</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white border border-slate-200/80 p-5 rounded-2xl space-y-3 shadow-sm">
-                    <span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg border border-amber-200">Suncheek Mutation</span>
-                    <h3 class="font-bold text-slate-900 text-lg">ซันชีค (Suncheek)</h3>
-                    <p class="text-xs text-slate-600 leading-relaxed">
-                        เกิดจากยีนผสม: <strong class="text-slate-800">Yellow-Sided + Cinnamon + Dilute</strong><br>
-                        ลักษณะ: หัวสีเหลืองส้ม อกสีแดงสด ขาสีชมพู ปากสีสว่าง
-                    </p>
-                </div>
-                <div class="bg-white border border-slate-200/80 p-5 rounded-2xl space-y-3 shadow-sm">
-                    <span class="px-2.5 py-1 bg-sky-100 text-sky-800 text-xs font-semibold rounded-lg border border-sky-200">Mooncheek Mutation</span>
-                    <h3 class="font-bold text-slate-900 text-lg">มูนชีค (Mooncheek)</h3>
-                    <p class="text-xs text-slate-600 leading-relaxed">
-                        เกิดจากยีนผสม: <strong class="text-slate-800">Turquoise + Yellow-Sided + Cinnamon + Dilute</strong><br>
-                        ลักษณะ: สีพาสเทลสว่าง ปีกสีพาสเทลอมเขียวมิ้นต์ อกสีส้มอ่อน
-                    </p>
-                </div>
-                <div class="bg-white border border-slate-200/80 p-5 rounded-2xl space-y-3 shadow-sm">
-                    <span class="px-2.5 py-1 bg-rose-100 text-rose-800 text-xs font-semibold rounded-lg border border-rose-200">Pineapple Mutation</span>
-                    <h3 class="font-bold text-slate-900 text-lg">พายแอปเปิ้ล (Pineapple)</h3>
-                    <p class="text-xs text-slate-600 leading-relaxed">
-                        เกิดจากยีนผสม: <strong class="text-slate-800">Yellow-Sided + Cinnamon</strong><br>
-                        ลักษณะ: หัวสีน้ำตาลอ่อน ตาแดงตอนแรกเกิด ลำตัวสีเหลืองทองและแดง
-                    </p>
-                </div>
-                <div class="bg-white border border-slate-200/80 p-5 rounded-2xl space-y-3 shadow-sm">
-                    <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-200">Mint / Turquoise Mutation</span>
-                    <h3 class="font-bold text-slate-900 text-lg">มิ้นต์ / เทอร์ควอยซ์ (Turquoise/Mint)</h3>
-                    <p class="text-xs text-slate-600 leading-relaxed">
-                        เกิดจากยีนผสม: <strong class="text-slate-800">Blue-series (Turquoise)</strong><br>
-                        ลักษณะ: ตัดเม็ดสีเหลืองออก โทนสีฟ้า ฟ้าอมเขียว หรือมิ้นต์พาสเทล
-                    </p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Modal: Add/Edit Bird -->
-    <div id="modal-bird" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-feather text-emerald-600"></i> <span id="modal-bird-title">เพิ่มข้อมูลนก</span>
-                </h3>
-                <button onclick="closeModal('modal-bird')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <form id="form-bird" onsubmit="handleBirdSubmit(event)" class="p-5 space-y-4">
-                <input type="hidden" id="bird-id">
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">รหัสห่วงขา (Ring No.) *</label>
-                    <input type="text" id="bird-ring" required placeholder="เช่น GCC-2024-M01" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อนก</label>
-                        <input type="text" id="bird-name" placeholder="เช่น กัปตัน" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">เพศ *</label>
-                        <select id="bird-gender" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                            <option value="ผู้">เพศผู้ (Male)</option>
-                            <option value="เมีย">เพศเมีย (Female)</option>
-                            <option value="ไม่ระบุ">ไม่ระบุเพศ</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">สีนก (Color Mutation) *</label>
-                        <input type="text" id="bird-color" placeholder="เช่น Suncheek, Pineapple" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">การถือยีน (Split/Bloodline)</label>
-                        <input type="text" id="bird-bloodline" placeholder="เช่น Split Dilute" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">สถานะ *</label>
-                        <select id="bird-status" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                            <option value="โสด">โสด</option>
-                            <option value="จับคู่แล้ว">จับคู่แล้ว</option>
-                            <option value="ติดจอง">ติดจอง</option>
-                            <option value="ขายแล้ว">ขายแล้ว</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">ราคาตั้งขาย (บาท)</label>
-                        <input type="number" id="bird-price" placeholder="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">วันเกิด / วันฟัก</label>
-                    <input type="date" id="bird-dob" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">หมายเหตุ</label>
-                    <textarea id="bird-notes" rows="2" placeholder="รายละเอียดเพิ่มเติม..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500"></textarea>
-                </div>
-                <div class="flex justify-end space-x-2 pt-2">
-                    <button type="button" onclick="closeModal('modal-bird')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm">บันทึกข้อมูล</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal: Add/Edit Pair -->
-    <div id="modal-pair" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-heart text-rose-500"></i> <span id="modal-pair-title">จับคู่นกผสมพันธุ์</span>
-                </h3>
-                <button onclick="closeModal('modal-pair')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <form id="form-pair" onsubmit="handlePairSubmit(event)" class="p-5 space-y-4">
-                <input type="hidden" id="pair-id">
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อคู่ / หมายเลขกรง *</label>
-                    <input type="text" id="pair-name" required placeholder="เช่น กรง A2 - ละมุดxกล้วยหวาน" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">เลือกพ่อพันธุ์ (เพศผู้) *</label>
-                    <select id="pair-male" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                        <!-- Dynamic Males -->
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">เลือกแม่พันธุ์ (เพศเมีย) *</label>
-                    <select id="pair-female" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                        <!-- Dynamic Females -->
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">วันที่จับคู่</label>
-                    <input type="date" id="pair-date" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">การวิเคราะห์พันธุกรรมลูกนก (โอกาสได้สี)</label>
-                    <textarea id="pair-genetics" rows="2" placeholder="เช่น โอกาสได้ลูก Suncheek 50%, Pineapple 50%" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-emerald-500"></textarea>
-                </div>
-                <div class="flex justify-end space-x-2 pt-2">
-                    <button type="button" onclick="closeModal('modal-pair')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl text-sm shadow-sm">บันทึกจับคู่</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        const LOCAL_STORAGE_KEY = 'gcc_aviary_data_v4';
-        window.isCloudMode = false;
-        window.appData = { birds: [], pairs: [], clutches: [], sales: [] };
-
-        function showCloudError(msg) {
-            const errEl = document.getElementById('cloud-err-msg');
-            const retryBtn = document.getElementById('btn-retry-cloud');
-            if (errEl) {
-                errEl.textContent = "สาเหตุ Cloud ล้มเหลว: " + msg;
-                errEl.classList.remove('hidden');
-            }
-            if (retryBtn) retryBtn.classList.remove('hidden');
-        }
-
-        function loadLocalStorage() {
-            window.isCloudMode = false;
-            const statusDot = document.getElementById('db-status-dot');
-            const statusText = document.getElementById('db-status-text');
-            if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
-            if (statusText) statusText.textContent = "บันทึกในเครื่อง (Local)";
-
-            const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (data) {
-                try {
-                    window.appData = JSON.parse(data);
-                } catch(e) { console.error(e); }
-            } else {
-                window.appData = {
-                    birds: [
-                        { id: 'b1', ring: 'GCC-2022-M01', name: 'พายแอปเปิ้ล', gender: 'ผู้', color: 'Pineapple', bloodline: 'Split Dilute', status: 'จับคู่แล้ว', price: 2500, dob: '2022-02-10', notes: 'พ่อพันธุ์โครงสร้างใหญ่' },
-                        { id: 'b2', ring: 'GCC-2024-F01', name: 'เยลโลไซด์', gender: 'เมีย', color: 'Yellow-Sided', bloodline: 'สายเดี่ยว', status: 'จับคู่แล้ว', price: 3500, dob: '2024-01-15', notes: 'ไข่ดก เลี้ยงลูกดี' }
-                    ],
-                    pairs: [
-                        { id: 'p1', name: 'กรง A2 - ละมุดxกล้วยหวาน', maleId: 'b1', femaleId: 'b2', status: 'จับคู่แล้ว', pairDate: '2024-02-01', geneticsNotes: 'โอกาสได้ลูก Yellow-Sided 50%, Pineapple 50%' }
-                    ],
-                    clutches: [],
-                    sales: []
-                };
-                saveLocalStorage();
-            }
-            refreshUI();
-        }
-
-        function saveLocalStorage() {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.appData));
-            refreshUI();
-        }
-
-        window.saveDocument = function(collectionName, id, data) {
-            if (window.isCloudMode && window.cloudSaveDoc) {
-                window.cloudSaveDoc(collectionName, id, data);
-            } else {
-                const arr = window.appData[collectionName] || [];
-                const idx = arr.findIndex(item => item.id === id);
-                data.id = id;
-                if (idx >= 0) arr[idx] = data;
-                else arr.push(data);
-                window.appData[collectionName] = arr;
-                saveLocalStorage();
-            }
-        };
-
-        window.deleteDocument = function(collectionName, id) {
-            if (window.isCloudMode && window.cloudDeleteDoc) {
-                window.cloudDeleteDoc(collectionName, id);
-            } else {
-                window.appData[collectionName] = (window.appData[collectionName] || []).filter(item => item.id !== id);
-                saveLocalStorage();
-            }
-        };
-
-        let cloudConnectionTimeout = setTimeout(() => {
-            if (!window.isCloudMode) {
-                showCloudError("หมดเวลาเชื่อมต่อ (Timeout) - โปรดเช็คการตั้งค่า Firebase Console");
-                loadLocalStorage();
-            }
-        }, 5000);
-
-        function retryCloudConnection() {
-            location.reload();
-        }
-
-        // Tab Navigation
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => {
-                el.className = "nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition text-slate-400 hover:bg-navy-800 hover:text-slate-100";
-            });
-
-            const targetTab = document.getElementById(`tab-${tabId}`);
-            const targetNav = document.getElementById(`nav-${tabId}`);
-            if (targetTab) targetTab.classList.remove('hidden');
-            if (targetNav) targetNav.className = "nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition bg-emerald-950/80 text-emerald-400 border border-emerald-500/30";
-
-            // Hide mobile sidebar
-            const sidebar = document.getElementById('sidebar-nav');
-            if (window.innerWidth < 768 && sidebar) sidebar.classList.add('hidden');
-        }
-
-        function toggleMobileMenu() {
-            const sidebar = document.getElementById('sidebar-nav');
-            if (sidebar) sidebar.classList.toggle('hidden');
-        }
-
-        // Modal Handlers
-        function openModal(id) {
-            const modal = document.getElementById(id);
-            if (!modal) return;
-
-            if (id === 'modal-pair') {
-                populatePairDropdowns();
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeModal(id) {
-            const modal = document.getElementById(id);
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function refreshUI() {
-            renderStats();
-            renderBirds();
-            renderPairs();
-            renderSales();
-        }
-
-        function renderStats() {
-            const birds = window.appData.birds || [];
-            const pairs = window.appData.pairs || [];
-            const sales = window.appData.sales || [];
-
-            document.getElementById('stat-total-birds').textContent = `${birds.length} ตัว`;
-            document.getElementById('stat-active-pairs').textContent = `${pairs.length} คู่`;
-            
-            const reserved = birds.filter(b => b.status === 'ติดจอง').length;
-            document.getElementById('stat-reserved-birds').textContent = `${reserved} ตัว`;
-
-            const totalRev = sales.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-            document.getElementById('stat-total-sales').textContent = `฿${totalRev.toLocaleString()}`;
-        }
-
-        function renderBirds() {
-            const grid = document.getElementById('birds-grid');
-            if (!grid) return;
-
-            const search = (document.getElementById('filter-bird-search')?.value || '').toLowerCase();
-            const gender = document.getElementById('filter-bird-gender')?.value || '';
-            const status = document.getElementById('filter-bird-status')?.value || '';
-
-            let list = window.appData.birds || [];
-            if (search) {
-                list = list.filter(b => (b.ring || '').toLowerCase().includes(search) || (b.name || '').toLowerCase().includes(search) || (b.color || '').toLowerCase().includes(search));
-            }
-            if (gender) list = list.filter(b => b.gender === gender);
-            if (status) list = list.filter(b => b.status === status);
-
-            if (list.length === 0) {
-                grid.innerHTML = `<div class="col-span-full py-10 text-center text-slate-400">ไม่พบข้อมูลนกตามเงื่อนไขที่ระบุ</div>`;
-                return;
-            }
-
-            grid.innerHTML = list.map(bird => `
-                <div class="bg-white border border-slate-200/80 rounded-2xl p-4 space-y-3 relative hover:shadow-md transition shadow-sm">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <span class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">${bird.ring}</span>
-                            <h4 class="font-bold text-slate-900 text-lg mt-1">${bird.name || 'ไม่มีชื่อ'}</h4>
-                        </div>
-                        <span class="px-2.5 py-1 text-xs font-semibold rounded-lg ${bird.gender === 'ผู้' ? 'bg-sky-100 text-sky-700' : bird.gender === 'เมีย' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}">
-                            ${bird.gender === 'ผู้' ? '♂ ผู้' : bird.gender === 'เมีย' ? '♀ เมีย' : 'ไม่ระบุ'}
-                        </span>
-                    </div>
-                    <div class="text-xs space-y-1 text-slate-600">
-                        <p><strong class="text-slate-800">สี:</strong> ${bird.color}</p>
-                        <p><strong class="text-slate-800">สายเลือด/ยีน:</strong> ${bird.bloodline || '-'}</p>
-                        <p><strong class="text-slate-800">สถานะ:</strong> <span class="text-emerald-600 font-medium">${bird.status}</span></p>
-                        ${bird.price ? `<p><strong class="text-slate-800">ราคา:</strong> ฿${Number(bird.price).toLocaleString()}</p>` : ''}
-                    </div>
-                    <div class="pt-2 border-t border-slate-100 flex justify-end space-x-2">
-                        <button onclick="editBird('${bird.id}')" class="px-3 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition font-medium"><i class="fa-solid fa-pen-to-square mr-1"></i>แก้ไข</button>
-                        <button onclick="deleteBird('${bird.id}')" class="px-3 py-1 text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition font-medium"><i class="fa-solid fa-trash mr-1"></i>ลบ</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function populatePairDropdowns() {
-            const males = (window.appData.birds || []).filter(b => b.gender === 'ผู้');
-            const females = (window.appData.birds || []).filter(b => b.gender === 'เมีย');
-
-            const mSel = document.getElementById('pair-male');
-            const fSel = document.getElementById('pair-female');
-
-            if (mSel) {
-                mSel.innerHTML = males.map(m => `<option value="${m.id}">${m.ring} (${m.name || 'ไม่มีชื่อ'}) - ${m.color}</option>`).join('');
-            }
-            if (fSel) {
-                fSel.innerHTML = females.map(f => `<option value="${f.id}">${f.ring} (${f.name || 'ไม่มีชื่อ'}) - ${f.color}</option>`).join('');
-            }
-        }
-
-        function renderPairs() {
-            const listContainer = document.getElementById('pairs-list');
-            const overviewPairsList = document.getElementById('overview-pairs-list');
-
-            const pairs = window.appData.pairs || [];
-            const birds = window.appData.birds || [];
-
-            if (pairs.length === 0) {
-                const emptyHTML = `<div class="py-8 text-center text-slate-400 text-sm">ยังไม่มีคู่ผสมพันธุ์ที่ลงทะเบียน</div>`;
-                if (listContainer) listContainer.innerHTML = emptyHTML;
-                if (overviewPairsList) overviewPairsList.innerHTML = emptyHTML;
-                return;
-            }
-
-            const html = pairs.map(pair => {
-                const male = birds.find(b => b.id === pair.maleId) || {};
-                const female = birds.find(b => b.id === pair.femaleId) || {};
-
-                return `
-                    <div class="bg-white border border-slate-200/80 rounded-2xl p-4 space-y-3 shadow-sm">
-                        <div class="flex items-center justify-between">
-                            <h4 class="font-bold text-slate-900 text-base">${pair.name}</h4>
-                            <span class="px-2.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 rounded-full">กำลังผสม</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <div>
-                                <span class="text-sky-600 font-semibold">♂ ${male.ring || 'ไม่ระบุรหัส'}:</span>
-                                <p class="text-slate-800 font-medium">(${male.color || '-'})</p>
-                            </div>
-                            <div>
-                                <span class="text-rose-600 font-semibold">♀ ${female.ring || 'ไม่ระบุรหัส'}:</span>
-                                <p class="text-slate-800 font-medium">(${female.color || '-'})</p>
-                            </div>
-                        </div>
-                        ${pair.geneticsNotes ? `<p class="text-xs text-slate-600"><strong class="text-slate-800">โอกาสสีลูกนก:</strong> ${pair.geneticsNotes}</p>` : ''}
-                        <div class="pt-2 border-t border-slate-100 flex justify-end space-x-2">
-                            <button onclick="deletePair('${pair.id}')" class="px-3 py-1 text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition font-medium"><i class="fa-solid fa-trash mr-1"></i>แยกคู่</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            if (listContainer) listContainer.innerHTML = html;
-            if (overviewPairsList) overviewPairsList.innerHTML = html;
-        }
-
-        function renderSales() {
-            const tbody = document.getElementById('sales-table-body');
-            if (!tbody) return;
-
-            const sales = window.appData.sales || [];
-            if (sales.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">ยังไม่มีบันทึกประวัติการขาย</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = sales.map(s => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-3.5 text-slate-700">${s.date || '-'}</td>
-                    <td class="p-3.5 font-semibold text-emerald-600">${s.birdRing || '-'}</td>
-                    <td class="p-3.5 text-slate-800 font-medium">${s.customerName || '-'}</td>
-                    <td class="p-3.5 text-slate-500">${s.phone || '-'}</td>
-                    <td class="p-3.5 text-slate-900 font-bold">฿${Number(s.price || 0).toLocaleString()}</td>
-                    <td class="p-3.5 text-emerald-600">฿${Number(s.deposit || 0).toLocaleString()}</td>
-                    <td class="p-3.5"><span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">${s.status || 'สำเร็จ'}</span></td>
-                    <td class="p-3.5 text-right"><button onclick="deleteSale('${s.id}')" class="text-rose-600 hover:underline"><i class="fa-solid fa-trash"></i></button></td>
-                </tr>
-            `).join('');
-        }
-
-        // Form Submit Handlers
-        function handleBirdSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('bird-id').value || `b_${Date.now()}`;
-            const bird = {
-                ring: document.getElementById('bird-ring').value,
-                name: document.getElementById('bird-name').value,
-                gender: document.getElementById('bird-gender').value,
-                color: document.getElementById('bird-color').value,
-                bloodline: document.getElementById('bird-bloodline').value,
-                status: document.getElementById('bird-status').value,
-                price: Number(document.getElementById('bird-price').value) || 0,
-                dob: document.getElementById('bird-dob').value,
-                notes: document.getElementById('bird-notes').value
-            };
-
-            window.saveDocument('birds', id, bird);
-            closeModal('modal-bird');
-            document.getElementById('form-bird').reset();
-        }
-
-        function handlePairSubmit(e) {
-            e.preventDefault();
-            const id = document.getElementById('pair-id').value || `p_${Date.now()}`;
-            const pair = {
-                name: document.getElementById('pair-name').value,
-                maleId: document.getElementById('pair-male').value,
-                femaleId: document.getElementById('pair-female').value,
-                pairDate: document.getElementById('pair-date').value,
-                geneticsNotes: document.getElementById('pair-genetics').value
-            };
-
-            window.saveDocument('pairs', id, pair);
-            closeModal('modal-pair');
-            document.getElementById('form-pair').reset();
-        }
-
-        function editBird(id) {
-            const bird = (window.appData.birds || []).find(b => b.id === id);
-            if (!bird) return;
-
-            document.getElementById('bird-id').value = bird.id;
-            document.getElementById('bird-ring').value = bird.ring || '';
-            document.getElementById('bird-name').value = bird.name || '';
-            document.getElementById('bird-gender').value = bird.gender || 'ผู้';
-            document.getElementById('bird-color').value = bird.color || '';
-            document.getElementById('bird-bloodline').value = bird.bloodline || '';
-            document.getElementById('bird-status').value = bird.status || 'โสด';
-            document.getElementById('bird-price').value = bird.price || 0;
-            document.getElementById('bird-dob').value = bird.dob || '';
-            document.getElementById('bird-notes').value = bird.notes || '';
-
-            openModal('modal-bird');
-        }
-
-        function deleteBird(id) {
-            if (confirm('ยืนยันลบข้อมูลนกตัวนี้?')) {
-                window.deleteDocument('birds', id);
-            }
-        }
-
-        function deletePair(id) {
-            if (confirm('ยืนยันยกเลิกการจับคู่นี้?')) {
-                window.deleteDocument('pairs', id);
-            }
-        }
-
-        function deleteSale(id) {
-            if (confirm('ยืนยันลบประวัติการขายนี้?')) {
-                window.deleteDocument('sales', id);
-            }
-        }
-
-        // Backup & Import
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appData, null, 2));
-            const dlAnchorElem = document.createElement('a');
-            dlAnchorElem.setAttribute("href", dataStr);
-            dlAnchorElem.setAttribute("download", `GCC_Aviary_Backup_${new Date().toISOString().slice(0,10)}.json`);
-            dlAnchorElem.click();
-        }
-
-        function importDataTrigger() {
-            document.getElementById('importFileInput').click();
-        }
-
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const imported = JSON.parse(e.target.result);
-                    if (imported.birds || imported.pairs) {
-                        window.appData = imported;
-                        saveLocalStorage();
-                        alert('นำเข้าข้อมูลสำเร็จ!');
-                    } else {
-                        alert('รูปแบบไฟล์ JSON ไม่ถูกต้อง');
-                    }
-                } catch(err) {
-                    alert('เกิดข้อผิดพลาดในการอ่านไฟล์ JSON');
-                }
-            };
-            reader.readAsText(file);
-        }
-    </script>
-
-    <!-- Firebase SDK Module -->
+<body class="bg-slate-50 text-slate-800 min-h-screen">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Requested Firebase Config
-        const myFirebaseConfig = {
+        // Provided Firebase Configuration
+        const firebaseConfig = {
             apiKey: "AIzaSyBohCYrkHMOpF3YuOk3TAt8IeMYVL-ahzw",
             authDomain: "birdsmyboss.firebaseapp.com",
             databaseURL: "https://birdsmyboss-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -896,71 +60,2034 @@
             measurementId: "G-CZ3C54MSL8"
         };
 
-        const firebaseConfig = (typeof __firebase_config !== 'undefined' && __firebase_config)
-            ? JSON.parse(__firebase_config)
-            : myFirebaseConfig;
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        async function initFirebase() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'birdsmyboss-app';
+        // Expose Firebase API to React app safely via window
+        window.FB = {
+            db,
+            auth,
+            signInAnonymously,
+            signInWithCustomToken,
+            onAuthStateChanged,
+            doc,
+            setDoc,
+            getDoc,
+            collection,
+            onSnapshot,
+            deleteDoc,
+            writeBatch
+        };
+    </script>
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        window.isCloudMode = true;
-                        clearTimeout(cloudConnectionTimeout);
+    <div id="root"></div>
 
-                        const statusDot = document.getElementById('db-status-dot');
-                        const statusText = document.getElementById('db-status-text');
-                        if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
-                        if (statusText) statusText.textContent = "Cloud DB ออนไลน์";
-                        
-                        const errEl = document.getElementById('cloud-err-msg');
-                        if (errEl) errEl.classList.add('hidden');
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
 
-                        ['birds', 'pairs', 'clutches', 'sales'].forEach(collName => {
-                            const colRef = collection(db, 'artifacts', appId, 'public', 'data', collName);
-                            onSnapshot(colRef, (snapshot) => {
-                                const items = [];
-                                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-                                window.appData[collName] = items;
-                                window.refreshUI();
-                            }, (err) => {
-                                showCloudError("Firestore Rules ปฏิเสธการเข้าถึง: " + (err.code || err.message));
-                            });
-                        });
-                    }
-                });
-
-                await signInAnonymously(auth).catch(authErr => {
-                    let errDetail = authErr.code || authErr.message;
-                    if (authErr.code === 'auth/operation-not-allowed') {
-                        errDetail = "ยังไม่ได้เปิดใช้งาน Anonymous Sign-in ใน Firebase Console";
-                    } else if (authErr.code === 'auth/unauthorized-domain') {
-                        errDetail = "ยังไม่ได้เพิ่ม Domain ใน Authorized Domains (Firebase Console)";
-                    }
-                    showCloudError(errDetail);
-                    loadLocalStorage();
-                });
-
-                window.cloudSaveDoc = async function(coll, id, data) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
-                    await setDoc(docRef, data, { merge: true });
-                };
-
-                window.cloudDeleteDoc = async function(coll, id) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
-                    await deleteDoc(docRef);
-                };
-            } catch(e) {
-                showCloudError(e.code || e.message || "การตั้งค่า Firebase ไม่สมบูรณ์");
-                loadLocalStorage();
+        // User Provided Birds Initial Dataset
+        const USER_PROVIDED_BIRDS = [
+            {
+                id: "b_1786106694252",
+                bandId: "GCC-2022-M01",
+                name: "ละมุด",
+                color: "พายแอปเปิ้ล",
+                gender: "M",
+                status: "paired",
+                pedigree: "P",
+                hatchDate: "2022-11-25",
+                acquireDate: "2022-11-25",
+                price: 1200,
+                notes: "อดีตนกบินอิสระ กรีนชีคตัวแรกของบ้าน มีเชื้อทุกคอก โครงสร้างสวย"
+            },
+            {
+                id: "b_1786106805729",
+                bandId: "GCC-2022-F01",
+                name: "กล้วยหวาน",
+                color: "เยลโลไซด์",
+                gender: "F",
+                status: "paired",
+                pedigree: "Y/B/D",
+                hatchDate: "2022-11-25",
+                acquireDate: "2022-11-25",
+                price: 2500,
+                notes: "นกจากบ้านพี่ปอง เลี้ยงลูกเก่ง ฝากฝัก-ฝากเลี้ยงได้ ไข่ดก"
+            },
+            {
+                id: "b_1786106942767",
+                bandId: "GCC-2022-M02",
+                name: "อัญชัน",
+                color: "บลูเยลโลไซด์",
+                gender: "M",
+                status: "paired",
+                pedigree: "BY/C",
+                hatchDate: "2022-12-12",
+                acquireDate: "2022-12-12",
+                price: 1400,
+                notes: "นกจากบ้านพี่หน่อย-เรวดี อดีตนกบินอิสระ เชื่องจับเล่นได้ เชื้อดี"
+            },
+            {
+                id: "b_1786107053540",
+                bandId: "GCC-2025-F02",
+                name: "เมล่อน",
+                color: "ซันชีค",
+                gender: "F",
+                status: "paired",
+                pedigree: "PD/B",
+                hatchDate: "2025-01-01",
+                acquireDate: "2025-01-01",
+                price: 8000,
+                notes: "นกบ้านJPP อดีตเคยบินอิสระแต่ไม่นาน ไม่เคยไข่"
+            },
+            {
+                id: "b_1786107287191",
+                bandId: "GCC-2024-M03",
+                name: "มะพร้าว",
+                color: "ชินนามอน",
+                gender: "M",
+                status: "available",
+                pedigree: "C/Y/B/D",
+                hatchDate: "2024-01-01",
+                acquireDate: "2024-01-01",
+                price: 4800,
+                notes: "นกจากแม่บิว-PBS ไม่เคยให้ลูกตั้งแต่ซื้อมา เคยเข้าคู่กับส้มโอแต่ก็ไม่เคยได้ลูก ไม่เชื่องแต่ไม่ดุ"
+            },
+            {
+                id: "b_1786107425856",
+                bandId: "GCC-2025-F03",
+                name: "ส้มโอ",
+                color: "เยลโลไซด์ไดลูท",
+                gender: "F",
+                status: "paired",
+                pedigree: "YD",
+                hatchDate: "2024-01-02",
+                acquireDate: "2024-01-02",
+                price: 2500,
+                notes: "นกจากบ้านท่าไม้ มีใบเพศ ไข่ลมแล้วหลายคอก"
+            },
+            {
+                id: "b_1786108504975",
+                bandId: "GCC-2024-F06",
+                name: "น้อยหน่า",
+                color: "บลูฟอโล่",
+                gender: "F",
+                status: "paired",
+                pedigree: "BF",
+                hatchDate: "2025-01-05",
+                acquireDate: "2025-01-05",
+                price: 4800,
+                notes: "นกจากบ้านพี่นริศ ยังไม่เคยให้ลูก มีใบเพศ"
+            },
+            {
+                id: "b_1786108754794",
+                bandId: "GCC-2024-F05",
+                name: "เลม่อน",
+                color: "ไดลูท",
+                gender: "F",
+                status: "paired",
+                pedigree: "D",
+                hatchDate: "2024-01-11",
+                acquireDate: "2024-01-11",
+                price: 2800,
+                notes: "นกบ้านพี่พิงค์ อดีตนกบินอิสระ ไม่ดุแต่ไม่เชื่อง เคยให้ไข่แล้ว มีใบเพศ"
             }
+        ];
+
+        const INITIAL_PAIRS = [
+            { id: 'P-1', maleBandId: 'GCC-2022-M01', femaleBandId: 'GCC-2022-F01', cageNo: 'กรง 01', pairDate: '2024-11-01', status: 'active', notes: 'กำลังกกไข่คอกที่ 2' },
+            { id: 'P-2', maleBandId: 'GCC-2022-M02', femaleBandId: 'GCC-2025-F02', cageNo: 'กรง 02', pairDate: '2024-12-15', status: 'active', notes: 'คู่อัญชัน x เมล่อน' }
+        ];
+
+        const INITIAL_CLUTCHES = [
+            { id: 'C-1', pairId: 'P-1', clutchNo: '1', startDate: '2024-12-01', totalEggs: 5, fertileEggs: 4, hatched: 4, fledged: 4, notes: 'ลูกนกแข็งแรงดี รอดครบ' }
+        ];
+
+        const INITIAL_SALES = [];
+        const INITIAL_EXPENSES = [
+            { id: 'E-1', date: '2025-02-01', category: 'อาหาร/ธัญพืช', amount: 1800, note: 'อาหารผสม + ผลไม้อบแห้ง 10 กก.' }
+        ];
+
+        // Normalizer function for imported JSON bird objects
+        function normalizeBirdData(b) {
+            let gender = b.gender;
+            if (gender === 'ผู้') gender = 'M';
+            else if (gender === 'เมีย') gender = 'F';
+            else if (gender !== 'M' && gender !== 'F') gender = 'U';
+
+            let status = b.status;
+            if (status === 'จับคู่แล้ว') status = 'paired';
+            else if (status === 'โสด' || status === 'พร้อมผสม') status = 'available';
+            else if (status === 'ขายแล้ว') status = 'sold';
+            else if (!status) status = 'available';
+
+            return {
+                id: b.id || `b_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                bandId: b.ring || b.bandId || b.id || `GCC-${new Date().getFullYear()}-000`,
+                name: b.name || '',
+                color: b.color || 'Green Cheek',
+                gender: gender,
+                status: status,
+                pedigree: b.bloodline || b.pedigree || '',
+                hatchDate: b.dob || b.hatchDate || '',
+                acquireDate: b.acquireDate || b.dob || new Date().toISOString().split('T')[0],
+                price: Number(b.price || 0),
+                notes: b.notes || ''
+            };
         }
 
-        initFirebase();
+        function App() {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            
+            // Online Sync & Auth states
+            const [user, setUser] = useState(null);
+            const [isOnline, setIsOnline] = useState(false);
+            const [syncStatus, setSyncStatus] = useState('initializing'); // 'initializing', 'synced', 'saving', 'error'
+            
+            // Core App States
+            const [birds, setBirds] = useState(() => {
+                const saved = localStorage.getItem('gcc_birds');
+                return saved ? JSON.parse(saved) : USER_PROVIDED_BIRDS;
+            });
+            const [pairs, setPairs] = useState(() => {
+                const saved = localStorage.getItem('gcc_pairs');
+                return saved ? JSON.parse(saved) : INITIAL_PAIRS;
+            });
+            const [clutches, setClutches] = useState(() => {
+                const saved = localStorage.getItem('gcc_clutches');
+                return saved ? JSON.parse(saved) : INITIAL_CLUTCHES;
+            });
+            const [sales, setSales] = useState(() => {
+                const saved = localStorage.getItem('gcc_sales');
+                return saved ? JSON.parse(saved) : INITIAL_SALES;
+            });
+            const [expenses, setExpenses] = useState(() => {
+                const saved = localStorage.getItem('gcc_expenses');
+                return saved ? JSON.parse(saved) : INITIAL_EXPENSES;
+            });
+
+            // Modals & Toasts
+            const [toastMessage, setToastMessage] = useState(null);
+            const [showJsonModal, setShowJsonModal] = useState(false);
+
+            const showToast = (msg) => {
+                setToastMessage(msg);
+                setTimeout(() => setToastMessage(null), 3000);
+            };
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'birdsmyboss';
+
+            // Firebase Authentication Initialization
+            useEffect(() => {
+                const initFirebase = async () => {
+                    if (!window.FB) return;
+                    const { auth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } = window.FB;
+
+                    try {
+                        let authUser = null;
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            const res = await signInWithCustomToken(auth, __initial_auth_token);
+                            authUser = res.user;
+                        } else {
+                            const res = await signInAnonymously(auth);
+                            authUser = res.user;
+                        }
+
+                        onAuthStateChanged(auth, (u) => {
+                            if (u) {
+                                setUser(u);
+                                setIsOnline(true);
+                                setSyncStatus('synced');
+                            }
+                        });
+                    } catch (err) {
+                        console.error('Firebase Auth Error:', err);
+                        setSyncStatus('error');
+                    }
+                };
+
+                initFirebase();
+            }, []);
+
+            // Firebase Firestore Subscriptions (Realtime Listener)
+            useEffect(() => {
+                if (!user || !window.FB) return;
+                const { db, collection, onSnapshot } = window.FB;
+
+                // Rule 1 Strict Path: /artifacts/{appId}/public/data/{collectionName}
+                const setupListener = (colName, setter, defaultData) => {
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+                    return onSnapshot(colRef, (snapshot) => {
+                        const items = [];
+                        snapshot.forEach((doc) => {
+                            items.push({ ...doc.data(), id: doc.id });
+                        });
+                        if (items.length > 0) {
+                            setter(items);
+                        } else if (defaultData && defaultData.length > 0) {
+                            // Seed initial Firestore data if collection is completely empty
+                            items.push(...defaultData);
+                            defaultData.forEach(async (item) => {
+                                const docRef = window.FB.doc(db, 'artifacts', appId, 'public', 'data', colName, item.id);
+                                await window.FB.setDoc(docRef, item);
+                            });
+                            setter(defaultData);
+                        }
+                        setSyncStatus('synced');
+                    }, (error) => {
+                        console.error(`Firestore Snapshot Error (${colName}):`, error);
+                        setSyncStatus('error');
+                    });
+                };
+
+                const unsubBirds = setupListener('birds', setBirds, USER_PROVIDED_BIRDS);
+                const unsubPairs = setupListener('pairs', setPairs, INITIAL_PAIRS);
+                const unsubClutches = setupListener('clutches', setClutches, INITIAL_CLUTCHES);
+                const unsubSales = setupListener('sales', setSales, INITIAL_SALES);
+                const unsubExpenses = setupListener('expenses', setExpenses, INITIAL_EXPENSES);
+
+                return () => {
+                    unsubBirds();
+                    unsubPairs();
+                    unsubClutches();
+                    unsubSales();
+                    unsubExpenses();
+                };
+            }, [user, appId]);
+
+            // Save handlers with Firebase + LocalStorage fallback
+            const saveData = async (colName, dataList) => {
+                // Always sync to LocalStorage
+                localStorage.setItem(`gcc_${colName}`, JSON.stringify(dataList));
+
+                // If online, save to Firestore
+                if (user && window.FB) {
+                    try {
+                        setSyncStatus('saving');
+                        const { db, doc, setDoc } = window.FB;
+                        for (const item of dataList) {
+                            const itemDoc = doc(db, 'artifacts', appId, 'public', 'data', colName, item.id);
+                            await setDoc(itemDoc, item, { merge: true });
+                        }
+                        setSyncStatus('synced');
+                    } catch (err) {
+                        console.error(`Firestore Save Error (${colName}):`, err);
+                        setSyncStatus('error');
+                    }
+                }
+            };
+
+            const deleteDocOnline = async (colName, itemId) => {
+                if (user && window.FB) {
+                    try {
+                        setSyncStatus('saving');
+                        const { db, doc, deleteDoc } = window.FB;
+                        const itemDoc = doc(db, 'artifacts', appId, 'public', 'data', colName, itemId);
+                        await deleteDoc(itemDoc);
+                        setSyncStatus('synced');
+                    } catch (err) {
+                        console.error(`Firestore Delete Error:`, err);
+                        setSyncStatus('error');
+                    }
+                }
+            };
+
+            // Wrap state setters with auto-save
+            const updateBirds = (newBirds) => { setBirds(newBirds); saveData('birds', newBirds); };
+            const updatePairs = (newPairs) => { setPairs(newPairs); saveData('pairs', newPairs); };
+            const updateClutches = (newClutches) => { setClutches(newClutches); saveData('clutches', newClutches); };
+            const updateSales = (newSales) => { setSales(newSales); saveData('sales', newSales); };
+            const updateExpenses = (newExpenses) => { setExpenses(newExpenses); saveData('expenses', newExpenses); };
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    {/* Sidebar */}
+                    <aside className="w-full md:w-64 bg-emerald-900 text-white flex-shrink-0 flex flex-col justify-between">
+                        <div>
+                            <div className="p-5 flex items-center justify-between border-b border-emerald-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xl font-bold shadow-inner">
+                                        <i className="fa-solid fa-kiwi-bird"></i>
+                                    </div>
+                                    <div>
+                                        <h1 className="font-bold text-lg leading-tight">GreenCheek</h1>
+                                        <p className="text-xs text-emerald-300">birdsmyboss farm</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Online Sync Indicator */}
+                            <div className="mx-4 mt-4 p-3 bg-emerald-950/60 rounded-xl border border-emerald-800/80 text-xs flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                                    <span className="font-medium text-emerald-100">
+                                        {isOnline ? 'เชื่อมต่อออนไลน์แล้ว' : 'โหมดออฟไลน์ (Local)'}
+                                    </span>
+                                </div>
+                                <span className="text-[10px] bg-emerald-800/60 text-emerald-200 px-2 py-0.5 rounded">
+                                    {syncStatus === 'saving' ? 'บันทึก...' : syncStatus === 'synced' ? 'Sync OK' : 'Ready'}
+                                </span>
+                            </div>
+
+                            {/* Navigation Tabs */}
+                            <nav className="p-4 space-y-1">
+                                <button
+                                    onClick={() => setActiveTab('dashboard')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm ${activeTab === 'dashboard' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-100 hover:bg-emerald-800'}`}
+                                >
+                                    <i className="fa-solid fa-chart-pie w-5"></i> ภาพรวมฟาร์ม
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('birds')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm ${activeTab === 'birds' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-100 hover:bg-emerald-800'}`}
+                                >
+                                    <i className="fa-solid fa-feather w-5"></i> ข้อมูลนกทั้งหมด ({birds.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('pairs')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm ${activeTab === 'pairs' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-100 hover:bg-emerald-800'}`}
+                                >
+                                    <i className="fa-solid fa-heart w-5"></i> บันทึกการจับคู่ ({pairs.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('eggs')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm ${activeTab === 'eggs' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-100 hover:bg-emerald-800'}`}
+                                >
+                                    <i className="fa-solid fa-egg w-5"></i> ประวัติไข่ & ลูกนก
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('sales')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm ${activeTab === 'sales' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-100 hover:bg-emerald-800'}`}
+                                >
+                                    <i className="fa-solid fa-hand-holding-dollar w-5"></i> บันทึกการขาย ({sales.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('expenses')}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-medium text-sm ${activeTab === 'expenses' ? 'bg-emerald-600 text-white shadow-md' : 'text-emerald-100 hover:bg-emerald-800'}`}
+                                >
+                                    <i className="fa-solid fa-file-invoice-dollar w-5"></i> ค่าใช้จ่าย & กราฟ
+                                </button>
+                            </nav>
+                        </div>
+
+                        {/* Import / Export Data Tools */}
+                        <div className="p-4 border-t border-emerald-800 space-y-2">
+                            <button
+                                onClick={() => setShowJsonModal(true)}
+                                className="w-full py-2.5 px-3 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 text-xs rounded-xl font-medium flex items-center justify-center gap-2 transition"
+                            >
+                                <i className="fa-solid fa-file-import text-amber-400"></i>
+                                <span>นำเข้า / ส่งออกข้อมูล JSON</span>
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+                        {/* Toast Notification */}
+                        {toastMessage && (
+                            <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce">
+                                <i className="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+                                <span>{toastMessage}</span>
+                            </div>
+                        )}
+
+                        {activeTab === 'dashboard' && <DashboardView birds={birds} pairs={pairs} clutches={clutches} sales={sales} expenses={expenses} setActiveTab={setActiveTab} setShowJsonModal={setShowJsonModal} />}
+                        {activeTab === 'birds' && <BirdsView birds={birds} setBirds={updateBirds} deleteDocOnline={deleteDocOnline} showToast={showToast} setShowJsonModal={setShowJsonModal} />}
+                        {activeTab === 'pairs' && <PairsView birds={birds} setBirds={updateBirds} pairs={pairs} setPairs={updatePairs} clutches={clutches} deleteDocOnline={deleteDocOnline} showToast={showToast} />}
+                        {activeTab === 'eggs' && <EggsView pairs={pairs} birds={birds} clutches={clutches} setClutches={updateClutches} deleteDocOnline={deleteDocOnline} showToast={showToast} />}
+                        {activeTab === 'sales' && <SalesView birds={birds} sales={sales} setSales={updateSales} deleteDocOnline={deleteDocOnline} showToast={showToast} />}
+                        {activeTab === 'expenses' && <ExpensesView expenses={expenses} setExpenses={updateExpenses} deleteDocOnline={deleteDocOnline} showToast={showToast} />}
+                    </main>
+
+                    {/* JSON Import/Export Modal */}
+                    {showJsonModal && (
+                        <JsonDataModal
+                            birds={birds}
+                            setBirds={updateBirds}
+                            pairs={pairs}
+                            clutches={clutches}
+                            sales={sales}
+                            expenses={expenses}
+                            setShowJsonModal={setShowJsonModal}
+                            showToast={showToast}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        function DashboardView({ birds, pairs, clutches, sales, expenses, setActiveTab, setShowJsonModal }) {
+            const totalBirds = birds.length;
+            const pairedCount = birds.filter(b => b.status === 'paired' || b.status === 'จับคู่แล้ว').length;
+            const availableCount = birds.filter(b => b.status === 'available' || b.status === 'โสด' || b.status === 'พร้อมผสม').length;
+            
+            const totalEggs = clutches.reduce((acc, c) => acc + Number(c.totalEggs || 0), 0);
+            const totalHatched = clutches.reduce((acc, c) => acc + Number(c.hatched || 0), 0);
+
+            const totalIncome = sales.reduce((acc, s) => acc + Number(s.price || 0), 0);
+            const totalExpenses = expenses.reduce((acc, e) => acc + Number(e.amount || 0), 0);
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">แดชบอร์ดภาพรวมฟาร์ม</h2>
+                            <p className="text-slate-500 text-sm">ข้อมูลเรียลไทม์ ซิงค์ออนไลน์ผ่าน Firebase Project: birdsmyboss</p>
+                        </div>
+                        <button
+                            onClick={() => setShowJsonModal(true)}
+                            className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm transition"
+                        >
+                            <i className="fa-solid fa-file-code"></i> จัดการไฟล์ข้อมูล JSON
+                        </button>
+                    </div>
+
+                    {/* Stat Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-slate-400 text-xs font-medium">นกทั้งหมดในฟาร์ม</p>
+                                <p className="text-3xl font-bold text-slate-800 mt-1">{totalBirds} <span className="text-sm font-normal text-slate-500">ตัว</span></p>
+                                <p className="text-xs text-emerald-600 mt-1 font-medium">พร้อมผสม {availableCount} ตัว</p>
+                            </div>
+                            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                                <i className="fa-solid fa-kiwi-bird"></i>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-slate-400 text-xs font-medium">คู่ผสมนก (เข้ากรง)</p>
+                                <p className="text-3xl font-bold text-rose-600 mt-1">{pairs.length} <span className="text-sm font-normal text-slate-500">คู่</span></p>
+                                <p className="text-xs text-slate-500 mt-1">นกจับคู่แล้ว {pairedCount} ตัว</p>
+                            </div>
+                            <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center text-xl">
+                                <i className="fa-solid fa-heart"></i>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-slate-400 text-xs font-medium">ไข่รวม / ฟักเป็นตัวแล้ว</p>
+                                <p className="text-3xl font-bold text-amber-600 mt-1">{totalEggs} / {totalHatched}</p>
+                                <p className="text-xs text-amber-700 mt-1 font-medium">อัตราฟักสำเร็จ {totalEggs ? Math.round((totalHatched/totalEggs)*100) : 0}%</p>
+                            </div>
+                            <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                                <i className="fa-solid fa-egg"></i>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-slate-400 text-xs font-medium">ยอดขาย / ค่าใช้จ่าย</p>
+                                <p className="text-xl font-bold text-emerald-600 mt-1">฿{totalIncome.toLocaleString()}</p>
+                                <p className="text-xs text-rose-500 mt-1 font-medium">รายจ่าย ฿{totalExpenses.toLocaleString()}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+                                <i className="fa-solid fa-wallet"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Shortcuts */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                        <h3 className="font-bold text-slate-800 text-base">เมนูดำเนินการด่วน</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <button onClick={() => setActiveTab('birds')} className="p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 transition text-left space-y-2 group">
+                                <i className="fa-solid fa-plus text-emerald-600 text-lg group-hover:scale-110 transition-transform"></i>
+                                <p className="font-semibold text-sm text-slate-700">เพิ่มนกใหม่เข้าฟาร์ม</p>
+                            </button>
+                            <button onClick={() => setActiveTab('pairs')} className="p-4 rounded-xl border border-slate-200 hover:border-rose-500 hover:bg-rose-50 transition text-left space-y-2 group">
+                                <i className="fa-solid fa-user-plus text-rose-500 text-lg group-hover:scale-110 transition-transform"></i>
+                                <p className="font-semibold text-sm text-slate-700">จับคู่นกตัวผู้-เมีย</p>
+                            </button>
+                            <button onClick={() => setActiveTab('eggs')} className="p-4 rounded-xl border border-slate-200 hover:border-amber-500 hover:bg-amber-50 transition text-left space-y-2 group">
+                                <i className="fa-solid fa-square-plus text-amber-500 text-lg group-hover:scale-110 transition-transform"></i>
+                                <p className="font-semibold text-sm text-slate-700">บันทึกคอกไข่ใหม่</p>
+                            </button>
+                            <button onClick={() => setActiveTab('sales')} className="p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition text-left space-y-2 group">
+                                <i className="fa-solid fa-cart-plus text-blue-500 text-lg group-hover:scale-110 transition-transform"></i>
+                                <p className="font-semibold text-sm text-slate-700">บันทึกการขาย / ติดจอง</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function BirdsView({ birds, setBirds, deleteDocOnline, showToast, setShowJsonModal }) {
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterGender, setFilterGender] = useState('ALL');
+            const [filterStatus, setFilterStatus] = useState('ALL');
+
+            const [showModal, setShowModal] = useState(false);
+            const [editingBird, setEditingBird] = useState(null);
+
+            const [formData, setFormData] = useState({
+                bandId: '', name: '', color: 'Pineapple', gender: 'M', pedigree: '', hatchDate: '', acquireDate: '', status: 'available', price: 0, notes: ''
+            });
+
+            const openAddModal = () => {
+                setEditingBird(null);
+                setFormData({
+                    bandId: `GCC-${new Date().getFullYear()}-M0${Math.floor(1 + Math.random() * 9)}`,
+                    name: '',
+                    color: 'พายแอปเปิ้ล',
+                    gender: 'M',
+                    pedigree: '',
+                    hatchDate: new Date().toISOString().split('T')[0],
+                    acquireDate: new Date().toISOString().split('T')[0],
+                    status: 'available',
+                    price: 2500,
+                    notes: ''
+                });
+                setShowModal(true);
+            };
+
+            const openEditModal = (bird) => {
+                setEditingBird(bird);
+                setFormData({
+                    ...bird,
+                    bandId: bird.bandId || bird.ring || '',
+                    pedigree: bird.pedigree || bird.bloodline || '',
+                    hatchDate: bird.hatchDate || bird.dob || ''
+                });
+                setShowModal(true);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!formData.bandId.trim()) return;
+
+                if (editingBird) {
+                    setBirds(birds.map(b => b.id === editingBird.id ? { ...formData } : b));
+                    showToast('อัปเดตข้อมูลนกเรียบร้อย');
+                } else {
+                    const newBird = { ...formData, id: `b_${Date.now()}` };
+                    setBirds([...birds, newBird]);
+                    showToast('บันทึกข้อมูลนกใหม่เรียบร้อย');
+                }
+                setShowModal(false);
+            };
+
+            const handleDelete = (id) => {
+                if (window.confirm('คุณต้องการลบข้อมูลนกตัวนี้หรือไม่?')) {
+                    setBirds(birds.filter(b => b.id !== id));
+                    deleteDocOnline('birds', id);
+                    showToast('ลบข้อมูลนกเรียบร้อย');
+                }
+            };
+
+            const filteredBirds = birds.filter(b => {
+                const bandStr = (b.bandId || b.ring || '').toLowerCase();
+                const nameStr = (b.name || '').toLowerCase();
+                const colorStr = (b.color || '').toLowerCase();
+
+                const matchSearch = bandStr.includes(searchTerm.toLowerCase()) ||
+                                    nameStr.includes(searchTerm.toLowerCase()) ||
+                                    colorStr.includes(searchTerm.toLowerCase());
+                
+                const isMale = b.gender === 'M' || b.gender === 'ผู้';
+                const isFemale = b.gender === 'F' || b.gender === 'เมีย';
+                const matchGender = filterGender === 'ALL' || 
+                                   (filterGender === 'M' && isMale) || 
+                                   (filterGender === 'F' && isFemale);
+
+                const isPaired = b.status === 'paired' || b.status === 'จับคู่แล้ว';
+                const isAvailable = b.status === 'available' || b.status === 'โสด' || b.status === 'พร้อมผสม';
+                const isSold = b.status === 'sold' || b.status === 'ขายแล้ว';
+
+                const matchStatus = filterStatus === 'ALL' ||
+                                   (filterStatus === 'available' && isAvailable) ||
+                                   (filterStatus === 'paired' && isPaired) ||
+                                   (filterStatus === 'sold' && isSold);
+
+                return matchSearch && matchGender && matchStatus;
+            });
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">1. บันทึกข้อมูลนกกรีนชีค</h2>
+                            <p className="text-slate-500 text-sm">จัดการประวัตินก รหัสห่วงขา สี เพศ สายเลือด และมูลค่า</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowJsonModal(true)}
+                                className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2.5 rounded-xl font-medium text-xs flex items-center gap-1.5 shadow-sm transition"
+                            >
+                                <i className="fa-solid fa-file-import"></i> นำเข้า JSON
+                            </button>
+                            <button
+                                onClick={openAddModal}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 shadow-sm transition"
+                            >
+                                <i className="fa-solid fa-plus"></i> เพิ่มนกใหม่
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Filters & Search */}
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap gap-3 items-center">
+                        <div className="relative flex-1 min-w-[200px]">
+                            <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input
+                                type="text"
+                                placeholder="ค้นหารหัสห่วงขา, ชื่อ, สี..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500"
+                            />
+                        </div>
+                        <select
+                            value={filterGender}
+                            onChange={e => setFilterGender(e.target.value)}
+                            className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                        >
+                            <option value="ALL">เพศทั้งหมด</option>
+                            <option value="M">ตัวผู้ (Male)</option>
+                            <option value="F">ตัวเมีย (Female)</option>
+                        </select>
+                        <select
+                            value={filterStatus}
+                            onChange={e => setFilterStatus(e.target.value)}
+                            className="px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                        >
+                            <option value="ALL">สถานะทั้งหมด</option>
+                            <option value="available">พร้อมผสม / โสด</option>
+                            <option value="paired">จับคู่แล้ว</option>
+                            <option value="sold">ขายแล้ว</option>
+                        </select>
+                    </div>
+
+                    {/* Bird Table */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-100">
+                                        <th className="p-4">รหัสห่วงขา / ชื่อ</th>
+                                        <th className="p-4">สี / Mutation</th>
+                                        <th className="p-4">เพศ</th>
+                                        <th className="p-4">สายเลือด / พ่อแม่</th>
+                                        <th className="p-4">วันเกิด / ราคา</th>
+                                        <th className="p-4">สถานะ</th>
+                                        <th className="p-4 text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-sm">
+                                    {filteredBirds.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" className="p-8 text-center text-slate-400">ไม่พบข้อมูลนกตามเงื่อนไขที่ค้นหา</td>
+                                        </tr>
+                                    ) : (
+                                        filteredBirds.map(bird => {
+                                            const isMale = bird.gender === 'M' || bird.gender === 'ผู้';
+                                            const isFemale = bird.gender === 'F' || bird.gender === 'เมีย';
+                                            const isPaired = bird.status === 'paired' || bird.status === 'จับคู่แล้ว';
+                                            const isSold = bird.status === 'sold' || bird.status === 'ขายแล้ว';
+
+                                            return (
+                                                <tr key={bird.id} className="hover:bg-slate-50 transition">
+                                                    <td className="p-4 font-medium text-slate-800">
+                                                        <div className="font-bold text-emerald-700">{bird.bandId || bird.ring}</div>
+                                                        <div className="text-xs text-slate-500">{bird.name || '-'}</div>
+                                                    </td>
+                                                    <td className="p-4 font-medium text-slate-700">{bird.color}</td>
+                                                    <td className="p-4">
+                                                        {isMale && <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-xs font-semibold"><i className="fa-solid fa-mars"></i> ผู้</span>}
+                                                        {isFemale && <span className="inline-flex items-center gap-1 bg-pink-50 text-pink-600 px-2.5 py-1 rounded-full text-xs font-semibold"><i className="fa-solid fa-venus"></i> เมีย</span>}
+                                                        {!isMale && !isFemale && <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-xs">ไม่ระบุ</span>}
+                                                    </td>
+                                                    <td className="p-4 text-xs text-slate-600 max-w-[180px] truncate">{bird.pedigree || bird.bloodline || '-'}</td>
+                                                    <td className="p-4 text-xs text-slate-500">
+                                                        <div>เกิด: {bird.hatchDate || bird.dob || '-'}</div>
+                                                        {bird.price > 0 && <div className="text-emerald-600 font-bold mt-0.5">฿{Number(bird.price).toLocaleString()}</div>}
+                                                    </td>
+                                                    <td className="p-4">
+                                                        {isPaired ? (
+                                                            <span className="bg-rose-100 text-rose-700 text-xs px-2.5 py-1 rounded-full font-medium">จับคู่แล้ว</span>
+                                                        ) : isSold ? (
+                                                            <span className="bg-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">ขายแล้ว</span>
+                                                        ) : (
+                                                            <span className="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium">พร้อมผสม/โสด</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button onClick={() => openEditModal(bird)} className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 flex items-center justify-center transition">
+                                                                <i className="fa-solid fa-pen-to-square text-xs"></i>
+                                                            </button>
+                                                            <button onClick={() => handleDelete(bird.id)} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition">
+                                                                <i className="fa-solid fa-trash text-xs"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Add/Edit Bird Modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                    <h3 className="font-bold text-lg text-slate-800">{editingBird ? 'แก้ไขข้อมูลนก' : 'เพิ่มข้อมูลนกใหม่'}</h3>
+                                    <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">รหัสห่วงขา *</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={formData.bandId}
+                                                onChange={e => setFormData({ ...formData, bandId: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">ชื่อนก</label>
+                                            <input
+                                                type="text"
+                                                value={formData.name}
+                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">สี / Mutation</label>
+                                            <input
+                                                type="text"
+                                                placeholder="เช่น พายแอปเปิ้ล, ซันชีค"
+                                                value={formData.color}
+                                                onChange={e => setFormData({ ...formData, color: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">เพศ</label>
+                                            <select
+                                                value={formData.gender}
+                                                onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                                            >
+                                                <option value="M">ตัวผู้ (Male)</option>
+                                                <option value="F">ตัวเมีย (Female)</option>
+                                                <option value="U">ไม่ระบุเพศ</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">สายเลือด / ประวัติพ่อแม่</label>
+                                            <input
+                                                type="text"
+                                                placeholder="เช่น P, Y/B/D"
+                                                value={formData.pedigree}
+                                                onChange={e => setFormData({ ...formData, pedigree: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">ราคานก (บาท)</label>
+                                            <input
+                                                type="number"
+                                                value={formData.price}
+                                                onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">วันเกิด</label>
+                                            <input
+                                                type="date"
+                                                value={formData.hatchDate}
+                                                onChange={e => setFormData({ ...formData, hatchDate: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">สถานะนก</label>
+                                            <select
+                                                value={formData.status}
+                                                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                                            >
+                                                <option value="available">พร้อมผสม / โสด</option>
+                                                <option value="paired">จับคู่แล้ว</option>
+                                                <option value="sold">ขายแล้ว</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">หมายเหตุ</label>
+                                        <textarea
+                                            rows="3"
+                                            value={formData.notes}
+                                            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            placeholder="บันทึกประวัติการบิน พฤติกรรม หรือที่มา..."
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-3 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModal(false)}
+                                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-md transition"
+                                        >
+                                            บันทึกข้อมูล
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function PairsView({ birds, setBirds, pairs, setPairs, clutches, deleteDocOnline, showToast }) {
+            const [showModal, setShowModal] = useState(false);
+            const [formData, setFormData] = useState({
+                maleBandId: '', femaleBandId: '', cageNo: 'กรง 01', pairDate: new Date().toISOString().split('T')[0], notes: ''
+            });
+
+            const maleOptions = birds.filter(b => (b.gender === 'M' || b.gender === 'ผู้') && b.status !== 'sold');
+            const femaleOptions = birds.filter(b => (b.gender === 'F' || b.gender === 'เมีย') && b.status !== 'sold');
+
+            const handlePairingSubmit = (e) => {
+                e.preventDefault();
+                if (!formData.maleBandId || !formData.femaleBandId) {
+                    alert('กรุณาเลือกทั้งนกตัวผู้และนกตัวเมีย');
+                    return;
+                }
+                if (formData.maleBandId === formData.femaleBandId) {
+                    alert('ไม่สามารถเลือกนกตัวเดียวกันจับคู่กันได้');
+                    return;
+                }
+
+                const newPair = {
+                    id: `P-${Date.now()}`,
+                    ...formData,
+                    status: 'active'
+                };
+
+                setPairs([...pairs, newPair]);
+
+                // Auto update status of paired birds to 'paired'
+                setBirds(birds.map(b => {
+                    const bId = b.bandId || b.ring;
+                    if (bId === formData.maleBandId || bId === formData.femaleBandId) {
+                        return { ...b, status: 'paired' };
+                    }
+                    return b;
+                }));
+
+                showToast('บันทึกจับคู่นกเรียบร้อย');
+                setShowModal(false);
+            };
+
+            const handleSeparate = (pair) => {
+                if (window.confirm('ต้องการแยกคู่นกคู่นี้หรือไม่? สถานะนกจะกลับมาเป็นพร้อมผสม')) {
+                    setPairs(pairs.filter(p => p.id !== pair.id));
+                    deleteDocOnline('pairs', pair.id);
+                    setBirds(birds.map(b => {
+                        const bId = b.bandId || b.ring;
+                        if (bId === pair.maleBandId || bId === pair.femaleBandId) {
+                            return { ...b, status: 'available' };
+                        }
+                        return b;
+                    }));
+                    showToast('ทำการแยกคู่เรียบร้อยแล้ว');
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">2. บันทึกจับคู่นก</h2>
+                            <p className="text-slate-500 text-sm">เลือกนกตัวผู้-ตัวเมีย เข้ากรงผสมพันธุ์พร้อมระบุวันที่เริ่มจับคู่</p>
+                        </div>
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 shadow-sm transition"
+                        >
+                            <i className="fa-solid fa-heart"></i> จับคู่ใหม่
+                        </button>
+                    </div>
+
+                    {/* Active Pairs List */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {pairs.length === 0 ? (
+                            <div className="col-span-full bg-white p-12 rounded-2xl text-center text-slate-400 border border-slate-100">
+                                ยังไม่มีคู่นกที่เข้าผสม คลิกปุ่ม "จับคู่ใหม่" ด้านบนเพื่อเริ่มบันทึก
+                            </div>
+                        ) : (
+                            pairs.map(pair => {
+                                const maleBird = birds.find(b => (b.bandId || b.ring) === pair.maleBandId);
+                                const femaleBird = birds.find(b => (b.bandId || b.ring) === pair.femaleBandId);
+                                const pairClutches = clutches.filter(c => c.pairId === pair.id);
+
+                                return (
+                                    <div key={pair.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4 hover:shadow-md transition">
+                                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                            <span className="bg-emerald-100 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold">
+                                                <i className="fa-solid fa-border-all mr-1"></i> {pair.cageNo || 'ไม่ระบูกรง'}
+                                            </span>
+                                            <span className="text-xs text-slate-400">เริ่มจับคู่: {pair.pairDate}</span>
+                                        </div>
+
+                                        {/* Male & Female Birds Info */}
+                                        <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                                                    <i className="fa-solid fa-mars"></i> นกตัวผู้ ({maleBird?.name || 'ละมุด'})
+                                                </p>
+                                                <p className="font-bold text-sm text-slate-800">{pair.maleBandId}</p>
+                                                <p className="text-xs text-slate-500">{maleBird?.color || '-'}</p>
+                                            </div>
+                                            <div className="space-y-1 border-l border-slate-200 pl-3">
+                                                <p className="text-[10px] font-bold text-pink-600 uppercase tracking-wider flex items-center gap-1">
+                                                    <i className="fa-solid fa-venus"></i> นกตัวเมีย ({femaleBird?.name || 'กล้วยหวาน'})
+                                                </p>
+                                                <p className="font-bold text-sm text-slate-800">{pair.femaleBandId}</p>
+                                                <p className="text-xs text-slate-500">{femaleBird?.color || '-'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-xs text-slate-500 flex justify-between items-center pt-1">
+                                            <span><i className="fa-solid fa-egg text-amber-500 mr-1"></i> ประวัติไข่ {pairClutches.length} คอก</span>
+                                            <button
+                                                onClick={() => handleSeparate(pair)}
+                                                className="text-rose-500 hover:text-rose-700 font-medium hover:underline text-xs"
+                                            >
+                                                <i className="fa-solid fa-link-slash mr-1"></i> แยกคู่
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* Pair Modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+                                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                        <i className="fa-solid fa-heart text-rose-500"></i> บันทึกจับคู่นกใหม่
+                                    </h3>
+                                    <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+                                </div>
+                                <form onSubmit={handlePairingSubmit} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">เลือกนกตัวผู้ (Male) *</label>
+                                        <select
+                                            required
+                                            value={formData.maleBandId}
+                                            onChange={e => setFormData({ ...formData, maleBandId: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rose-500 bg-white"
+                                        >
+                                            <option value="">-- เลือกนกตัวผู้ --</option>
+                                            {maleOptions.map(b => (
+                                                <option key={b.id} value={b.bandId || b.ring}>
+                                                    {b.bandId || b.ring} ({b.name ? `${b.name} - ` : ''}{b.color})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">เลือกนกตัวเมีย (Female) *</label>
+                                        <select
+                                            required
+                                            value={formData.femaleBandId}
+                                            onChange={e => setFormData({ ...formData, femaleBandId: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rose-500 bg-white"
+                                        >
+                                            <option value="">-- เลือกนกตัวเมีย --</option>
+                                            {femaleOptions.map(b => (
+                                                <option key={b.id} value={b.bandId || b.ring}>
+                                                    {b.bandId || b.ring} ({b.name ? `${b.name} - ` : ''}{b.color})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">หมายเลขกรง</label>
+                                            <input
+                                                type="text"
+                                                value={formData.cageNo}
+                                                onChange={e => setFormData({ ...formData, cageNo: e.target.value })}
+                                                placeholder="เช่น กรง 01"
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rose-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">วันที่เริ่มจับคู่</label>
+                                            <input
+                                                type="date"
+                                                value={formData.pairDate}
+                                                onChange={e => setFormData({ ...formData, pairDate: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rose-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">หมายเหตุ</label>
+                                        <textarea
+                                            rows="2"
+                                            value={formData.notes}
+                                            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                                            placeholder="บันทึกพฤติกรรมกรง..."
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-rose-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-3 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModal(false)}
+                                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 shadow-md transition"
+                                        >
+                                            ยืนยันจับคู่
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function EggsView({ pairs, birds, clutches, setClutches, deleteDocOnline, showToast }) {
+            const [selectedPairId, setSelectedPairId] = useState(pairs[0]?.id || '');
+            const [showModal, setShowModal] = useState(false);
+
+            const [formData, setFormData] = useState({
+                pairId: '', clutchNo: '1', startDate: new Date().toISOString().split('T')[0],
+                totalEggs: 4, fertileEggs: 3, hatched: 2, fledged: 2, notes: ''
+            });
+
+            const openAddClutch = () => {
+                if (pairs.length === 0) {
+                    alert('ต้องทำการจับคู่นกก่อนอย่างน้อย 1 คู่ จึงจะเริ่มบันทึกประวัติไข่ได้');
+                    return;
+                }
+                const activePairId = selectedPairId || pairs[0]?.id;
+                const existingClutches = clutches.filter(c => c.pairId === activePairId);
+                setFormData({
+                    pairId: activePairId,
+                    clutchNo: String(existingClutches.length + 1),
+                    startDate: new Date().toISOString().split('T')[0],
+                    totalEggs: 5,
+                    fertileEggs: 4,
+                    hatched: 3,
+                    fledged: 3,
+                    notes: ''
+                });
+                setShowModal(true);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setClutches([...clutches, { ...formData, id: `C-${Date.now()}` }]);
+                showToast('บันทึกคอกไข่เรียบร้อยแล้ว');
+                setShowModal(false);
+            };
+
+            const handleDeleteClutch = (id) => {
+                if (window.confirm('ยืนยันลบข้อมูลไข่คอกนี้?')) {
+                    setClutches(clutches.filter(c => c.id !== id));
+                    deleteDocOnline('clutches', id);
+                    showToast('ลบประวัติไข่เรียบร้อยแล้ว');
+                }
+            };
+
+            const activePair = pairs.find(p => p.id === selectedPairId) || pairs[0];
+            const activePairClutches = activePair ? clutches.filter(c => c.pairId === activePair.id) : [];
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">3. ประวัติไข่และลูกนกแต่ละคู่</h2>
+                            <p className="text-slate-500 text-sm">บันทึกจำนวนไข่ อัตราติดเชื้อ การฟัก และลูกนกรอดชีวิต</p>
+                        </div>
+                        <button
+                            onClick={openAddClutch}
+                            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 shadow-sm transition"
+                        >
+                            <i className="fa-solid fa-egg"></i> เพิ่มบันทึกไข่คอกใหม่
+                        </button>
+                    </div>
+
+                    {/* Pair Selector Tabs */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                        {pairs.map(pair => (
+                            <button
+                                key={pair.id}
+                                onClick={() => setSelectedPairId(pair.id)}
+                                className={`px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition flex items-center gap-2 border ${selectedPairId === pair.id || (!selectedPairId && pairs[0]?.id === pair.id) ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                            >
+                                <i className="fa-solid fa-border-all"></i>
+                                {pair.cageNo} ({pair.maleBandId} x {pair.femaleBandId})
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Clutch History Cards */}
+                    {!activePair ? (
+                        <div className="bg-white p-12 rounded-2xl text-center text-slate-400 border border-slate-100">
+                            ยังไม่มีคู่ผสมในฟาร์ม โปรดจับคู่นกในเมนูก่อนหน้า
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-wrap justify-between items-center text-xs text-amber-900 gap-2">
+                                <div>
+                                    <span className="font-bold text-sm">{activePair.cageNo}</span> : ตัวผู้ <span className="font-semibold">{activePair.maleBandId}</span> x ตัวเมีย <span className="font-semibold">{activePair.femaleBandId}</span>
+                                </div>
+                                <div>เริ่มจับคู่เมื่อ: {activePair.pairDate}</div>
+                            </div>
+
+                            {activePairClutches.length === 0 ? (
+                                <div className="bg-white p-8 rounded-2xl text-center text-slate-400 border border-slate-100">
+                                    ยังไม่มีประวัติการไข่สำหรับคู่นี้
+                                </div>
+                            ) : (
+                                activePairClutches.map(clutch => (
+                                    <div key={clutch.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-sm">
+                                                    #{clutch.clutchNo}
+                                                </span>
+                                                <h4 className="font-bold text-slate-800 text-base">คอกที่ {clutch.clutchNo}</h4>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xs text-slate-400">เริ่มไข่: {clutch.startDate}</span>
+                                                <button onClick={() => handleDeleteClutch(clutch.id)} className="text-slate-300 hover:text-rose-500"><i className="fa-solid fa-trash"></i></button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                <p className="text-[10px] text-slate-400 uppercase font-semibold">ไข่ทั้งหมด</p>
+                                                <p className="text-2xl font-bold text-slate-700">{clutch.totalEggs} <span className="text-xs font-normal">ฟอง</span></p>
+                                            </div>
+                                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                                <p className="text-[10px] text-blue-500 uppercase font-semibold">ไข่มีเชื้อ</p>
+                                                <p className="text-2xl font-bold text-blue-600">{clutch.fertileEggs} <span className="text-xs font-normal">ฟอง</span></p>
+                                            </div>
+                                            <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                                                <p className="text-[10px] text-amber-600 uppercase font-semibold">ฟักเป็นตัว</p>
+                                                <p className="text-2xl font-bold text-amber-700">{clutch.hatched} <span className="text-xs font-normal">ตัว</span></p>
+                                            </div>
+                                            <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                                                <p className="text-[10px] text-emerald-600 uppercase font-semibold">รอดจนโต</p>
+                                                <p className="text-2xl font-bold text-emerald-700">{clutch.fledged} <span className="text-xs font-normal">ตัว</span></p>
+                                            </div>
+                                        </div>
+
+                                        {clutch.notes && (
+                                            <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">
+                                                <i className="fa-regular fa-note-sticky mr-1"></i> {clutch.notes}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+
+                    {/* Clutch Modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+                                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                    <h3 className="font-bold text-lg text-slate-800">บันทึกประวัติไข่คอกใหม่</h3>
+                                    <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">เลือกคู่ผสม</label>
+                                        <select
+                                            value={formData.pairId}
+                                            onChange={e => setFormData({ ...formData, pairId: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 bg-white"
+                                        >
+                                            {pairs.map(p => (
+                                                <option key={p.id} value={p.id}>{p.cageNo} ({p.maleBandId} x {p.femaleBandId})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">คอกที่</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={formData.clutchNo}
+                                                onChange={e => setFormData({ ...formData, clutchNo: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">วันที่เริ่มออกไข่</label>
+                                            <input
+                                                type="date"
+                                                value={formData.startDate}
+                                                onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">จำนวนไข่ทั้งหมด (ฟอง)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.totalEggs}
+                                                onChange={e => setFormData({ ...formData, totalEggs: Number(e.target.value) })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">ไข่มีเชื้อ (ฟอง)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.fertileEggs}
+                                                onChange={e => setFormData({ ...formData, fertileEggs: Number(e.target.value) })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">ฟักเป็นตัว (ตัว)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.hatched}
+                                                onChange={e => setFormData({ ...formData, hatched: Number(e.target.value) })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">รอดจนโต/รอดชีวิต (ตัว)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.fledged}
+                                                onChange={e => setFormData({ ...formData, fledged: Number(e.target.value) })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">หมายเหตุ</label>
+                                        <textarea
+                                            rows="2"
+                                            value={formData.notes}
+                                            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-3 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModal(false)}
+                                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 shadow-md transition"
+                                        >
+                                            บันทึกข้อมูล
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function SalesView({ birds, sales, setSales, deleteDocOnline, showToast }) {
+            const [showModal, setShowModal] = useState(false);
+            const [formData, setFormData] = useState({
+                birdBandId: '', price: 3500, deposit: 1000, status: 'reserved',
+                buyerName: '', buyerPhone: '', date: new Date().toISOString().split('T')[0], note: ''
+            });
+
+            const openAddSale = () => {
+                const firstBird = birds[0]?.bandId || birds[0]?.ring || '';
+                setFormData({
+                    birdBandId: firstBird,
+                    price: 3500,
+                    deposit: 1000,
+                    status: 'reserved',
+                    buyerName: '',
+                    buyerPhone: '',
+                    date: new Date().toISOString().split('T')[0],
+                    note: 'ส่งมอบที่ฟาร์มหรือผ่านบริการขนส่งนก'
+                });
+                setShowModal(true);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setSales([...sales, { ...formData, id: `S-${Date.now()}` }]);
+                showToast('บันทึกการขายนกเรียบร้อย');
+                setShowModal(false);
+            };
+
+            const handleDeleteSale = (id) => {
+                if (window.confirm('ลบรายการการขายนี้หรือไม่?')) {
+                    setSales(sales.filter(s => s.id !== id));
+                    deleteDocOnline('sales', id);
+                    showToast('ลบรายการขายเรียบร้อย');
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">4. บันทึกการขายนก</h2>
+                            <p className="text-slate-500 text-sm">ราคานก เงินมัดจำ ยอดคงเหลือ สถานะการจอง ข้อมูลผู้ซื้อ และการจัดส่ง</p>
+                        </div>
+                        <button
+                            onClick={openAddSale}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 shadow-sm transition"
+                        >
+                            <i className="fa-solid fa-cart-plus"></i> บันทึกการขายใหม่
+                        </button>
+                    </div>
+
+                    {/* Sales Table */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-100">
+                                        <th className="p-4">วันที่ / รหัสห่วงขา</th>
+                                        <th className="p-4">ผู้ซื้อ / เบอร์โทร</th>
+                                        <th className="p-4">ราคานก (บาท)</th>
+                                        <th className="p-4">เงินมัดจำ</th>
+                                        <th className="p-4">คงเหลือชำระ</th>
+                                        <th className="p-4">สถานะการขาย</th>
+                                        <th className="p-4">การจัดส่ง / หมายเหตุ</th>
+                                        <th className="p-4 text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-sm">
+                                    {sales.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="p-8 text-center text-slate-400">ยังไม่มีประวัติการขาย</td>
+                                        </tr>
+                                    ) : (
+                                        sales.map(sale => {
+                                            const remaining = Number(sale.price || 0) - Number(sale.deposit || 0);
+                                            return (
+                                                <tr key={sale.id} className="hover:bg-slate-50 transition">
+                                                    <td className="p-4 font-medium text-slate-800">
+                                                        <div className="font-bold text-blue-600">{sale.birdBandId}</div>
+                                                        <div className="text-xs text-slate-400">{sale.date}</div>
+                                                    </td>
+                                                    <td className="p-4 font-medium text-slate-700">
+                                                        <div>{sale.buyerName || 'ไม่ระบุ'}</div>
+                                                        <div className="text-xs text-slate-400">{sale.buyerPhone || '-'}</div>
+                                                    </td>
+                                                    <td className="p-4 font-bold text-slate-800">฿{Number(sale.price).toLocaleString()}</td>
+                                                    <td className="p-4 text-emerald-600 font-medium">฿{Number(sale.deposit).toLocaleString()}</td>
+                                                    <td className="p-4 font-bold text-rose-600">฿{remaining > 0 ? remaining.toLocaleString() : '0 (ชำระครบ)'}</td>
+                                                    <td className="p-4">
+                                                        {sale.status === 'reserved' && <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-medium"><i className="fa-solid fa-clock mr-1"></i> ติดจอง</span>}
+                                                        {sale.status === 'delivered' && <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-medium"><i className="fa-solid fa-circle-check mr-1"></i> ส่งมอบแล้ว</span>}
+                                                    </td>
+                                                    <td className="p-4 text-xs text-slate-500 max-w-[200px] truncate">{sale.note || '-'}</td>
+                                                    <td className="p-4 text-center">
+                                                        <button onClick={() => handleDeleteSale(sale.id)} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition mx-auto">
+                                                            <i className="fa-solid fa-trash text-xs"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Sales Modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+                                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                    <h3 className="font-bold text-lg text-slate-800">บันทึกการขายนก/ติดจอง</h3>
+                                    <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">เลือกนกที่ขาย/จอง *</label>
+                                            <select
+                                                value={formData.birdBandId}
+                                                onChange={e => setFormData({ ...formData, birdBandId: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white"
+                                            >
+                                                {birds.map(b => (
+                                                    <option key={b.id} value={b.bandId || b.ring}>
+                                                        {b.bandId || b.ring} ({b.name ? `${b.name} - ` : ''}{b.color})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">วันที่ตกลงขาย</label>
+                                            <input
+                                                type="date"
+                                                value={formData.date}
+                                                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">ชื่อผู้ซื้อ</label>
+                                            <input
+                                                type="text"
+                                                placeholder="ชื่อ-นามสกุล หรือชื่อเล่น"
+                                                value={formData.buyerName}
+                                                onChange={e => setFormData({ ...formData, buyerName: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์ผู้ซื้อ</label>
+                                            <input
+                                                type="text"
+                                                placeholder="08X-XXX-XXXX"
+                                                value={formData.buyerPhone}
+                                                onChange={e => setFormData({ ...formData, buyerPhone: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">ราคานกสุทธิ (บาท)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.price}
+                                                onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">เงินมัดจำ (บาท)</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.deposit}
+                                                onChange={e => setFormData({ ...formData, deposit: Number(e.target.value) })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">สถานะการขาย</label>
+                                        <select
+                                            value={formData.status}
+                                            onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white"
+                                        >
+                                            <option value="reserved">ติดจอง (จ่ายมัดจำแล้ว)</option>
+                                            <option value="delivered">ส่งมอบแล้ว (จ่ายครบ)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">วิธีการส่งมอบ / หมายเหตุ</label>
+                                        <textarea
+                                            rows="2"
+                                            placeholder="เช่น ส่งรถตู้, รับที่ฟาร์ม..."
+                                            value={formData.note}
+                                            onChange={e => setFormData({ ...formData, note: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-3 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModal(false)}
+                                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-md transition"
+                                        >
+                                            บันทึกการขาย
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function ExpensesView({ expenses, setExpenses, deleteDocOnline, showToast }) {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            const [showModal, setShowModal] = useState(false);
+            const [formData, setFormData] = useState({
+                date: new Date().toISOString().split('T')[0],
+                category: 'อาหาร/ธัญพืช',
+                amount: 500,
+                note: ''
+            });
+
+            const categoryTotals = useMemo(() => {
+                const totals = {};
+                expenses.forEach(e => {
+                    totals[e.category] = (totals[e.category] || 0) + Number(e.amount);
+                });
+                return totals;
+            }, [expenses]);
+
+            useEffect(() => {
+                if (chartRef.current) {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+
+                    const labels = Object.keys(categoryTotals);
+                    const data = Object.values(categoryTotals);
+
+                    const ctx = chartRef.current.getContext('2d');
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels.length ? labels : ['ไม่มีข้อมูล'],
+                            datasets: [{
+                                data: data.length ? data : [1],
+                                backgroundColor: [
+                                    '#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#64748b'
+                                ],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { font: { family: 'Kanit' } }
+                                }
+                            }
+                        }
+                    });
+                }
+            }, [categoryTotals]);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setExpenses([...expenses, { ...formData, id: `E-${Date.now()}` }]);
+                showToast('บันทึกค่าใช้จ่ายเรียบร้อย');
+                setShowModal(false);
+            };
+
+            const handleDelete = (id) => {
+                if (window.confirm('ลบรายการค่าใช้จ่ายนี้?')) {
+                    setExpenses(expenses.filter(e => e.id !== id));
+                    deleteDocOnline('expenses', id);
+                    showToast('ลบรายการค่าใช้จ่ายเรียบร้อย');
+                }
+            };
+
+            const totalExpense = expenses.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">5. บันทึกค่าใช้จ่าย & สรุปกราฟหมวดหมู่</h2>
+                            <p className="text-slate-500 text-sm">ช่วยวิเคราะห์และบริหารจัดการรายจ่ายฟาร์มได้อย่างแม่นยำ</p>
+                        </div>
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 shadow-sm transition"
+                        >
+                            <i className="fa-solid fa-plus"></i> เพิ่มรายการค่าใช้จ่าย
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Expense Chart Card */}
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center">
+                            <h3 className="font-bold text-slate-800 text-base mb-2 w-full text-left">สัดส่วนค่าใช้จ่ายแยกหมวด</h3>
+                            <div className="w-full h-64 relative">
+                                <canvas ref={chartRef}></canvas>
+                            </div>
+                            <div className="mt-4 text-center border-t border-slate-100 pt-3 w-full">
+                                <p className="text-xs text-slate-400">รวมค่าใช้จ่ายทั้งหมด</p>
+                                <p className="text-2xl font-bold text-rose-600">฿{totalExpense.toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        {/* Expense Table */}
+                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                            <div className="p-4 border-b border-slate-100">
+                                <h3 className="font-bold text-slate-800 text-base">รายการบันทึกค่าใช้จ่ายล่าสุด</h3>
+                            </div>
+                            <div className="overflow-x-auto flex-1">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-100">
+                                            <th className="p-4">วันที่</th>
+                                            <th className="p-4">หมวดหมู่</th>
+                                            <th className="p-4">จำนวนเงิน</th>
+                                            <th className="p-4">รายละเอียด / รายการ</th>
+                                            <th className="p-4 text-center">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-sm">
+                                        {expenses.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="p-8 text-center text-slate-400">ยังไม่มีรายการค่าใช้จ่าย</td>
+                                            </tr>
+                                        ) : (
+                                            expenses.map(exp => (
+                                                <tr key={exp.id} className="hover:bg-slate-50 transition">
+                                                    <td className="p-4 text-xs text-slate-500 font-medium">{exp.date}</td>
+                                                    <td className="p-4 font-semibold text-slate-700">
+                                                        <span className="bg-slate-100 px-2.5 py-1 rounded-full text-xs">{exp.category}</span>
+                                                    </td>
+                                                    <td className="p-4 font-bold text-rose-600">฿{Number(exp.amount).toLocaleString()}</td>
+                                                    <td className="p-4 text-xs text-slate-500 max-w-[200px] truncate">{exp.note || '-'}</td>
+                                                    <td className="p-4 text-center">
+                                                        <button onClick={() => handleDelete(exp.id)} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition mx-auto">
+                                                            <i className="fa-solid fa-trash text-xs"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Expense Modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+                                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                    <h3 className="font-bold text-lg text-slate-800">เพิ่มรายการค่าใช้จ่าย</h3>
+                                    <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+                                </div>
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">วันที่ชำระ</label>
+                                            <input
+                                                type="date"
+                                                value={formData.date}
+                                                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1">หมวดหมู่ค่าใช้จ่าย</label>
+                                            <select
+                                                value={formData.category}
+                                                onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                                            >
+                                                <option value="อาหาร/ธัญพืช">อาหาร/ธัญพืช</option>
+                                                <option value="วิตามิน/ยารักษา">วิตามิน/ยารักษา</option>
+                                                <option value="อุปกรณ์/รังไข่">อุปกรณ์/กรง/รังไข่</option>
+                                                <option value="ค่าน้ำ/ค่าไฟ">ค่าน้ำ/ค่าไฟ</option>
+                                                <option value="อื่นๆ">อื่นๆ</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">จำนวนเงิน (บาท) *</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            min="0"
+                                            value={formData.amount}
+                                            onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 font-bold"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">รายละเอียด / หมายเหตุ</label>
+                                        <textarea
+                                            rows="2"
+                                            placeholder="รายละเอียดค่าใช้จ่าย..."
+                                            value={formData.note}
+                                            onChange={e => setFormData({ ...formData, note: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-3 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModal(false)}
+                                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-md transition"
+                                        >
+                                            บันทึก
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function JsonDataModal({ birds, setBirds, pairs, clutches, sales, expenses, setShowJsonModal, showToast }) {
+            const [jsonInput, setJsonInput] = useState('');
+            const [importMode, setImportMode] = useState('birds'); // 'birds' or 'full'
+
+            // Pre-load user provided birds JSON format into textarea for easy view
+            useEffect(() => {
+                setJsonInput(JSON.stringify({ birds: USER_PROVIDED_BIRDS }, null, 2));
+            }, []);
+
+            // Quick load preset provided by user
+            const handleLoadUserPreset = () => {
+                const normalizedPreset = USER_PROVIDED_BIRDS.map(normalizeBirdData);
+                setBirds(normalizedPreset);
+                showToast(`นำเข้าข้อมูลนกจำนวน ${normalizedPreset.length} ตัวสำเร็จ!`);
+                setShowJsonModal(false);
+            };
+
+            // Parse and import user pasted JSON
+            const handleImportPastedJson = () => {
+                try {
+                    const parsed = JSON.parse(jsonInput);
+                    let rawBirds = [];
+
+                    if (Array.isArray(parsed)) {
+                        rawBirds = parsed;
+                    } else if (parsed && Array.isArray(parsed.birds)) {
+                        rawBirds = parsed.birds;
+                    } else if (parsed && typeof parsed === 'object') {
+                        // Single bird object
+                        rawBirds = [parsed];
+                    }
+
+                    if (rawBirds.length === 0) {
+                        alert('ไม่พบข้อมูลนกใน JSON ที่ระบุ กรุณาตรวจสอบฟอร์แมตอีกครั้ง');
+                        return;
+                    }
+
+                    const normalizedBirds = rawBirds.map(normalizeBirdData);
+
+                    // Combine or Replace existing birds
+                    if (window.confirm(`พบข้อมูลนก ${normalizedBirds.length} ตัว ต้องการแทนที่ข้อมูลเดิมทั้งหมดใช่หรือไม่? (กด Cancel เพื่อต่อท้ายข้อมูลเดิม)`)) {
+                        setBirds(normalizedBirds);
+                    } else {
+                        // Merge without duplicate IDs
+                        const existingIds = new Set(birds.map(b => b.id));
+                        const newBirds = [...birds];
+                        normalizedBirds.forEach(nb => {
+                            if (!existingIds.has(nb.id)) {
+                                newBirds.push(nb);
+                            }
+                        });
+                        setBirds(newBirds);
+                    }
+
+                    showToast(`นำเข้าข้อมูลเรียบร้อยแล้ว (${normalizedBirds.length} รายการ)`);
+                    setShowJsonModal(false);
+                } catch (err) {
+                    alert('เกิดข้อผิดพลาดในการอ่านไฟล์ JSON: ' + err.message);
+                }
+            };
+
+            // Export full farm backup
+            const handleExportJson = () => {
+                const fullBackup = {
+                    birds,
+                    pairs,
+                    clutches,
+                    sales,
+                    expenses,
+                    exportedAt: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(fullBackup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `gcc_farm_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('ส่งออกไฟล์สำรองข้อมูล JSON เรียบร้อยแล้ว');
+            };
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    setJsonInput(event.target.result);
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <div>
+                                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                    <i className="fa-solid fa-file-code text-amber-500"></i> นำเข้า / ส่งออกข้อมูล JSON
+                                </h3>
+                                <p className="text-xs text-slate-500">รองรับการนำเข้าประวัตินก (ละมุด, กล้วยหวาน, อัญชัน ฯลฯ) และไฟล์ Backup ฟาร์ม</p>
+                            </div>
+                            <button onClick={() => setShowJsonModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+
+                        {/* Preset Quick Import Box */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div>
+                                <p className="font-bold text-amber-900 text-sm">ชุดข้อมูลนกเริ่มต้น (8 ตัวที่ระบุในคำขอ)</p>
+                                <p className="text-xs text-amber-700">รวม ละมุด, กล้วยหวาน, อัญชัน, เมล่อน, มะพร้าว, ส้มโอ, น้อยหน่า, เลม่อน</p>
+                            </div>
+                            <button
+                                onClick={handleLoadUserPreset}
+                                className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap shadow transition"
+                            >
+                                <i className="fa-solid fa-download mr-1"></i> โหลดชุดข้อมูล 8 ตัวนี้
+                            </button>
+                        </div>
+
+                        {/* Textarea or Upload file */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="block text-xs font-semibold text-slate-700">วางข้อความ JSON หรือเลือกไฟล์ JSON</label>
+                                <label className="cursor-pointer text-xs text-emerald-600 hover:underline font-semibold flex items-center gap-1">
+                                    <i className="fa-solid fa-upload"></i> อัปโหลดไฟล์ .json
+                                    <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
+                                </label>
+                            </div>
+                            <textarea
+                                rows="8"
+                                value={jsonInput}
+                                onChange={e => setJsonInput(e.target.value)}
+                                placeholder='{ "birds": [ { "name": "ละมุด", "ring": "GCC-2022-M01", ... } ] }'
+                                className="w-full p-3 font-mono text-xs bg-slate-900 text-emerald-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            ></textarea>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap gap-3 pt-3 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={handleExportJson}
+                                className="py-2.5 px-4 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition flex items-center gap-2"
+                            >
+                                <i className="fa-solid fa-file-export text-blue-500"></i> สำรองข้อมูลทั้งหมด (Export Backup)
+                            </button>
+                            <div className="flex-1 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowJsonModal(false)}
+                                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition"
+                                >
+                                    ปิด
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleImportPastedJson}
+                                    className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 shadow-md transition flex items-center gap-2"
+                                >
+                                    <i className="fa-solid fa-check"></i> นำเข้าข้อมูล JSON นี้
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
