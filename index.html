@@ -589,6 +589,22 @@
             ? JSON.parse(__firebase_config)
             : myFirebaseConfig;
 
+        let cloudFailed = false;
+
+        function fallbackToLocal(reason) {
+            if (cloudFailed) return;
+            cloudFailed = true;
+            window.isCloudMode = false;
+            console.warn("Falling back to LocalStorage mode due to Cloud restriction:", reason);
+            if (typeof loadLocalStorage === 'function') {
+                loadLocalStorage();
+            }
+            const statusDot = document.getElementById('db-status-dot');
+            const statusText = document.getElementById('db-status-text');
+            if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-amber-500";
+            if (statusText) statusText.textContent = "บันทึกในเครื่อง (Local)";
+        }
+
         if (firebaseConfig.apiKey) {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -598,10 +614,12 @@
 
                 window.isCloudMode = true;
 
-                signInAnonymously(auth);
+                signInAnonymously(auth).catch((err) => {
+                    fallbackToLocal(err.message);
+                });
 
                 onAuthStateChanged(auth, (user) => {
-                    if (user) {
+                    if (user && !cloudFailed) {
                         const statusDot = document.getElementById('db-status-dot');
                         const statusText = document.getElementById('db-status-text');
                         if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
@@ -610,31 +628,52 @@
                         ['birds', 'pairs', 'clutches', 'sales'].forEach(collName => {
                             const colRef = collection(db, 'artifacts', appId, 'public', 'data', collName);
                             onSnapshot(colRef, (snapshot) => {
+                                if (cloudFailed) return;
                                 const items = [];
                                 snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
                                 window.appData[collName] = items;
                                 window.refreshUI();
-                            }, (err) => console.error("Cloud error:", err));
+                            }, (err) => {
+                                fallbackToLocal(err.message);
+                            });
                         });
+                    } else if (!user) {
+                        fallbackToLocal("Unauthenticated");
                     }
                 });
 
                 window.cloudSaveDoc = async function(coll, id, data) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
-                    await setDoc(docRef, data, { merge: true });
+                    if (!window.isCloudMode || cloudFailed) {
+                        return false;
+                    }
+                    try {
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
+                        await setDoc(docRef, data, { merge: true });
+                        return true;
+                    } catch(err) {
+                        fallbackToLocal(err.message);
+                        return false;
+                    }
                 };
 
                 window.cloudDeleteDoc = async function(coll, id) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
-                    await deleteDoc(docRef);
+                    if (!window.isCloudMode || cloudFailed) {
+                        return false;
+                    }
+                    try {
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', coll, id);
+                        await deleteDoc(docRef);
+                        return true;
+                    } catch(err) {
+                        fallbackToLocal(err.message);
+                        return false;
+                    }
                 };
             } catch(e) {
-                console.warn("Cloud connection error, using LocalStorage fallback", e);
-                loadLocalStorage();
+                fallbackToLocal(e.message);
             }
         } else {
-            console.log("Using LocalStorage Mode.");
-            loadLocalStorage();
+            fallbackToLocal("No Firebase Config");
         }
     </script>
 
@@ -676,10 +715,13 @@
             refreshUI();
         }
 
-        window.saveDocument = function(collectionName, id, data) {
+        window.saveDocument = async function(collectionName, id, data) {
+            let savedInCloud = false;
             if (window.isCloudMode && window.cloudSaveDoc) {
-                window.cloudSaveDoc(collectionName, id, data);
-            } else {
+                savedInCloud = await window.cloudSaveDoc(collectionName, id, data);
+            }
+            
+            if (!savedInCloud) {
                 const arr = window.appData[collectionName] || [];
                 const idx = arr.findIndex(item => item.id === id);
                 data.id = id;
@@ -690,10 +732,13 @@
             }
         };
 
-        window.deleteDocument = function(collectionName, id) {
+        window.deleteDocument = async function(collectionName, id) {
+            let deletedInCloud = false;
             if (window.isCloudMode && window.cloudDeleteDoc) {
-                window.cloudDeleteDoc(collectionName, id);
-            } else {
+                deletedInCloud = await window.cloudDeleteDoc(collectionName, id);
+            }
+            
+            if (!deletedInCloud) {
                 window.appData[collectionName] = (window.appData[collectionName] || []).filter(item => item.id !== id);
                 saveLocalStorage();
             }
@@ -1501,4 +1546,3 @@
     </script>
 </body>
 </html>
-
