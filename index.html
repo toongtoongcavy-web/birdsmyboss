@@ -244,7 +244,8 @@ window.editEgg = id => {
                 <input
                     type="text"
                     value="${esc(cycleText)}"
-                    readonly>
+                    readonly
+                >
                 <p class="text-xs text-slate-400 mt-1">
                     คู่: ${esc(pairText)}
                 </p>
@@ -255,17 +256,24 @@ window.editEgg = id => {
                 <input
                     type="number"
                     value="${esc(egg.eggNo || "")}"
-                    readonly>
+                    readonly
+                >
                 <p class="text-xs text-slate-400 mt-1">
                     เลขไข่เดิม ไม่สามารถเปลี่ยนได้
                 </p>
             </div>
 
-            ${dateField(
-                "editEggDate",
-                "วันที่ไข่",
-                toDDMMYYYY(egg.laidDate || "")
-            )}
+            <div>
+                <label>วันที่ไข่</label>
+                <input
+                    type="text"
+                    value="${esc(toDDMMYYYY(egg.laidDate || ""))}"
+                    readonly
+                >
+                <p class="text-xs text-slate-400 mt-1">
+                    วันที่ไข่เดิม ไม่สามารถเปลี่ยนได้
+                </p>
+            </div>
 
             ${dateField(
                 "editEggCheck",
@@ -273,35 +281,42 @@ window.editEgg = id => {
                 toDDMMYYYY(egg.checkDate || "")
             )}
 
-            ${dateField(
-                "editEggHatch",
-                "วันคาดฟัก",
-                toDDMMYYYY(egg.expectedHatchDate || "")
-            )}
+            <div>
+                <label>วันคาดฟัก</label>
+                <input
+                    id="editEggHatch"
+                    type="text"
+                    value="${esc(toDDMMYYYY(egg.expectedHatchDate || ""))}"
+                    readonly
+                >
+                <p class="text-xs text-slate-400 mt-1">
+                    ระบบจะคำนวณอัตโนมัติจากวันที่ไข่ + 23 วัน เมื่อผลตรวจเป็น "มีเชื้อ"
+                </p>
+            </div>
 
             <div>
                 <label>ผลตรวจเชื้อ</label>
-
                 <select id="editEggF">
-
                     <option
                         value="รอตรวจ"
-                        ${egg.fertility === "รอตรวจ" ? "selected" : ""}>
+                        ${egg.fertility === "รอตรวจ" ? "selected" : ""}
+                    >
                         รอตรวจ
                     </option>
 
                     <option
                         value="มีเชื้อ"
-                        ${egg.fertility === "มีเชื้อ" ? "selected" : ""}>
+                        ${egg.fertility === "มีเชื้อ" ? "selected" : ""}
+                    >
                         มีเชื้อ
                     </option>
 
                     <option
                         value="ไม่มีเชื้อ"
-                        ${egg.fertility === "ไม่มีเชื้อ" ? "selected" : ""}>
+                        ${egg.fertility === "ไม่มีเชื้อ" ? "selected" : ""}
+                    >
                         ไม่มีเชื้อ
                     </option>
-
                 </select>
             </div>
 
@@ -309,14 +324,14 @@ window.editEgg = id => {
 
         <button
             class="btn btn-primary w-full mt-4"
-            onclick="saveEditedEgg('${id}')">
+            onclick="saveEditedEgg('${id}')"
+        >
             บันทึกการแก้ไข
         </button>
         `
     );
 };
-  window.saveEditedEgg = async id => {
-
+window.saveEditedEgg = async id => {
     const egg = state.eggs.find(
         x => String(x.id) === String(id)
     );
@@ -329,25 +344,36 @@ window.editEgg = id => {
     const fertility =
         document.getElementById("editEggF").value;
 
+    const checkDate =
+        toISODate(
+            document.getElementById("editEggCheck").value
+        );
+
+    const laidDate = egg.laidDate || "";
+
+    let expectedHatchDate = "";
+
+    if (fertility === "มีเชื้อ" && laidDate) {
+        const hatchDate = new Date(
+            laidDate + "T00:00:00"
+        );
+
+        hatchDate.setDate(
+            hatchDate.getDate() + 23
+        );
+
+        expectedHatchDate =
+            hatchDate.toISOString().slice(0, 10);
+    }
+
     await save(
         "eggs",
         {
             cycleId: egg.cycleId,
-
             eggNo: egg.eggNo,
-
-            laidDate: toISODate(
-                document.getElementById("editEggDate").value
-            ),
-
-            checkDate: toISODate(
-                document.getElementById("editEggCheck").value
-            ),
-
-            expectedHatchDate: toISODate(
-                document.getElementById("editEggHatch").value
-            ),
-
+            laidDate: laidDate,
+            checkDate: checkDate,
+            expectedHatchDate: expectedHatchDate,
             fertility: fertility
         },
         id
