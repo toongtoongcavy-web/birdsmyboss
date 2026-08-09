@@ -355,16 +355,16 @@ window.saveEditedEgg = async id => {
 
     if (fertility === "มีเชื้อ" && laidDate) {
         const hatchDate = new Date(
-            laidDate + "T00:00:00"
+            laidDate + "T00:00:00Z"
         );
-
-        hatchDate.setDate(
-            hatchDate.getDate() + 23
+        
+        hatchDate.setUTCDate(
+            hatchDate.getUTCDate() + 23
         );
-
+        
         expectedHatchDate =
             hatchDate.toISOString().slice(0, 10);
-    }
+      }
 
     await save(
         "eggs",
