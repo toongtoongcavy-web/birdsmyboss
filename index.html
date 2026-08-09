@@ -525,7 +525,335 @@ window.saveEgg=()=>{
         fertility:document.getElementById("egF").value
     });
 };
-window.openChick=()=>modal("เพิ่มลูกนก",`<div class="grid gap-3">${ff("ccode","รหัสลูกนก")}${ff("cname","ชื่อ")}${dateField("cdate","วันเกิด","")}<div><label>พ่อ</label><select id="cf">${state.birds.map(b=>`<option value="${b.id}">${esc(birdName(b.id))}</option>`).join("")}</select></div><div><label>แม่</label><select id="cm">${state.birds.map(b=>`<option value="${b.id}">${esc(birdName(b.id))}</option>`).join("")}</select></div>${ff("cmut","Mutation")}${ff("cweight","น้ำหนักล่าสุด (g)","number")}</div><button class="btn btn-primary w-full mt-4" onclick="save('chicks',{code:document.getElementById('ccode').value,name:document.getElementById('cname').value,birthDate:toISODate(document.getElementById('cdate').value),fatherId:document.getElementById('cf').value,motherId:document.getElementById('cm').value,mutation:document.getElementById('cmut').value,latestWeight:Number(document.getElementById('cweight').value||0)})">บันทึกลูกนก</button>`);
+  window.getNextChickCode = () => {
+    const numbers = Array.isArray(state.chicks)
+        ? state.chicks
+            .map(x => {
+                const m = String(x.code || "").match(/^CH-(\d+)$/i);
+                return m ? Number(m[1]) : NaN;
+            })
+            .filter(Number.isFinite)
+        : [];
+
+    const highestNo = numbers.length
+        ? Math.max(...numbers)
+        : 0;
+
+    return `CH-${String(highestNo + 1).padStart(4, "0")}`;
+};
+
+window.openChick = () => {
+    const fertileEggs = state.eggs
+        .filter(x => x.fertility === "มีเชื้อ")
+        .sort((a, b) =>
+            String(b.laidDate || "").localeCompare(
+                String(a.laidDate || "")
+            )
+        );
+
+    modal(
+        "เพิ่มลูกนก",
+        `
+        <div class="grid gap-3">
+
+            <div>
+                <label>รหัสลูกนก</label>
+                <input
+                    id="cCode"
+                    type="text"
+                    value="${esc(getNextChickCode())}"
+                    readonly
+                >
+                <p class="text-xs text-slate-400 mt-1">
+                    ระบบสร้างรหัส Running ให้อัตโนมัติ
+                </p>
+            </div>
+
+            <div>
+                <label>รหัสห่วงขา</label>
+                <input
+                    id="cRing"
+                    type="text"
+                    placeholder="กรอกรหัสห่วงขา"
+                >
+            </div>
+
+            <div>
+                <label>ไข่ต้นทาง</label>
+                <select id="cEgg" onchange="updateChickSource()">
+                    <option value="">
+                        — เลือกไข่ต้นทาง —
+                    </option>
+
+                    ${fertileEggs.map(egg => {
+
+                        const cycle = state.cycles.find(
+                            c => String(c.id) === String(egg.cycleId)
+                        );
+
+                        const pair = cycle
+                            ? state.pairs.find(
+                                p => String(p.id) === String(cycle.pairId)
+                            )
+                            : null;
+
+                        const pairText = pair
+                            ? `${birdName(pair.maleId)} × ${birdName(pair.femaleId)}`
+                            : "";
+
+                        const cycleText = cycle
+                            ? (cycle.name || ("รอบ " + cycle.id))
+                            : "ไม่พบรอบ";
+
+                        return `
+                            <option value="${egg.id}">
+                                ${esc(cycleText)}
+                                · ไข่ #${esc(egg.eggNo || egg.id)}
+                                · ${toDDMMYYYY(egg.laidDate || "")}
+                                · ${esc(pairText)}
+                            </option>
+                        `;
+                    }).join("")}
+
+                    <option value="external">
+                        ไม่ทราบไข่ / ลูกนกจากภายนอก
+                    </option>
+                </select>
+
+                <p class="text-xs text-slate-400 mt-1">
+                    ลูกนกที่เกิดจากฟาร์มควรผูกกับไข่ต้นทาง
+                </p>
+            </div>
+
+            <div id="chickSourceInfo"
+                 class="p-3 rounded-xl bg-slate-50 text-sm text-slate-600">
+                กรุณาเลือกไข่ต้นทาง
+            </div>
+
+            <div>
+                <label>ชื่อ</label>
+                <input id="cName" type="text">
+            </div>
+
+            <div>
+                ${dateField("cDate", "วันที่ฟักจริง", "")}
+            </div>
+
+            <div>
+                <label>Mutation</label>
+                <input id="cMutation" type="text">
+            </div>
+
+            <div>
+                <label>น้ำหนักล่าสุด (g)</label>
+                <input
+                    id="cWeight"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    placeholder="0"
+                >
+            </div>
+
+            <div>
+                <label>หมายเหตุ</label>
+                <textarea id="cNotes"></textarea>
+            </div>
+
+        </div>
+
+        <button
+            class="btn btn-primary w-full mt-4"
+            onclick="saveNewChick()"
+        >
+            บันทึกลูกนก
+        </button>
+        `
+    );
+};
+window.updateChickSource = () => {
+
+    const eggId =
+        document.getElementById("cEgg")?.value;
+
+    const box =
+        document.getElementById("chickSourceInfo");
+
+    if (!box) return;
+
+    if (!eggId) {
+        box.innerHTML =
+            "กรุณาเลือกไข่ต้นทาง";
+        return;
+    }
+
+    if (eggId === "external") {
+        box.innerHTML = `
+            <div class="font-semibold">
+                🐣 ลูกนกจากภายนอก / ไม่ทราบไข่ต้นทาง
+            </div>
+            <div class="text-xs text-slate-500 mt-1">
+                สามารถกรอกข้อมูลพ่อและแม่ภายหลังได้
+            </div>
+        `;
+        return;
+    }
+
+    const egg = state.eggs.find(
+        x => String(x.id) === String(eggId)
+    );
+
+    if (!egg) {
+        box.innerHTML =
+            "ไม่พบข้อมูลไข่";
+        return;
+    }
+
+    const cycle = state.cycles.find(
+        x => String(x.id) === String(egg.cycleId)
+    );
+
+    const pair = cycle
+        ? state.pairs.find(
+            x => String(x.id) === String(cycle.pairId)
+        )
+        : null;
+
+    const father = pair
+        ? birdName(pair.maleId)
+        : "-";
+
+    const mother = pair
+        ? birdName(pair.femaleId)
+        : "-";
+
+    const cycleText = cycle
+        ? (cycle.name || ("รอบ " + cycle.id))
+        : "-";
+
+    box.innerHTML = `
+        <div class="font-semibold">
+            🥚 ไข่ #${esc(egg.eggNo || egg.id)}
+        </div>
+
+        <div class="mt-1">
+            รอบเพาะพันธุ์:
+            ${esc(cycleText)}
+        </div>
+
+        <div>
+            วันที่ไข่:
+            ${esc(toDDMMYYYY(egg.laidDate || "-"))}
+        </div>
+
+        <div>
+            วันคาดฟัก:
+            ${esc(toDDMMYYYY(egg.expectedHatchDate || "-"))}
+        </div>
+
+        <div>
+            👨 พ่อ:
+            ${esc(father)}
+        </div>
+
+        <div>
+            👩 แม่:
+            ${esc(mother)}
+        </div>
+    `;
+};
+window.saveNewChick = async () => {
+
+    const eggId =
+        document.getElementById("cEgg").value;
+
+    if (!eggId) {
+        alert("กรุณาเลือกไข่ต้นทาง");
+        return;
+    }
+
+    const code =
+        document.getElementById("cCode").value;
+
+    const ring =
+        document.getElementById("cRing").value;
+
+    const name =
+        document.getElementById("cName").value;
+
+    const birthDate =
+        toISODate(
+            document.getElementById("cDate").value
+        );
+
+    const mutation =
+        document.getElementById("cMutation").value;
+
+    const latestWeight =
+        Number(
+            document.getElementById("cWeight").value || 0
+        );
+
+    const notes =
+        document.getElementById("cNotes").value;
+
+    let egg = null;
+    let cycle = null;
+    let pair = null;
+
+    if (eggId !== "external") {
+
+        egg = state.eggs.find(
+            x => String(x.id) === String(eggId)
+        );
+
+        if (!egg) {
+            alert("ไม่พบข้อมูลไข่ต้นทาง");
+            return;
+        }
+
+        cycle = state.cycles.find(
+            x => String(x.id) === String(egg.cycleId)
+        );
+
+        pair = cycle
+            ? state.pairs.find(
+                x => String(x.id) === String(cycle.pairId)
+            )
+            : null;
+    }
+
+    await save(
+        "chicks",
+        {
+            code: code,
+            ring: ring,
+            name: name,
+
+            eggId:
+                eggId === "external"
+                    ? ""
+                    : eggId,
+
+            cycleId:
+                cycle?.id || "",
+
+            fatherId:
+                pair?.maleId || "",
+
+            motherId:
+                pair?.femaleId || "",
+
+            birthDate: birthDate,
+
+            mutation: mutation,
+
+            latestWeight: latestWeight,
+
+            notes: notes
+        }
+    );
+};
 window.openFinance=type=>modal(type==="income"?"เพิ่มรายรับ":"เพิ่มรายจ่าย",`<div class="grid gap-3">${dateField("fd","วันที่",todayDDMMYYYY())}${ff("fa","จำนวนเงิน","number","0")}${ff("fx","รายละเอียด")}${type==="expense"?`<div><label>หมวด</label><select id="fc"><option>อาหารนก</option><option>ยา/วิตามิน</option><option>วัสดุทำรัง</option><option>ทำความสะอาด</option><option>ค่าไฟ</option><option>ค่าน้ำ</option><option>ค่าส่ง</option><option>บรรจุภัณฑ์</option><option>อุปกรณ์ฟาร์ม</option><option>ซื้อนก</option><option>อื่น ๆ</option></select></div>`:""}</div><button class="btn btn-primary w-full mt-4" onclick="save('${type==="income"?"income":"expenses"}',{date:toISODate(document.getElementById('fd').value),amount:Number(document.getElementById('fa').value||0),description:document.getElementById('fx').value,${type==="expense"?"category:document.getElementById('fc').value":""}})">บันทึก</button>`);
 window.showBird=id=>{const b=state.birds.find(x=>x.id===id);if(!b)return;modal("ข้อมูลนก",`<div class="space-y-3"><div class="text-2xl font-extrabold">${esc(b.name||"-")}</div><div class="grid grid-cols-2 gap-2 text-sm"><div><b>รหัส:</b> ${esc(b.ring||b.code||b.id)}</div><div><b>Mutation:</b> ${esc(b.color||"-")}</div><div><b>เพศ:</b> ${esc(b.gender||"-")}</div><div><b>วันเกิด:</b> ${esc(b.dob||"-")}</div><div><b>สายเลือด:</b> ${esc(b.bloodline||"-")}</div><div><b>สถานะ:</b> ${esc(b.status||"-")}</div></div>${b.photoUrl?`<img src="${esc(b.photoUrl)}" class="w-full max-h-64 object-contain rounded-xl bg-slate-50">`:""}<div class="flex gap-2"><button class="btn btn-primary flex-1" onclick="openSale('${id}')">💵 บันทึกการขาย</button><button class="btn btn-secondary flex-1" onclick="openWeight('${id}')">⚖️ เพิ่มน้ำหนัก</button></div><div id="qr" class="flex justify-center p-3"></div><p class="text-sm text-slate-600">${esc(b.notes||"")}</p></div>`);setTimeout(()=>new QRCode(document.getElementById("qr"),{text:location.href.split("#")[0]+"#bird="+encodeURIComponent(id),width:150,height:150}),50)};
 window.openSale=id=>{modal("บันทึกการขาย",`<div class="grid gap-3">${dateField("sd","วันที่ขาย",todayDDMMYYYY())}${ff("scustomer","ชื่อลูกค้า")}${ff("samount","ราคาขาย","number","0")}${ff("sship","ค่าขนส่ง","number","0")}${ff("schannel","ช่องทางการขาย","text","Facebook")}${ff("spayment","วิธีรับเงิน","text","โอน")}</div><button class="btn btn-primary w-full mt-4" onclick="saveSale('${id}')">บันทึกการขาย</button>`)}
