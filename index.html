@@ -142,7 +142,7 @@ window.saveCycle=()=>save("cycles",{pairId:document.getElementById("cyPair").val
 window.openEgg=()=>{const cycles=[...state.cycles].sort((a,b)=>String(b.firstEggDate||"").localeCompare(String(a.firstEggDate||"")));if(!cycles.length){modal("เพิ่มไข่",`<div class="p-4 bg-amber-50 rounded-xl text-amber-800">ยังไม่มี <b>รอบเพาะพันธุ์</b> ในฐานข้อมูล จึงยังไม่สามารถผูกไข่ได้</div><button class="btn btn-primary w-full mt-4" onclick="closeModal();openCycle()">＋ สร้างรอบเพาะพันธุ์</button>`);return}modal("เพิ่มไข่",`<div class="grid gap-3"><div><label>รอบเพาะพันธุ์</label><select id="egCycle" required onchange="setNextEggNo()"><option value="">— เลือกรอบเพาะพันธุ์ —</option>${cycles.map(x=>{const p=state.pairs.find(q=>q.id===x.pairId);const pairText=p?` · ${birdName(p.maleId)} × ${birdName(p.femaleId)}`:"";return `<option value="${x.id}">${esc(x.name||("รอบ "+x.id))} · ${toDDMMYYYY(x.firstEggDate||"")}${esc(pairText)}</option>`}).join("")}</select></div><div>
 <label>ลำดับไข่</label>
 <input id="egNo" type="number" min="1" readonly>
-<p class="text-xs text-slate-400 mt-1">ระบบกำหนดลำดับให้อัตโนมัติตามรอบเพาะพันธุ์</p>
+<p class="text-xs text-slate-400 mt-1">ระบบกำหนดลำดับให้อัตโนมัติตามรอบเพาะพันธุ์ </p>
 </div>${dateField("egDate","วันที่ไข่",todayDDMMYYYY())}${dateField("egCheck","วันที่ตรวจเชื้อ","")}${dateField("egHatch","วันคาดฟัก","")}<div><label>ผลตรวจเชื้อ</label><select id="egF"><option value="รอตรวจ">รอตรวจ</option><option value="มีเชื้อ">มีเชื้อ</option><option value="ไม่มีเชื้อ">ไม่มีเชื้อ</option></select></div></div><button class="btn btn-primary w-full mt-4" onclick="saveEgg()">บันทึกไข่</button>`); setNextEggNo();};
 function setNextEggNo(){
     const cycleId = document.getElementById("egCycle")?.value;
