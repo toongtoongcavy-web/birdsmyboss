@@ -139,7 +139,36 @@ window.reactivatePair=async id=>{const p=state.pairs.find(x=>x.id===id);if(!p)re
 window.showPairLog=id=>{const p=state.pairs.find(x=>x.id===id);if(!p)return;modal("ประวัติคู่",`<div class="space-y-2"><div><b>${esc(p.name||p.id)}</b></div><div>♂ ${esc(birdName(p.maleId||p.maleBirdId))}</div><div>♀ ${esc(birdName(p.femaleId||p.femaleBirdId))}</div><hr>${(p.statusHistory||[]).map(h=>`<div class="p-2 rounded-lg bg-slate-50">${esc(String(h.status||""))} · ${toDDMMYYYY(String(h.date||"").slice(0,10))}</div>`).join("")||"<div class='text-slate-400'>ไม่มีประวัติสถานะ</div>"}</div>`)};
 window.openCycle=()=>{const activePairs=state.pairs.filter(p=>(p.status||"active")==="active");if(!activePairs.length){alert("ยังไม่มีคู่ ACTIVE กรุณาสร้างคู่พ่อแม่พันธุ์ก่อน");return}modal("เพิ่มรอบเพาะพันธุ์",`<div class="grid gap-3"><div><label>คู่พ่อแม่พันธุ์</label><select id="cyPair">${activePairs.map(p=>`<option value="${p.id}">${esc(p.name||p.id)} · ${esc(birdName(p.maleId))} × ${esc(birdName(p.femaleId))}</option>`).join("")}</select></div>${ff("cyName","ชื่อ/เลขรอบ")}${dateField("cyDate","วันที่ไข่ฟองแรก",todayDDMMYYYY())}</div><button class="btn btn-primary w-full mt-4" onclick="saveCycle()">บันทึกรอบ</button>`)};
 window.saveCycle=()=>save("cycles",{pairId:document.getElementById("cyPair").value,name:document.getElementById("cyName").value,firstEggDate:toISODate(document.getElementById("cyDate").value),eggCount:0,hatchedCount:0});
-window.openEgg=()=>{const cycles=[...state.cycles].sort((a,b)=>String(b.firstEggDate||"").localeCompare(String(a.firstEggDate||"")));if(!cycles.length){modal("เพิ่มไข่",`<div class="p-4 bg-amber-50 rounded-xl text-amber-800">ยังไม่มี <b>รอบเพาะพันธุ์</b> ในฐานข้อมูล จึงยังไม่สามารถผูกไข่ได้</div><button class="btn btn-primary w-full mt-4" onclick="closeModal();openCycle()">＋ สร้างรอบเพาะพันธุ์</button>`);return}modal("เพิ่มไข่",`<div class="grid gap-3"><div><label>รอบเพาะพันธุ์</label><select id="egCycle" required><option value="">— เลือกรอบเพาะพันธุ์ —</option>${cycles.map(x=>{const p=state.pairs.find(q=>q.id===x.pairId);const pairText=p?` · ${birdName(p.maleId)} × ${birdName(p.femaleId)}`:"";return `<option value="${x.id}">${esc(x.name||("รอบ "+x.id))} · ${toDDMMYYYY(x.firstEggDate||"")}${esc(pairText)}</option>`}).join("")}</select></div>${ff("egNo","ลำดับไข่")}${dateField("egDate","วันที่ไข่",todayDDMMYYYY())}${dateField("egCheck","วันที่ตรวจเชื้อ","")}${dateField("egHatch","วันคาดฟัก","")}<div><label>ผลตรวจเชื้อ</label><select id="egF"><option value="รอตรวจ">รอตรวจ</option><option value="มีเชื้อ">มีเชื้อ</option><option value="ไม่มีเชื้อ">ไม่มีเชื้อ</option></select></div></div><button class="btn btn-primary w-full mt-4" onclick="saveEgg()">บันทึกไข่</button>`)};
+window.openEgg=()=>{const cycles=[...state.cycles].sort((a,b)=>String(b.firstEggDate||"").localeCompare(String(a.firstEggDate||"")));if(!cycles.length){modal("เพิ่มไข่",`<div class="p-4 bg-amber-50 rounded-xl text-amber-800">ยังไม่มี <b>รอบเพาะพันธุ์</b> ในฐานข้อมูล จึงยังไม่สามารถผูกไข่ได้</div><button class="btn btn-primary w-full mt-4" onclick="closeModal();openCycle()">＋ สร้างรอบเพาะพันธุ์</button>`);return}modal("เพิ่มไข่",`<div class="grid gap-3"><div><label>รอบเพาะพันธุ์</label><select id="egCycle" required onchange="setNextEggNo()"><option value="">— เลือกรอบเพาะพันธุ์ —</option>${cycles.map(x=>{const p=state.pairs.find(q=>q.id===x.pairId);const pairText=p?` · ${birdName(p.maleId)} × ${birdName(p.femaleId)}`:"";return `<option value="${x.id}">${esc(x.name||("รอบ "+x.id))} · ${toDDMMYYYY(x.firstEggDate||"")}${esc(pairText)}</option>`}).join("")}</select></div><div>
+<label>ลำดับไข่</label>
+<input id="egNo" type="number" min="1" readonly>
+<p class="text-xs text-slate-400 mt-1">ระบบกำหนดลำดับให้อัตโนมัติตามรอบเพาะพันธุ์</p>
+</div>${dateField("egDate","วันที่ไข่",todayDDMMYYYY())}${dateField("egCheck","วันที่ตรวจเชื้อ","")}${dateField("egHatch","วันคาดฟัก","")}<div><label>ผลตรวจเชื้อ</label><select id="egF"><option value="รอตรวจ">รอตรวจ</option><option value="มีเชื้อ">มีเชื้อ</option><option value="ไม่มีเชื้อ">ไม่มีเชื้อ</option></select></div></div><button class="btn btn-primary w-full mt-4" onclick="saveEgg()">บันทึกไข่</button>`)};
+function setNextEggNo(){
+    const cycleId = document.getElementById("egCycle")?.value;
+    const input = document.getElementById("egNo");
+
+    if (!input) return;
+
+    if (!cycleId) {
+        input.value = "";
+        return;
+    }
+
+    const eggs = state.eggs.filter(
+        e => String(e.cycleId) === String(cycleId)
+    );
+
+    const numbers = eggs
+        .map(e => Number(e.eggNo))
+        .filter(Number.isFinite);
+
+    const nextNo = numbers.length
+        ? Math.max(...numbers) + 1
+        : 1;
+
+    input.value = String(nextNo);
+}
 window.saveEgg=()=>{const cycleId=document.getElementById("egCycle").value;if(!cycleId){alert("กรุณาเลือกรอบเพาะพันธุ์");return}return save("eggs",{cycleId,eggNo:document.getElementById("egNo").value,laidDate:toISODate(document.getElementById("egDate").value),checkDate:toISODate(document.getElementById("egCheck").value),expectedHatchDate:toISODate(document.getElementById("egHatch").value),fertility:document.getElementById("egF").value})};
 window.openChick=()=>modal("เพิ่มลูกนก",`<div class="grid gap-3">${ff("ccode","รหัสลูกนก")}${ff("cname","ชื่อ")}${dateField("cdate","วันเกิด","")}<div><label>พ่อ</label><select id="cf">${state.birds.map(b=>`<option value="${b.id}">${esc(birdName(b.id))}</option>`).join("")}</select></div><div><label>แม่</label><select id="cm">${state.birds.map(b=>`<option value="${b.id}">${esc(birdName(b.id))}</option>`).join("")}</select></div>${ff("cmut","Mutation")}${ff("cweight","น้ำหนักล่าสุด (g)","number")}</div><button class="btn btn-primary w-full mt-4" onclick="save('chicks',{code:document.getElementById('ccode').value,name:document.getElementById('cname').value,birthDate:toISODate(document.getElementById('cdate').value),fatherId:document.getElementById('cf').value,motherId:document.getElementById('cm').value,mutation:document.getElementById('cmut').value,latestWeight:Number(document.getElementById('cweight').value||0)})">บันทึกลูกนก</button>`);
 window.openFinance=type=>modal(type==="income"?"เพิ่มรายรับ":"เพิ่มรายจ่าย",`<div class="grid gap-3">${dateField("fd","วันที่",todayDDMMYYYY())}${ff("fa","จำนวนเงิน","number","0")}${ff("fx","รายละเอียด")}${type==="expense"?`<div><label>หมวด</label><select id="fc"><option>อาหารนก</option><option>ยา/วิตามิน</option><option>วัสดุทำรัง</option><option>ทำความสะอาด</option><option>ค่าไฟ</option><option>ค่าน้ำ</option><option>ค่าส่ง</option><option>บรรจุภัณฑ์</option><option>อุปกรณ์ฟาร์ม</option><option>ซื้อนก</option><option>อื่น ๆ</option></select></div>`:""}</div><button class="btn btn-primary w-full mt-4" onclick="save('${type==="income"?"income":"expenses"}',{date:toISODate(document.getElementById('fd').value),amount:Number(document.getElementById('fa').value||0),description:document.getElementById('fx').value,${type==="expense"?"category:document.getElementById('fc').value":""}})">บันทึก</button>`);
