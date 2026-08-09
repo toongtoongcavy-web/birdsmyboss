@@ -113,11 +113,248 @@ function renderCycles(){
   </div>`;
 }
 function renderEggs(){
-  document.getElementById("eggs").innerHTML=`<div class="card p-5">
-    <div class="flex justify-between"><div><h3 class="font-extrabold">🥚 ไข่</h3><p class="text-sm text-slate-500">บันทึกไข่ ตรวจเชื้อ และวันคาดฟัก</p></div><button class="btn btn-primary" onclick="openEgg()">＋ เพิ่มไข่</button></div>
-    <div class="mt-4 grid gap-2">${state.eggs.map(x=>`<div class="p-3 border rounded-xl flex justify-between"><div><b>${esc(x.eggNo||x.id)}</b> · ${toDDMMYYYY(x.laidDate||"")}</div><span class="badge">${esc(x.fertility||"รอตรวจ")}</span></div>`).join("")||"<p class='text-slate-400'>ยังไม่มีข้อมูลไข่</p>"}</div>
-  </div>`;
+    document.getElementById("eggs").innerHTML = `
+        <div class="card p-5">
+
+            <div class="flex justify-between">
+                <div>
+                    <h3 class="font-extrabold">🥚 ไข่</h3>
+                    <p class="text-sm text-slate-500">
+                        บันทึกไข่ ตรวจเชื้อ และวันคาดฟัก
+                    </p>
+                </div>
+
+                <button class="btn btn-primary" onclick="openEgg()">
+                    ＋ เพิ่มไข่
+                </button>
+            </div>
+
+            <div class="mt-4 grid gap-2">
+
+                ${
+                    state.eggs.length
+                    ? state.eggs.map(x => {
+
+                        const cycle = state.cycles.find(
+                            c => String(c.id) === String(x.cycleId)
+                        );
+
+                        const pair = cycle
+                            ? state.pairs.find(
+                                p => String(p.id) === String(cycle.pairId)
+                            )
+                            : null;
+
+                        const pairText = pair
+                            ? `${birdName(pair.maleId)} × ${birdName(pair.femaleId)}`
+                            : "ไม่พบข้อมูลคู่พ่อแม่";
+
+                        const cycleText = cycle
+                            ? `${cycle.name || ("รอบ " + cycle.id)}`
+                            : "ไม่พบรอบเพาะพันธุ์";
+
+                        return `
+                            <div class="p-3 border rounded-xl">
+
+                                <div class="flex justify-between items-start gap-3">
+
+                                    <div class="min-w-0">
+
+                                        <div class="font-bold">
+                                            🥚 ไข่ #${esc(x.eggNo || x.id)}
+                                            · ${toDDMMYYYY(x.laidDate || "")}
+                                        </div>
+
+                                        <div class="text-sm text-slate-600 mt-1">
+                                            รอบ: ${esc(cycleText)}
+                                        </div>
+
+                                        <div class="text-sm text-slate-600">
+                                            คู่: ${esc(pairText)}
+                                        </div>
+
+                                    </div>
+
+                                    <div class="flex items-center gap-2 shrink-0">
+
+                                        <span class="badge">
+                                            ${esc(x.fertility || "รอตรวจ")}
+                                        </span>
+
+                                        <button
+                                            class="btn btn-secondary"
+                                            onclick="editEgg('${x.id}')">
+                                            ✏️ แก้ไข
+                                        </button>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        `;
+
+                    }).join("")
+                    : `
+                        <p class="text-slate-400">
+                            ยังไม่มีข้อมูลไข่
+                        </p>
+                    `
+                }
+
+            </div>
+        </div>
+    `;
 }
+window.editEgg = id => {
+    const egg = state.eggs.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (!egg) {
+        alert("ไม่พบข้อมูลไข่");
+        return;
+    }
+
+    const cycle = state.cycles.find(
+        x => String(x.id) === String(egg.cycleId)
+    );
+
+    const pair = cycle
+        ? state.pairs.find(
+            x => String(x.id) === String(cycle.pairId)
+        )
+        : null;
+
+    const pairText = pair
+        ? `${birdName(pair.maleId)} × ${birdName(pair.femaleId)}`
+        : "ไม่พบข้อมูลคู่พ่อแม่";
+
+    const cycleText = cycle
+        ? `${cycle.name || ("รอบ " + cycle.id)} · ${toDDMMYYYY(cycle.firstEggDate || "")}`
+        : "ไม่พบรอบเพาะพันธุ์";
+
+    modal(
+        "แก้ไขข้อมูลไข่",
+        `
+        <div class="grid gap-3">
+
+            <div>
+                <label>รอบเพาะพันธุ์</label>
+                <input
+                    type="text"
+                    value="${esc(cycleText)}"
+                    readonly>
+                <p class="text-xs text-slate-400 mt-1">
+                    คู่: ${esc(pairText)}
+                </p>
+            </div>
+
+            <div>
+                <label>ลำดับไข่</label>
+                <input
+                    type="number"
+                    value="${esc(egg.eggNo || "")}"
+                    readonly>
+                <p class="text-xs text-slate-400 mt-1">
+                    เลขไข่เดิม ไม่สามารถเปลี่ยนได้
+                </p>
+            </div>
+
+            ${dateField(
+                "editEggDate",
+                "วันที่ไข่",
+                toDDMMYYYY(egg.laidDate || "")
+            )}
+
+            ${dateField(
+                "editEggCheck",
+                "วันที่ตรวจเชื้อ",
+                toDDMMYYYY(egg.checkDate || "")
+            )}
+
+            ${dateField(
+                "editEggHatch",
+                "วันคาดฟัก",
+                toDDMMYYYY(egg.expectedHatchDate || "")
+            )}
+
+            <div>
+                <label>ผลตรวจเชื้อ</label>
+
+                <select id="editEggF">
+
+                    <option
+                        value="รอตรวจ"
+                        ${egg.fertility === "รอตรวจ" ? "selected" : ""}>
+                        รอตรวจ
+                    </option>
+
+                    <option
+                        value="มีเชื้อ"
+                        ${egg.fertility === "มีเชื้อ" ? "selected" : ""}>
+                        มีเชื้อ
+                    </option>
+
+                    <option
+                        value="ไม่มีเชื้อ"
+                        ${egg.fertility === "ไม่มีเชื้อ" ? "selected" : ""}>
+                        ไม่มีเชื้อ
+                    </option>
+
+                </select>
+            </div>
+
+        </div>
+
+        <button
+            class="btn btn-primary w-full mt-4"
+            onclick="saveEditedEgg('${id}')">
+            บันทึกการแก้ไข
+        </button>
+        `
+    );
+};
+  window.saveEditedEgg = async id => {
+
+    const egg = state.eggs.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (!egg) {
+        alert("ไม่พบข้อมูลไข่");
+        return;
+    }
+
+    const fertility =
+        document.getElementById("editEggF").value;
+
+    await save(
+        "eggs",
+        {
+            cycleId: egg.cycleId,
+
+            eggNo: egg.eggNo,
+
+            laidDate: toISODate(
+                document.getElementById("editEggDate").value
+            ),
+
+            checkDate: toISODate(
+                document.getElementById("editEggCheck").value
+            ),
+
+            expectedHatchDate: toISODate(
+                document.getElementById("editEggHatch").value
+            ),
+
+            fertility: fertility
+        },
+        id
+    );
+
+    closeModal();
+};
 function renderChicks(){document.getElementById("chicks").innerHTML=`<div class="card p-5"><div class="flex justify-between"><div><h3 class="font-extrabold">🐣 ลูกนก & น้ำหนัก</h3><p class="text-sm text-slate-500">ทะเบียนลูกนกและน้ำหนักล่าสุด</p></div><button class="btn btn-primary" onclick="openChick()">＋ เพิ่มลูกนก</button></div><div class="mt-4 grid gap-2">${state.chicks.map(x=>`<div class="p-3 border rounded-xl"><div class="flex justify-between"><b>${esc(x.code||x.id)} · ${esc(x.name||"")}</b><span>${x.latestWeight?x.latestWeight+" g":"-"}</span></div><div class="text-xs text-slate-500">พ่อ ${esc(birdName(x.fatherId))} · แม่ ${esc(birdName(x.motherId))} · เกิด ${esc(x.birthDate||"-")}</div></div>`).join("")||"<p class='text-slate-400'>ยังไม่มีลูกนก</p>"}</div></div>`}
 function renderFinance(){const inc=state.income.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.description||x.birdId||"-")}</td><td class="text-emerald-700">${money(x.amount)}</td></tr>`).join(""),exp=state.expenses.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.category||x.description||"-")}</td><td class="text-rose-700">${money(x.amount)}</td></tr>`).join("");document.getElementById("finance").innerHTML=`<div class="grid lg:grid-cols-2 gap-4"><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬆️ รายรับ</h3><button class="btn btn-primary text-xs" onclick="openFinance('income')">＋</button></div><table><tbody>${inc||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬇️ รายจ่าย</h3><button class="btn btn-primary text-xs" onclick="openFinance('expense')">＋</button></div><table><tbody>${exp||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div></div>`}
 function modal(t,b){document.getElementById("modalTitle").textContent=t;document.getElementById("modalBody").innerHTML=b;document.getElementById("modal").classList.remove("hidden");document.getElementById("modal").classList.add("flex")}window.closeModal=()=>document.getElementById("modal").classList.add("hidden");async function save(k,data,id){const ref=doc(coll(k),id||crypto.randomUUID());await setDoc(ref,{...data,updatedAt:serverTimestamp()},{merge:true});await load(k);render();closeModal()}
