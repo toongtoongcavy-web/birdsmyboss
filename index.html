@@ -94,7 +94,7 @@ function renderPairs(){
     <div class="card p-4 mb-4 flex flex-wrap justify-between items-center gap-3">
       <div><h3 class="font-extrabold">คู่พ่อแม่พันธุ์</h3><p class="text-xs text-slate-500">ไม่ลบประวัติเดิม — เปลี่ยนสถานะเป็น ACTIVE / INACTIVE เพื่อเก็บ Log</p></div>
       <div class="flex gap-2 items-center">
-        <select id="pairStatusFilter" onchange="renderPairs()" class="max-w-[180px]">
+        <select id="pairStatusFilter" onchange="window.renderPairs()">
           <option value="active" ${filter==="active"?"selected":""}>แสดงเฉพาะ ACTIVE</option>
           <option value="all" ${filter==="all"?"selected":""}>แสดงทั้งหมด</option>
           <option value="inactive" ${filter==="inactive"?"selected":""}>แสดงเฉพาะ INACTIVE</option>
@@ -104,6 +104,7 @@ function renderPairs(){
     </div>
     <div class="card overflow-auto"><table><thead><tr><th>ชื่อคู่</th><th>ตัวผู้</th><th>ตัวเมีย</th><th>สถานะ</th><th>พันธุกรรม</th><th>จัดการ</th></tr></thead><tbody>${rows||`<tr><td colspan="6" class="text-slate-400">ไม่พบข้อมูลตามตัวกรอง</td></tr>`}</tbody></table></div>`;
 }
+  window.renderPairs = renderPairs;
 function renderCycles(){
   const activePairs=state.pairs.filter(p=>(p.status||"active")==="active");
   document.getElementById("cycles").innerHTML=`<div class="card p-5">
