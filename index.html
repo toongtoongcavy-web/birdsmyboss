@@ -155,17 +155,25 @@ function setNextEggNo(){
         return;
     }
 
-    const eggs = state.eggs.filter(
-        e => String(e.cycleId) === String(cycleId)
-    );
+    const eggs = Array.isArray(state.eggs)
+        ? state.eggs.filter(
+            e => String(e.cycleId) === String(cycleId)
+          )
+        : [];
 
     const numbers = eggs
         .map(e => Number(e.eggNo))
         .filter(Number.isFinite);
 
-    const nextNo = numbers.length
-        ? Math.max(...numbers) + 1
-        : 1;
+    const legacyCount = eggs.filter(
+        e => !Number.isFinite(Number(e.eggNo))
+    ).length;
+
+    const highestNo = numbers.length
+        ? Math.max(...numbers)
+        : 0;
+
+    const nextNo = Math.max(highestNo, legacyCount) + 1;
 
     input.value = String(nextNo);
 }
