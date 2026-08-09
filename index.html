@@ -143,7 +143,7 @@ window.openEgg=()=>{const cycles=[...state.cycles].sort((a,b)=>String(b.firstEgg
 <label>ลำดับไข่</label>
 <input id="egNo" type="number" min="1" readonly>
 <p class="text-xs text-slate-400 mt-1">ระบบกำหนดลำดับให้อัตโนมัติตามรอบเพาะพันธุ์</p>
-</div>${dateField("egDate","วันที่ไข่",todayDDMMYYYY())}${dateField("egCheck","วันที่ตรวจเชื้อ","")}${dateField("egHatch","วันคาดฟัก","")}<div><label>ผลตรวจเชื้อ</label><select id="egF"><option value="รอตรวจ">รอตรวจ</option><option value="มีเชื้อ">มีเชื้อ</option><option value="ไม่มีเชื้อ">ไม่มีเชื้อ</option></select></div></div><button class="btn btn-primary w-full mt-4" onclick="saveEgg()">บันทึกไข่</button>`)};
+</div>${dateField("egDate","วันที่ไข่",todayDDMMYYYY())}${dateField("egCheck","วันที่ตรวจเชื้อ","")}${dateField("egHatch","วันคาดฟัก","")}<div><label>ผลตรวจเชื้อ</label><select id="egF"><option value="รอตรวจ">รอตรวจ</option><option value="มีเชื้อ">มีเชื้อ</option><option value="ไม่มีเชื้อ">ไม่มีเชื้อ</option></select></div></div><button class="btn btn-primary w-full mt-4" onclick="saveEgg()">บันทึกไข่</button>`); setNextEggNo();};
 function setNextEggNo(){
     const cycleId = document.getElementById("egCycle")?.value;
     const input = document.getElementById("egNo");
