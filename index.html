@@ -409,19 +409,11 @@ function renderChicks(){
                 ${
                     state.chicks.map(x => {
 
-                        const egg = state.eggs.find(
-                            e => String(e.id) === String(x.eggId)
-                        );
-
-                        const sourceText =
-                            x.eggId
-                                ? egg
-                                    ? `ไข่ #${esc(egg.eggNo || egg.id)} · ${esc(toDDMMYYYY(egg.laidDate || ""))}`
-                                    : "ไม่พบข้อมูลไข่ต้นทาง"
-                                : "ลูกนกจากภายนอก / ไม่ทราบไข่ต้นทาง";
-
                         return `
-                            <div class="p-3 border rounded-xl">
+                            <div
+                                class="p-3 border rounded-xl cursor-pointer hover:bg-slate-50"
+                                onclick="openChickDetail('${x.id}')"
+                            >
 
                                 <div class="flex justify-between items-start gap-3">
 
@@ -439,7 +431,19 @@ function renderChicks(){
 
                                         <div class="text-sm text-slate-600 mt-1">
                                             🥚 ไข่ต้นทาง:
-                                            ${sourceText}
+                                            ${
+                                                x.eggId
+                                                    ? `ไข่ #${esc(
+                                                        (
+                                                            state.eggs.find(
+                                                                e =>
+                                                                    String(e.id) ===
+                                                                    String(x.eggId)
+                                                            ) || {}
+                                                        ).eggNo || "-"
+                                                    )}`
+                                                    : "ลูกนกจากภายนอก / ไม่ทราบไข่ต้นทาง"
+                                            }
                                         </div>
 
                                         <div class="text-sm text-slate-600 mt-1">
@@ -452,11 +456,11 @@ function renderChicks(){
 
                                         <div class="text-sm text-slate-600 mt-1">
                                             เกิด:
-                                            ${esc(
+                                            ${
                                                 x.birthDate
                                                     ? toDDMMYYYY(x.birthDate)
                                                     : "-"
-                                            )}
+                                            }
                                         </div>
 
                                     </div>
@@ -473,8 +477,11 @@ function renderChicks(){
 
                             </div>
                         `;
+
                     }).join("")
+
                     ||
+
                     "<p class='text-slate-400'>ยังไม่มีลูกนก</p>"
                 }
 
@@ -482,6 +489,182 @@ function renderChicks(){
         </div>
     `;
 }
+window.openChickDetail = id => {
+
+    const chick = state.chicks.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (!chick) {
+        alert("ไม่พบข้อมูลลูกนก");
+        return;
+    }
+
+    const egg = chick.eggId
+        ? state.eggs.find(
+            x => String(x.id) === String(chick.eggId)
+        )
+        : null;
+
+    const cycle = egg
+        ? state.cycles.find(
+            x => String(x.id) === String(egg.cycleId)
+        )
+        : null;
+
+    const pair = cycle
+        ? state.pairs.find(
+            x => String(x.id) === String(cycle.pairId)
+        )
+        : null;
+
+    const father = chick.fatherId
+        ? birdName(chick.fatherId)
+        : "-";
+
+    const mother = chick.motherId
+        ? birdName(chick.motherId)
+        : "-";
+
+    const sourceText = egg
+        ? `ไข่ #${esc(egg.eggNo || egg.id)}`
+        : "ลูกนกจากภายนอก / ไม่ทราบไข่ต้นทาง";
+
+    modal(
+        "รายละเอียดลูกนก",
+        `
+        <div class="grid gap-3">
+
+            <div class="p-4 rounded-xl bg-slate-50">
+
+                <div class="text-lg font-extrabold">
+                    🐣 ${esc(chick.code || chick.id)}
+                    ${chick.name ? ` · ${esc(chick.name)}` : ""}
+                </div>
+
+                <div class="text-sm text-slate-500 mt-1">
+                    ลูกนก
+                </div>
+
+            </div>
+
+            <div>
+                <label>รหัสห่วงขา</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${esc(chick.ring || "-")}
+                </div>
+            </div>
+
+            <div>
+                <label>ไข่ต้นทาง</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${sourceText}
+                </div>
+            </div>
+
+            <div>
+                <label>รอบเพาะพันธุ์</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${
+                        cycle
+                            ? esc(
+                                cycle.name ||
+                                ("รอบ " + cycle.id)
+                            )
+                            : "-"
+                    }
+                </div>
+            </div>
+
+            <div>
+                <label>วันที่ไข่</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${
+                        egg?.laidDate
+                            ? toDDMMYYYY(egg.laidDate)
+                            : "-"
+                    }
+                </div>
+            </div>
+
+            <div>
+                <label>วันคาดฟัก</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${
+                        egg?.expectedHatchDate
+                            ? toDDMMYYYY(
+                                egg.expectedHatchDate
+                            )
+                            : "-"
+                    }
+                </div>
+            </div>
+
+            <div>
+                <label>วันที่ฟักจริง</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${
+                        chick.birthDate
+                            ? toDDMMYYYY(chick.birthDate)
+                            : "-"
+                    }
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-3">
+
+                <div>
+                    <label>👨 พ่อ</label>
+                    <div class="p-3 border rounded-xl bg-slate-50">
+                        ${esc(father)}
+                    </div>
+                </div>
+
+                <div>
+                    <label>👩 แม่</label>
+                    <div class="p-3 border rounded-xl bg-slate-50">
+                        ${esc(mother)}
+                    </div>
+                </div>
+
+            </div>
+
+            <div>
+                <label>Mutation</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${esc(chick.mutation || "-")}
+                </div>
+            </div>
+
+            <div>
+                <label>น้ำหนักล่าสุด</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${
+                        chick.latestWeight
+                            ? `${esc(chick.latestWeight)} g`
+                            : "-"
+                    }
+                </div>
+            </div>
+
+            <div>
+                <label>หมายเหตุ</label>
+                <div class="p-3 border rounded-xl bg-slate-50 whitespace-pre-wrap">
+                    ${esc(chick.notes || "-")}
+                </div>
+            </div>
+
+        </div>
+
+        <button
+            class="btn btn-secondary w-full mt-4"
+            onclick="closeModal()"
+        >
+            ปิด
+        </button>
+        `
+    );
+};
 function renderFinance(){const inc=state.income.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.description||x.birdId||"-")}</td><td class="text-emerald-700">${money(x.amount)}</td></tr>`).join(""),exp=state.expenses.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.category||x.description||"-")}</td><td class="text-rose-700">${money(x.amount)}</td></tr>`).join("");document.getElementById("finance").innerHTML=`<div class="grid lg:grid-cols-2 gap-4"><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬆️ รายรับ</h3><button class="btn btn-primary text-xs" onclick="openFinance('income')">＋</button></div><table><tbody>${inc||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬇️ รายจ่าย</h3><button class="btn btn-primary text-xs" onclick="openFinance('expense')">＋</button></div><table><tbody>${exp||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div></div>`}
 function modal(t,b){document.getElementById("modalTitle").textContent=t;document.getElementById("modalBody").innerHTML=b;document.getElementById("modal").classList.remove("hidden");document.getElementById("modal").classList.add("flex")}window.closeModal=()=>document.getElementById("modal").classList.add("hidden");async function save(k,data,id){const ref=doc(coll(k),id||crypto.randomUUID());await setDoc(ref,{...data,updatedAt:serverTimestamp()},{merge:true});await load(k);render();closeModal()}
 function ff(id,l,type="text",v=""){return `<div><label>${l}</label><input id="${id}" type="${type}" value="${esc(v)}"></div>`}
