@@ -381,7 +381,107 @@ window.saveEditedEgg = async id => {
 
     closeModal();
 };
-function renderChicks(){document.getElementById("chicks").innerHTML=`<div class="card p-5"><div class="flex justify-between"><div><h3 class="font-extrabold">🐣 ลูกนก & น้ำหนัก</h3><p class="text-sm text-slate-500">ทะเบียนลูกนกและน้ำหนักล่าสุด</p></div><button class="btn btn-primary" onclick="openChick()">＋ เพิ่มลูกนก</button></div><div class="mt-4 grid gap-2">${state.chicks.map(x=>`<div class="p-3 border rounded-xl"><div class="flex justify-between"><b>${esc(x.code||x.id)} · ${esc(x.name||"")}</b><span>${x.latestWeight?x.latestWeight+" g":"-"}</span></div><div class="text-xs text-slate-500">พ่อ ${esc(birdName(x.fatherId))} · แม่ ${esc(birdName(x.motherId))} · เกิด ${esc(x.birthDate||"-")}</div></div>`).join("")||"<p class='text-slate-400'>ยังไม่มีลูกนก</p>"}</div></div>`}
+function renderChicks(){
+    document.getElementById("chicks").innerHTML = `
+        <div class="card p-5">
+
+            <div class="flex justify-between">
+                <div>
+                    <h3 class="font-extrabold">
+                        🐣 ลูกนก & น้ำหนัก
+                    </h3>
+
+                    <p class="text-sm text-slate-500">
+                        ทะเบียนลูกนกและน้ำหนักล่าสุด
+                    </p>
+                </div>
+
+                <button
+                    class="btn btn-primary"
+                    onclick="openChick()"
+                >
+                    ＋ เพิ่มลูกนก
+                </button>
+            </div>
+
+            <div class="mt-4 grid gap-2">
+
+                ${
+                    state.chicks.map(x => {
+
+                        const egg = state.eggs.find(
+                            e => String(e.id) === String(x.eggId)
+                        );
+
+                        const sourceText =
+                            x.eggId
+                                ? egg
+                                    ? `ไข่ #${esc(egg.eggNo || egg.id)} · ${esc(toDDMMYYYY(egg.laidDate || ""))}`
+                                    : "ไม่พบข้อมูลไข่ต้นทาง"
+                                : "ลูกนกจากภายนอก / ไม่ทราบไข่ต้นทาง";
+
+                        return `
+                            <div class="p-3 border rounded-xl">
+
+                                <div class="flex justify-between items-start gap-3">
+
+                                    <div>
+
+                                        <div class="font-bold">
+                                            🐣 ${esc(x.code || x.id)}
+                                            ${x.name ? ` · ${esc(x.name)}` : ""}
+                                        </div>
+
+                                        <div class="text-sm text-slate-600 mt-1">
+                                            🦵 รหัสห่วงขา:
+                                            ${esc(x.ring || "-")}
+                                        </div>
+
+                                        <div class="text-sm text-slate-600 mt-1">
+                                            🥚 ไข่ต้นทาง:
+                                            ${sourceText}
+                                        </div>
+
+                                        <div class="text-sm text-slate-600 mt-1">
+                                            👨 พ่อ:
+                                            ${esc(birdName(x.fatherId))}
+                                            ·
+                                            👩 แม่:
+                                            ${esc(birdName(x.motherId))}
+                                        </div>
+
+                                        <div class="text-sm text-slate-600 mt-1">
+                                            เกิด:
+                                            ${esc(
+                                                x.birthDate
+                                                    ? toDDMMYYYY(x.birthDate)
+                                                    : "-"
+                                            )}
+                                        </div>
+
+                                    </div>
+
+                                    <div class="font-semibold shrink-0">
+                                        ${
+                                            x.latestWeight
+                                                ? `${esc(x.latestWeight)} g`
+                                                : "-"
+                                        }
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        `;
+                    }).join("")
+                    ||
+                    "<p class='text-slate-400'>ยังไม่มีลูกนก</p>"
+                }
+
+            </div>
+        </div>
+    `;
+}
 function renderFinance(){const inc=state.income.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.description||x.birdId||"-")}</td><td class="text-emerald-700">${money(x.amount)}</td></tr>`).join(""),exp=state.expenses.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.category||x.description||"-")}</td><td class="text-rose-700">${money(x.amount)}</td></tr>`).join("");document.getElementById("finance").innerHTML=`<div class="grid lg:grid-cols-2 gap-4"><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬆️ รายรับ</h3><button class="btn btn-primary text-xs" onclick="openFinance('income')">＋</button></div><table><tbody>${inc||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬇️ รายจ่าย</h3><button class="btn btn-primary text-xs" onclick="openFinance('expense')">＋</button></div><table><tbody>${exp||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div></div>`}
 function modal(t,b){document.getElementById("modalTitle").textContent=t;document.getElementById("modalBody").innerHTML=b;document.getElementById("modal").classList.remove("hidden");document.getElementById("modal").classList.add("flex")}window.closeModal=()=>document.getElementById("modal").classList.add("hidden");async function save(k,data,id){const ref=doc(coll(k),id||crypto.randomUUID());await setDoc(ref,{...data,updatedAt:serverTimestamp()},{merge:true});await load(k);render();closeModal()}
 function ff(id,l,type="text",v=""){return `<div><label>${l}</label><input id="${id}" type="${type}" value="${esc(v)}"></div>`}
