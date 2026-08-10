@@ -751,6 +751,76 @@ window.openChickWeight = id => {
         `
     );
 };
+window.saveChickWeight = async id => {
+
+    const chick = state.chicks.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (!chick) {
+        alert("ไม่พบข้อมูลลูกนก");
+        return;
+    }
+
+    const date =
+        toISODate(
+            document.getElementById("chickWeightDate").value
+        );
+
+    const weight =
+        Number(
+            document.getElementById("chickWeightValue").value
+        );
+
+    const notes =
+        document.getElementById("chickWeightNotes").value.trim();
+
+    if (!date) {
+        alert("กรุณากรอกวันที่ชั่งน้ำหนัก");
+        return;
+    }
+
+    if (!Number.isFinite(weight) || weight <= 0) {
+        alert("กรุณากรอกน้ำหนักให้ถูกต้อง");
+        return;
+    }
+
+    // 1. บันทึกประวัติน้ำหนัก
+    await save(
+        "weights",
+        {
+            chickId: chick.id,
+            date: date,
+            weight: weight,
+            notes: notes
+        }
+    );
+
+    // 2. อัปเดตน้ำหนักล่าสุดในทะเบียนลูกนก
+    await save(
+        "chicks",
+        {
+            code: chick.code,
+            ring: chick.ring || "",
+            name: chick.name || "",
+
+            eggId: chick.eggId || "",
+            cycleId: chick.cycleId || "",
+            fatherId: chick.fatherId || "",
+            motherId: chick.motherId || "",
+
+            birthDate: chick.birthDate || "",
+
+            mutation: chick.mutation || "",
+
+            latestWeight: weight,
+
+            notes: chick.notes || ""
+        },
+        id
+    );
+
+};
 window.openChickEdit = id => {
 
     const chick = state.chicks.find(
