@@ -656,15 +656,228 @@ window.openChickDetail = id => {
 
         </div>
 
+        <div class="grid grid-cols-2 gap-3 mt-4">
+
+    <button
+        class="btn btn-secondary"
+        onclick="closeModal()"
+    >
+        ปิด
+    </button>
+
+    <button
+        class="btn btn-primary"
+        onclick="openChickEdit('${id}')"
+    >
+        ✏️ แก้ไข
+    </button>
+
+</div>
+        `
+    );
+};
+window.openChickEdit = id => {
+
+    const chick = state.chicks.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (!chick) {
+        alert("ไม่พบข้อมูลลูกนก");
+        return;
+    }
+
+    const egg = chick.eggId
+        ? state.eggs.find(
+            x => String(x.id) === String(chick.eggId)
+        )
+        : null;
+
+    const cycle = egg
+        ? state.cycles.find(
+            x => String(x.id) === String(egg.cycleId)
+        )
+        : null;
+
+    const pair = cycle
+        ? state.pairs.find(
+            x => String(x.id) === String(cycle.pairId)
+        )
+        : null;
+
+    const father = pair
+        ? birdName(pair.maleId)
+        : "-";
+
+    const mother = pair
+        ? birdName(pair.femaleId)
+        : "-";
+
+    const sourceText = egg
+        ? `ไข่ #${esc(egg.eggNo || egg.id)}`
+        : "ลูกนกจากภายนอก / ไม่ทราบไข่ต้นทาง";
+
+    modal(
+        "แก้ไขข้อมูลลูกนก",
+        `
+        <div class="grid gap-3">
+
+            <div class="p-4 rounded-xl bg-slate-50">
+
+                <div class="text-lg font-extrabold">
+                    🐣 ${esc(chick.code || chick.id)}
+                    ${chick.name ? ` · ${esc(chick.name)}` : ""}
+                </div>
+
+                <div class="text-sm text-slate-500 mt-1">
+                    รหัสลูกนกไม่สามารถเปลี่ยนได้
+                </div>
+
+            </div>
+
+            <div>
+                <label>รหัสห่วงขา</label>
+                <input
+                    id="editChickRing"
+                    type="text"
+                    value="${esc(chick.ring || "")}"
+                >
+            </div>
+
+            <div>
+                <label>ชื่อ</label>
+                <input
+                    id="editChickName"
+                    type="text"
+                    value="${esc(chick.name || "")}"
+                >
+            </div>
+
+            <div>
+                <label>ไข่ต้นทาง</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${esc(sourceText)}
+                </div>
+            </div>
+
+            <div>
+                <label>พ่อ</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${esc(father)}
+                </div>
+            </div>
+
+            <div>
+                <label>แม่</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${esc(mother)}
+                </div>
+            </div>
+
+            <div>
+                <label>วันที่ฟักจริง</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${
+                        chick.birthDate
+                            ? toDDMMYYYY(chick.birthDate)
+                            : "-"
+                    }
+                </div>
+                <p class="text-xs text-slate-400 mt-1">
+                    วันที่ฟักจริงยังไม่สามารถแก้จากหน้านี้
+                </p>
+            </div>
+
+            <div>
+                <label>Mutation</label>
+                <input
+                    id="editChickMutation"
+                    type="text"
+                    value="${esc(chick.mutation || "")}"
+                >
+            </div>
+
+            <div>
+                <label>น้ำหนักล่าสุด</label>
+                <div class="p-3 border rounded-xl bg-slate-50">
+                    ${
+                        chick.latestWeight
+                            ? `${esc(chick.latestWeight)} g`
+                            : "-"
+                    }
+                </div>
+                <p class="text-xs text-slate-400 mt-1">
+                    น้ำหนักจะจัดการแยกเป็นประวัติน้ำหนัก
+                </p>
+            </div>
+
+            <div>
+                <label>หมายเหตุ</label>
+                <textarea
+                    id="editChickNotes"
+                >${esc(chick.notes || "")}</textarea>
+            </div>
+
+        </div>
+
         <button
-            class="btn btn-secondary w-full mt-4"
-            onclick="closeModal()"
+            class="btn btn-primary w-full mt-4"
+            onclick="saveEditedChick('${id}')"
         >
-            ปิด
+            บันทึกการแก้ไข
         </button>
         `
     );
 };
+
+window.saveEditedChick = async id => {
+
+    const chick = state.chicks.find(
+        x => String(x.id) === String(id)
+    );
+
+    if (!chick) {
+        alert("ไม่พบข้อมูลลูกนก");
+        return;
+    }
+
+    const ring =
+        document.getElementById("editChickRing").value.trim();
+
+    const name =
+        document.getElementById("editChickName").value.trim();
+
+    const mutation =
+        document.getElementById("editChickMutation").value.trim();
+
+    const notes =
+        document.getElementById("editChickNotes").value;
+
+    await save(
+        "chicks",
+        {
+            code: chick.code,
+            ring: ring,
+            name: name,
+
+            eggId: chick.eggId || "",
+            cycleId: chick.cycleId || "",
+            fatherId: chick.fatherId || "",
+            motherId: chick.motherId || "",
+
+            birthDate: chick.birthDate || "",
+
+            mutation: mutation,
+
+            latestWeight:
+                chick.latestWeight || 0,
+
+            notes: notes
+        },
+        id
+    );
+  closeModal();
+};  
 function renderFinance(){const inc=state.income.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.description||x.birdId||"-")}</td><td class="text-emerald-700">${money(x.amount)}</td></tr>`).join(""),exp=state.expenses.map(x=>`<tr><td>${toDDMMYYYY(x.date||"")||"-"}</td><td>${esc(x.category||x.description||"-")}</td><td class="text-rose-700">${money(x.amount)}</td></tr>`).join("");document.getElementById("finance").innerHTML=`<div class="grid lg:grid-cols-2 gap-4"><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬆️ รายรับ</h3><button class="btn btn-primary text-xs" onclick="openFinance('income')">＋</button></div><table><tbody>${inc||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div><div class="card p-4"><div class="flex justify-between mb-3"><h3 class="font-extrabold">⬇️ รายจ่าย</h3><button class="btn btn-primary text-xs" onclick="openFinance('expense')">＋</button></div><table><tbody>${exp||"<tr><td>ยังไม่มีข้อมูล</td></tr>"}</tbody></table></div></div>`}
 function modal(t,b){document.getElementById("modalTitle").textContent=t;document.getElementById("modalBody").innerHTML=b;document.getElementById("modal").classList.remove("hidden");document.getElementById("modal").classList.add("flex")}window.closeModal=()=>document.getElementById("modal").classList.add("hidden");async function save(k,data,id){const ref=doc(coll(k),id||crypto.randomUUID());await setDoc(ref,{...data,updatedAt:serverTimestamp()},{merge:true});await load(k);render();closeModal()}
 function ff(id,l,type="text",v=""){return `<div><label>${l}</label><input id="${id}" type="${type}" value="${esc(v)}"></div>`}
