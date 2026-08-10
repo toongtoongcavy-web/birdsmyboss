@@ -637,14 +637,22 @@ window.openChickDetail = id => {
             </div>
 
             <div>
-                <label>น้ำหนักล่าสุด</label>
-                <div class="p-3 border rounded-xl bg-slate-50">
-                    ${
-                        chick.latestWeight
-                            ? `${esc(chick.latestWeight)} g`
-                            : "-"
-                    }
-                </div>
+              <label>น้ำหนักล่าสุด</label>
+          
+              <div class="p-3 border rounded-xl bg-slate-50">
+                  ${
+                      chick.latestWeight
+                          ? `${esc(chick.latestWeight)} g`
+                          : "-"
+                  }
+              </div>
+          
+              <button
+                  class="btn btn-primary w-full mt-2"
+                  onclick="openChickWeight('${id}')"
+              >
+                  ⚖️ บันทึกน้ำหนัก
+              </button>
             </div>
 
             <div>
