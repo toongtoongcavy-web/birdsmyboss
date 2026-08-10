@@ -637,23 +637,83 @@ window.openChickDetail = id => {
             </div>
 
             <div>
-              <label>น้ำหนักล่าสุด</label>
-          
-              <div class="p-3 border rounded-xl bg-slate-50">
-                  ${
-                      chick.latestWeight
-                          ? `${esc(chick.latestWeight)} g`
-                          : "-"
-                  }
-              </div>
-          
-              <button
-                  class="btn btn-primary w-full mt-2"
-                  onclick="openChickWeight('${id}')"
-              >
-                  ⚖️ บันทึกน้ำหนัก
-              </button>
-            </div>
+
+    <label>น้ำหนักล่าสุด</label>
+
+    <div class="p-3 border rounded-xl bg-slate-50">
+        ${
+            chick.latestWeight
+                ? `${esc(chick.latestWeight)} g`
+                : "-"
+        }
+    </div>
+
+    <button
+        class="btn btn-primary w-full mt-2"
+        onclick="openChickWeight('${id}')"
+    >
+        ⚖️ บันทึกน้ำหนัก
+    </button>
+
+</div>
+
+<div>
+
+    <label>📈 ประวัติน้ำหนัก</label>
+
+    <div class="mt-2 grid gap-2">
+
+        ${
+            state.weights
+                .filter(w =>
+                    String(w.chickId) === String(chick.id)
+                )
+                .sort((a, b) =>
+                    String(b.date || "")
+                        .localeCompare(String(a.date || ""))
+                )
+                .map(w => `
+                    <div class="p-3 border rounded-xl bg-slate-50">
+
+                        <div class="flex justify-between gap-3">
+
+                            <div>
+                                <div class="font-semibold">
+                                    ${esc(toDDMMYYYY(w.date || ""))}
+                                </div>
+
+                                ${
+                                    w.notes
+                                        ? `
+                                            <div class="text-xs text-slate-500 mt-1">
+                                                ${esc(w.notes)}
+                                            </div>
+                                        `
+                                        : ""
+                                }
+
+                            </div>
+
+                            <div class="font-extrabold shrink-0">
+                                ${esc(w.weight)} g
+                            </div>
+
+                        </div>
+
+                    </div>
+                `)
+                .join("")
+
+            || `
+                <div class="p-3 rounded-xl bg-slate-50 text-sm text-slate-400">
+                    ยังไม่มีประวัติน้ำหนัก
+                </div>
+            `
+        }
+
+    </div>
+
+</div>
 
             <div>
                 <label>หมายเหตุ</label>
@@ -816,10 +876,11 @@ window.saveChickWeight = async id => {
             latestWeight: weight,
 
             notes: chick.notes || ""
-        },
-        id
-    );
+            },
+    id
+);
 
+closeModal();
 };
 window.openChickEdit = id => {
 
