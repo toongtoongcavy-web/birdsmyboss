@@ -1,0 +1,10 @@
+.sale-registry-row{width:100%;min-width:0}
+.reservation-state{display:grid;justify-items:start;gap:3px}.reservation-state small{color:var(--bmb-gray);font-size:10px}
+@media(max-width:760px){
+  .sale-registry-row{grid-template-columns:20px minmax(0,1fr) 82px}
+  .sale-registry-state{min-width:0}
+  .sale-registry-state .status-badge{max-width:82px;overflow:hidden;text-overflow:ellipsis}
+  .sale-detail-hero{overflow:hidden}
+  .sale-detail-hero>.status-badge{align-self:start;max-width:82px}
+  .reservation-state{justify-items:end;text-align:right}
+}

@@ -1,0 +1,5 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
+vi.mock("../functions", () => ({ invoke: vi.fn(async () => ({ ringId: "GC-001", sex: "female", mutation: "Blue", hatchedOn: "2026-02-01", handoverOn: "2026-08-14", origin: "farm_hatched", photos: [], documents: [] })), thaiError: () => "เกิดข้อผิดพลาด" }));
+import { PublicPassport } from "./PublicPassport";
+it("renders explicit public Passport fields with their public labels", async () => { render(<PublicPassport />); fireEvent.change(screen.getByLabelText("Public Token"), { target: { value: "token" } }); fireEvent.click(screen.getByText("เปิด Passport")); expect(await screen.findByText("Ring ID: GC-001")).toBeTruthy(); expect(screen.getByText("Origin")).toBeTruthy(); expect(screen.getByText("Farm Hatched")).toBeTruthy(); expect(screen.getByText("วันฟัก")).toBeTruthy(); expect(screen.getByText("01/02/2026")).toBeTruthy(); expect(screen.getByText("วันส่งมอบ: 14/08/2026")).toBeTruthy(); expect(screen.queryByText(/storagePath/)).toBeNull(); });

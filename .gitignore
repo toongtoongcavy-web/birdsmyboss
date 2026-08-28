@@ -1,0 +1,66 @@
+# Node.js
+node_modules/
+functions/node_modules/
+functions/lib/
+web/dist/
+
+# Test and coverage output
+coverage/
+functions/coverage/
+*.tsbuildinfo
+
+# Firebase tooling and local emulator data
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+*-debug.log
+firebase-export/
+
+# Local-only configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
+.runtimeconfig.json
+application_default_credentials.json
+*service-account*.json
+*serviceAccount*.json
+*.pem
+*.p12
+*.pfx
+*.key
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Visual review captures (not release source)
+birds-registry-signature-round-1/
+birds-registry-visual-master-3-candidate/
+bmb-design-system-v1-regression/
+bmb-visual-master-round-3/
+breeding-signature-round-1/
+breeding-visual-master-4-candidate/
+customers-final-polish/
+customers-visual-master-6-candidate/
+dashboard-signature-round-1/
+dashboard-visual-master-candidate/
+delivery-handover-signature-round-1/
+passport-signature-round-1/
+sales-signature-round-1/
+sales-visual-master-candidate/
+signature-ui-concept-round-1/
+signature-ui-refinement-round-2/
+ui-review-screenshots/
+ui-review-screenshots-second/
+
+# One-off visual capture helpers and their local output
+web/.screenshot-vite.err
+web/.screenshot-vite.out
+web/scripts/capture-delivery-preview.mjs
+web/scripts/capture-mobile-delivery.mjs
+web/scripts/capture-passport-preview.mjs
+web/scripts/capture-viewport.mjs
+web/scripts/passport-preview-entry.tsx

@@ -1,0 +1,29 @@
+{
+  "name": "birdsmyboss-farm-system-v1-functions",
+  "version": "0.1.0",
+  "private": true,
+  "main": "lib/src/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test lib/test/*.test.js",
+    "test:integration": "npm run build && node --test lib/integration/core-integrity.test.js",
+    "test:integration:all": "npm run build && node --test lib/integration/asset-intake.test.js lib/integration/breeding-lifecycle.test.js lib/integration/contract-repair.test.js lib/integration/core-integrity.test.js lib/integration/commercial.test.js lib/integration/giveaway.test.js lib/integration/opaque-public-media.test.js lib/integration/phase4.test.js lib/integration/phase5c.test.js lib/integration/reads.test.js lib/integration/storage-rules.test.js",
+    "test:callable-smoke": "node --test lib/integration/callable-auth-smoke.test.js",
+    "test:phase6": "node --test --test-concurrency=1 lib/integration/phase6-e2e.test.js",
+    "test:external-bird": "node --test --test-concurrency=1 lib/integration/external-bird.test.js",
+    "admin:operator-claim": "node admin/operator-claim.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}

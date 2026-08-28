@@ -1,0 +1,25 @@
+{
+  "name": "birdsmyboss-farm-system-v1",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Farm System V1 Firebase foundation",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "npm --prefix functions run build && npm --prefix web run build",
+    "lint": "npm --prefix functions run lint && npm --prefix web run lint",
+    "typecheck": "npm --prefix functions run typecheck && npm --prefix web run typecheck",
+    "test": "npm --prefix functions run test && npm --prefix web run test",
+    "dev:web": "npm --prefix web run dev",
+    "test:emulator": "firebase emulators:exec --project birdsmyboss-v1-dev --only firestore \"npm --prefix functions run test:integration\"",
+    "test:callable-smoke": "npm --prefix functions run build && firebase emulators:exec --project birdsmyboss-v1-dev --only auth,firestore,functions \"npm --prefix functions run test:callable-smoke\"",
+    "test:phase6": "npm --prefix functions run build && firebase emulators:exec --project birdsmyboss-v1-dev --only auth,firestore,functions \"npm --prefix functions run test:phase6\"",
+    "test:emulator:all": "firebase emulators:exec --project birdsmyboss-v1-dev --only auth,firestore,storage \"npm --prefix functions run test:integration:all\"",
+    "emulators": "firebase emulators:start --project birdsmyboss-v1-dev",
+    "validate:firebase": "firebase use birdsmyboss-v1-dev && firebase emulators:exec --only firestore,functions \"npm run typecheck && npm run test\""
+  },
+  "devDependencies": {
+    "firebase-tools": "15.26.0"
+  }
+}

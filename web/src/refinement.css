@@ -1,0 +1,187 @@
+.row:has(> :nth-child(6)) {
+  grid-template-columns: minmax(210px, 1.45fr) minmax(120px, .8fr) minmax(140px, .9fr) minmax(90px, .6fr) minmax(110px, .7fr) 64px;
+}
+
+.row:has(> :nth-child(6)) > span:last-child {
+  justify-self: end;
+  white-space: nowrap;
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.breeding-actions {
+  display: grid;
+  gap: var(--space-4);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.breeding-actions h2,
+.breeding-actions p { margin: 0; }
+.breeding-actions .quick-actions { align-items: center; }
+.secondary-action { background: var(--surface-soft); color: var(--primary-dark); border: 1px solid var(--border); }
+.creation-panel { max-width: 760px; padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.creation-panel > .card { margin: 0; }
+.pair-focus { display: block; }
+
+@media (max-width: 1050px) {
+  .app { grid-template-columns: 230px minmax(0, 1fr); }
+  .nav button { padding-inline: 12px; white-space: nowrap; }
+  .row:has(> :nth-child(6)) { grid-template-columns: minmax(170px, 1.4fr) minmax(100px, .8fr) minmax(110px, .9fr) minmax(100px, .7fr) 56px; }
+}
+
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; }
+  .nav button { white-space: nowrap; }
+  .row:has(> :nth-child(6)) { grid-template-columns: 1fr auto; }
+  .row:has(> :nth-child(6)) > *:not(:first-child):not(:last-child) { display: none; }
+  .breeding-actions { padding: var(--space-4); }
+}
+
+/* Signature Bird Profile */
+.bird-profile { --profile-ink: #254f4b; display: grid; gap: var(--space-6); margin-top: var(--space-3); }
+.bird-identity-hero { position: relative; display: grid; grid-template-columns: 230px minmax(0, 1fr) 126px; gap: 30px; align-items: center; min-height: 300px; padding: 30px; overflow: hidden; border-radius: var(--radius-lg); color: #fff; background: linear-gradient(118deg, #315f5a 0%, var(--primary) 68%, #6b9e97 100%); box-shadow: 0 24px 55px rgba(55,107,102,.22); }
+.bird-identity-hero::after { content: ""; position: absolute; width: 330px; height: 330px; right: -150px; bottom: -210px; border: 46px solid rgba(255,255,255,.08); border-radius: 50%; }
+.bird-portrait { position: relative; z-index: 1; width: 210px; height: 236px; margin: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.36); border-radius: 50% 50% 44% 44% / 42% 42% 58% 58%; background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 9px rgba(255,255,255,.08), 0 18px 36px rgba(27,66,62,.24); }
+.bird-portrait img { width: 100%; height: 100%; object-fit: cover; }
+.bird-portrait.placeholder > div { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 4px; }
+.bird-portrait.placeholder b { z-index: 1; font-size: 58px; line-height: 1; font-weight: 500; }
+.bird-portrait.placeholder small { z-index: 1; color: rgba(255,255,255,.7); }
+.portrait-ring { position: absolute; width: 118px; height: 118px; border: 16px solid rgba(247,222,213,.48); border-radius: 50%; transform: rotate(-18deg); }
+.bird-portrait figcaption { position: absolute; inset:auto 0 0; padding: 8px; text-align:center; background:rgba(37,79,75,.72); font-size:12px; }
+.bird-identity-copy { position: relative; z-index: 1; min-width: 0; }
+.profile-kicker { color: #f7ded5; font-size: 11px; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
+.bird-name-line { display: flex; align-items: center; gap: 14px; margin: 8px 0 12px; }
+.bird-name-line h2 { margin: 0; font-size: clamp(38px, 5vw, 62px); line-height: 1; letter-spacing: -.045em; font-weight: 760; }
+.bird-name-line .status-badge { background: #fff; color: var(--primary-dark); }
+.ring-identity { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 8px 16px 8px 10px; border: 1px solid rgba(255,255,255,.38); border-radius: 999px; background: rgba(20,60,56,.28); box-shadow: inset 0 0 0 3px rgba(255,255,255,.06); }
+.ring-identity::before { content: ""; width: 24px; height: 24px; border: 6px solid var(--accent-soft); border-radius: 50%; }
+.ring-identity small { color: rgba(255,255,255,.66); font-size: 9px; letter-spacing: .14em; }
+.ring-identity strong { font-size: 18px; letter-spacing: .06em; }
+.identity-meta-grid { display: grid; grid-template-columns: repeat(4,minmax(100px,1fr)); gap: 8px; }
+.identity-meta { display: grid; gap: 2px; padding: 9px 10px; border-left: 1px solid rgba(255,255,255,.28); }
+.identity-meta small { color: rgba(255,255,255,.63); font-size: 10px; }.identity-meta strong { font-size: 14px; font-weight: 650; }
+.passport-seal { position: relative; z-index: 1; display: grid; justify-items: center; gap: 3px; padding: 18px 8px; border: 1px solid rgba(255,255,255,.36); border-radius: 50% 50% 18px 18px; background: rgba(255,255,255,.1); text-align: center; }
+.passport-seal > span:first-child { display: grid; place-items: center; width: 58px; height: 58px; border: 2px solid var(--accent-soft); border-radius: 50%; color: var(--accent-soft); font-weight: 900; letter-spacing: .08em; }.passport-seal > small { color: rgba(255,255,255,.72); }.passport-seal .status-badge{background:rgba(255,255,255,.16);color:#fff}
+.story-section,.history-ledger,.profile-passport,.profile-record-actions { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); }
+.story-section { padding: 24px; }.story-section > header,.profile-record-actions > header { display:flex; gap:12px; align-items:center; margin-bottom:20px; }.story-section > header > span { display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--accent);border-radius:50%;color:var(--accent);font-size:11px;font-weight:900; }.story-section h3,.history-ledger h3,.profile-passport h3,.profile-record-actions h3 { margin:0;color:var(--profile-ink);font-size:21px; }.story-section header small,.profile-record-actions header small { color:var(--muted);letter-spacing:.08em;text-transform:uppercase; }
+.lineage-map { position:relative; display:grid;grid-template-columns:1fr 180px 1fr;gap:44px;align-items:center;max-width:900px;margin:10px auto; }.lineage-map::before,.lineage-map::after { content:"";position:absolute;top:50%;height:1px;width:18%;background:linear-gradient(90deg,var(--accent),var(--primary)); }.lineage-map::before{left:27%}.lineage-map::after{right:27%;transform:scaleX(-1)}
+.parent-node,.lineage-bird { display:grid;gap:4px;padding:16px;border-radius:14px;background:var(--surface-soft); }.parent-node small{color:var(--muted)}.parent-node strong{color:var(--primary-dark);font-size:17px}.parent-node span{font-size:12px;color:var(--muted)}.lineage-bird{justify-items:center;position:relative;z-index:1;border:1px solid #b9d1cd;background:#fff;box-shadow:0 10px 24px rgba(55,107,102,.1)}.lineage-bird strong{color:var(--primary-dark);font-size:18px}.lineage-bird small{color:var(--muted)}.mini-ring{width:32px;height:32px;border:7px solid var(--accent);border-radius:50%}
+.life-timeline { display:flex;gap:0;overflow-x:auto;padding:4px 0 8px; }.life-timeline article { position:relative;display:grid;gap:3px;min-width:210px;padding:6px 24px 6px 20px;border-top:1px solid #c9d9d6; }.life-timeline i { position:absolute;width:11px;height:11px;left:0;top:-6px;border:3px solid #fff;border-radius:50%;background:var(--accent);box-shadow:0 0 0 1px var(--accent); }.life-timeline small{color:var(--muted)}.life-timeline strong{color:var(--primary-dark);font-size:14px}
+.profile-history-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }.history-ledger{padding:22px}.history-ledger header{padding-bottom:14px;border-bottom:1px solid var(--border)}.history-ledger header p{margin:2px 0 0;color:var(--muted);font-size:13px}.history-ledger > article{display:flex;gap:12px;align-items:center;padding:13px 2px;border-bottom:1px solid var(--border)}.history-ledger > article > span{color:var(--accent);font-size:11px;font-weight:900}.history-ledger > article div{display:grid}.history-ledger > article small{color:var(--muted)}
+.profile-passport { display:grid;grid-template-columns:minmax(240px,.7fr) minmax(0,1.3fr);overflow:hidden;border-color:#c6d8d5; }.passport-intro{display:flex;gap:18px;align-items:flex-start;padding:26px;background:linear-gradient(145deg,#eff6f3,#fff)}.passport-mark{display:grid;place-items:center;flex:0 0 auto;width:54px;height:72px;border:2px solid var(--primary);border-radius:26px 26px 12px 12px;color:var(--primary-dark);font-size:24px;font-weight:900}.passport-intro small{color:var(--accent);font-size:10px;letter-spacing:.12em}.passport-intro p{display:flex;align-items:center;gap:8px}.passport-controls{padding:24px}.passport-controls h4{margin-top:0}.passport-controls button{margin:4px}.profile-record-actions{padding:24px}.profile-record-actions header p{margin:2px 0;color:var(--muted)}
+.sr-only { position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important; }
+
+@media (max-width:1050px) {
+  .bird-identity-hero{grid-template-columns:170px minmax(0,1fr);padding:24px}.bird-portrait{width:160px;height:190px}.passport-seal{position:absolute;right:20px;top:20px;width:96px}.bird-identity-copy{padding-right:92px}.identity-meta-grid{grid-template-columns:repeat(2,1fr)}.lineage-map{grid-template-columns:1fr 150px 1fr;gap:28px}.profile-passport{grid-template-columns:1fr}
+}
+@media (max-width:760px) {
+  .bird-profile{gap:16px}.bird-identity-hero{grid-template-columns:92px minmax(0,1fr);gap:16px;min-height:240px;padding:18px}.bird-portrait{width:92px;height:128px}.bird-portrait.placeholder b{font-size:34px}.portrait-ring{width:64px;height:64px;border-width:10px}.bird-identity-copy{padding:0}.profile-kicker{font-size:9px}.bird-name-line{display:grid;gap:6px}.bird-name-line h2{font-size:34px}.passport-seal{position:static;grid-column:1/-1;display:flex;justify-content:flex-start;gap:8px;padding:8px 12px;border-radius:12px}.passport-seal>span{width:32px;height:32px;font-size:10px}.ring-identity{margin-bottom:10px}.identity-meta-grid{grid-column:1/-1}.identity-meta:nth-child(n+3){display:none}.story-section{padding:18px}.lineage-map{grid-template-columns:1fr 76px 1fr;gap:8px}.lineage-map::before,.lineage-map::after{display:none}.parent-node{padding:10px}.parent-node strong{font-size:14px}.parent-node span{font-size:10px}.lineage-bird{padding:10px 4px}.lineage-bird strong{font-size:13px}.profile-history-grid{grid-template-columns:1fr}.profile-passport{grid-template-columns:1fr}.passport-intro,.passport-controls,.profile-record-actions{padding:18px}
+}
+
+/* Signature palette refinement — scoped to Bird Profile for review. */
+.bird-profile{--bmb-green:#2e7d6e;--bmb-turquoise:#5baa9d;--bmb-mint:#8bc4b8;--bmb-orange:#f4a261;--bmb-gold:#e9c46a;--bmb-cream:#faf7f2;--bmb-beige:#f0e8dc;--bmb-gray:#7a7a7a;--profile-ink:#204f47}
+.bird-profile .bird-identity-hero{isolation:isolate;border:1px solid rgba(255,255,255,.24);background:radial-gradient(circle at 9% 14%,rgba(233,196,106,.16),transparent 25%),linear-gradient(122deg,#205a50 0%,var(--bmb-green) 50%,var(--bmb-turquoise) 100%);box-shadow:0 26px 62px rgba(32,79,71,.25),inset 0 1px rgba(255,255,255,.18)}
+.bird-profile .bird-identity-hero::before{content:"";position:absolute;z-index:-1;width:260px;height:260px;left:-115px;top:-165px;border:38px solid rgba(244,162,97,.13);border-radius:50%}
+.bird-profile .bird-identity-hero::after{z-index:-1;border-color:rgba(139,196,184,.18)}
+.bird-profile .portrait-ring{border-color:rgba(244,162,97,.58);box-shadow:0 0 0 9px rgba(233,196,106,.1)}
+.bird-profile .profile-kicker{color:#ffe0bd}
+.bird-profile .ring-identity{padding:8px 17px 8px 9px;border-color:rgba(255,255,255,.42);background:linear-gradient(90deg,rgba(20,60,56,.42),rgba(46,125,110,.2));box-shadow:inset 0 0 0 3px rgba(255,255,255,.055),0 8px 22px rgba(20,60,56,.18)}
+.bird-profile .ring-identity::before{width:25px;height:25px;border-color:var(--bmb-orange);border-right-color:#ffd0aa;transform:rotate(-22deg);box-shadow:0 0 0 3px rgba(255,255,255,.14)}
+.bird-profile .passport-seal>span:first-child{border-color:var(--bmb-gold);color:#fff1c7;box-shadow:inset 0 0 0 4px rgba(233,196,106,.09)}
+.bird-profile .story-section,.bird-profile .history-ledger,.bird-profile .profile-passport,.bird-profile .profile-record-actions{border-color:#e5ded4}
+.bird-profile .lineage-map::before,.bird-profile .lineage-map::after{height:2px;background:linear-gradient(90deg,var(--bmb-mint),var(--bmb-turquoise))}
+.bird-profile .parent-node{background:var(--bmb-beige)}
+.bird-profile .parent-node small,.bird-profile .parent-node span,.bird-profile .lineage-bird small{color:var(--bmb-gray)}
+.bird-profile .parent-node strong,.bird-profile .lineage-bird strong{color:var(--bmb-green)}
+.bird-profile .lineage-bird{border-color:var(--bmb-mint);background:linear-gradient(145deg,#fff,#eef8f5);box-shadow:0 12px 28px rgba(46,125,110,.13)}
+.bird-profile .mini-ring{border-color:var(--bmb-orange);border-right-color:#ffd0aa;transform:rotate(-18deg)}
+.bird-profile .life-timeline i{background:var(--bmb-turquoise);box-shadow:0 0 0 1px var(--bmb-turquoise)}
+.bird-profile .life-timeline article:first-child i{background:var(--bmb-gold);box-shadow:0 0 0 1px #c79a32}
+.bird-profile .life-timeline article:nth-child(n+3) i{background:var(--bmb-green);box-shadow:0 0 0 1px var(--bmb-green)}
+.bird-profile .life-timeline small{color:var(--bmb-gray)}
+.bird-profile .life-timeline strong{color:var(--profile-ink)}
+.bird-profile .profile-passport{border-color:var(--bmb-mint);box-shadow:0 14px 34px rgba(46,125,110,.1)}
+.bird-profile .passport-intro{background:linear-gradient(145deg,#eaf6f2 0%,#fff 66%,#fff8ea 100%)}
+.bird-profile .passport-mark{border-color:var(--bmb-green);border-top-color:var(--bmb-gold);color:var(--bmb-green);box-shadow:inset 0 0 0 4px rgba(139,196,184,.12)}
+.bird-profile .passport-intro small{color:#a95227;font-weight:800}
+.bird-profile .passport-controls{background:#fff}
+.bird-profile .profile-record-actions{background:linear-gradient(180deg,#fff,var(--bmb-cream))}
+
+/* BMB Visual Master candidate — final hierarchy polish. */
+.bird-profile{min-width:0}
+main:has(.bird-profile){min-width:0}
+.bird-profile>*{min-width:0;max-width:100%}
+.bird-profile .lineage-map{grid-template-columns:minmax(0,1fr) 180px minmax(0,1fr)}
+.bird-profile .parent-node{min-width:0}
+.bird-profile .parent-node strong,.bird-profile .parent-node span{overflow-wrap:anywhere}
+.bird-profile .bird-identity-hero{background:radial-gradient(circle at 10% 12%,rgba(233,196,106,.13),transparent 20%),linear-gradient(124deg,#275f56 0%,#2e7d6e 45%,#61a99e 100%)}
+.bird-profile .bird-identity-hero::before{width:210px;height:210px;left:-112px;top:-142px;border-width:24px;border-color:rgba(244,162,97,.09)}
+.bird-profile .bird-identity-hero::after{width:280px;height:280px;right:-145px;bottom:-185px;border-width:30px;border-color:rgba(240,232,220,.14)}
+.bird-profile .bird-portrait{border-color:rgba(255,255,255,.3);background:rgba(240,232,220,.1);box-shadow:inset 0 0 0 5px rgba(255,255,255,.055),0 16px 32px rgba(22,66,59,.19)}
+.bird-profile .portrait-ring{width:96px;height:96px;border-width:11px;border-color:rgba(244,162,97,.54);box-shadow:none}
+.bird-profile .ring-identity{border-color:rgba(255,255,255,.48);background:linear-gradient(90deg,rgba(25,72,64,.5),rgba(91,170,157,.16))}
+.bird-profile .ring-identity::before{flex:0 0 auto;border-width:6px;border-color:var(--bmb-orange);border-right-color:#ffd7b7}
+.bird-profile .passport-seal{padding:14px 8px;background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.27)}
+.bird-profile .passport-seal>span:first-child{width:48px;height:48px;font-size:14px;border-width:1.5px;box-shadow:inset 0 0 0 3px rgba(233,196,106,.07)}
+.bird-profile .passport-seal>small{font-size:11px}
+.bird-profile .story-section>header>span{border-color:var(--bmb-orange);color:#b8572c}
+.bird-profile .history-ledger>article>span{color:#bf6540}
+
+@media (max-width:1050px){
+  .bird-profile{width:100%;max-width:100%;overflow:hidden}
+  .bird-profile .bird-identity-hero{min-width:0;grid-template-columns:136px minmax(0,1fr);gap:18px}
+  .bird-profile .bird-portrait{width:132px;height:174px}
+  .bird-profile .passport-seal{padding:7px 10px}
+  .bird-profile .passport-seal>span:first-child{width:30px;height:30px;font-size:9px}
+  .bird-profile .lineage-map{grid-template-columns:minmax(0,1fr) 130px minmax(0,1fr)}
+}
+
+@media (max-width:760px){
+  .bird-profile .bird-identity-hero{width:calc(100vw - 32px);max-width:calc(100vw - 32px);padding:16px 16px 14px}
+  .bird-profile .bird-portrait{left:16px;top:58px;width:78px;height:105px;border-radius:48% 48% 42% 42% / 40% 40% 58% 58%}
+  .bird-profile .portrait-ring{width:52px;height:52px;border-width:7px}
+  .bird-profile .bird-portrait.placeholder b{font-size:30px}
+  .bird-profile .bird-portrait.placeholder small{font-size:9px}
+  .bird-profile .bird-identity-copy{padding-left:94px}
+  .bird-profile .profile-kicker{letter-spacing:.12em}
+  .bird-profile .bird-name-line{display:flex;align-items:center;gap:8px;margin:6px 0 9px}
+  .bird-profile .bird-name-line h2{font-size:32px}
+  .bird-profile .bird-name-line .status-badge{min-height:23px;padding:2px 8px;font-size:11px}
+  .bird-profile .ring-identity{gap:9px;margin-bottom:8px;padding:6px 12px 6px 7px}
+  .bird-profile .ring-identity::before{width:21px;height:21px;border-width:5px}
+  .bird-profile .ring-identity small{font-size:8px}
+  .bird-profile .ring-identity strong{font-size:15px}
+  .bird-profile .identity-meta-grid{width:calc(100% + 94px);grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 5px;margin-left:-94px;padding-top:6px}
+  .bird-profile .identity-meta{padding:6px 8px}
+  .bird-profile .identity-meta small{font-size:9px}
+  .bird-profile .identity-meta strong{font-size:11px;line-height:1.35}
+  .bird-profile .passport-seal{margin-top:8px;padding:6px 9px;gap:7px}
+  .bird-profile .passport-seal>span:first-child{width:27px;height:27px;font-size:8px}
+  .bird-profile .passport-seal>small{font-size:10px}
+  .bird-profile .lineage-map{width:100%;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr)}
+}
+
+.parent-node { position: relative; z-index: 1; }
+@media (max-width:1050px) {
+  .bird-identity-hero { width: 100%; max-width: 100%; grid-template-columns: 150px minmax(0, 1fr); gap: 20px; }
+  .bird-portrait { width: 145px; }
+  .bird-identity-copy { min-width: 0; }
+  .identity-meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .identity-meta strong { overflow-wrap: anywhere; }
+  .passport-seal { position: static; grid-column: 1/-1; display: flex; justify-content: flex-start; align-items: center; gap: 8px; width: auto; padding: 9px 12px; border-radius: 14px; }
+  .passport-seal > span:first-child { width: 34px; height: 34px; font-size: 10px; }
+  .bird-identity-copy { padding-right: 0; }
+}
+@media (max-width:760px) {
+  .bird-identity-hero { display: block; min-height: 0; padding: 18px; }
+  .bird-portrait { position: absolute; left: 18px; top: 62px; width: 88px; height: 118px; }
+  .bird-portrait.placeholder b { font-size: 34px; }.portrait-ring { width: 60px; height: 60px; border-width: 9px; }
+  .bird-identity-copy { padding: 0 0 0 108px; }.profile-kicker { font-size: 8px; }
+  .bird-name-line h2 { font-size: 34px; }.ring-identity { max-width: 100%; margin-bottom: 12px; padding-right: 10px; }.ring-identity strong { font-size: 16px; }
+  .identity-meta-grid { display: grid; width: calc(100% + 108px); grid-template-columns: 1fr; margin-left: -108px; padding-top: 10px; }.identity-meta:nth-child(n+3) { display: grid; }.identity-meta { min-width: 0; }.identity-meta strong { font-size: 12px; }
+  .passport-seal { margin-top: 14px; }.passport-seal > span:first-child { width: 32px; height: 32px; }.passport-seal .status-badge { width: max-content; height: auto; font-size: 12px; }
+}

@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function operator() {
+      return request.auth != null && request.auth.token.operator == true;
+    }
+
+    match /bird-assets/{birdId}/{assetKind}/{intakeId}/{fileName} {
+      function intake() {
+        return firestore.get(/databases/(default)/documents/assetIntakes/$(intakeId));
+      }
+
+      allow create: if resource == null
+        && operator()
+        && assetKind in ['photos', 'documents']
+        && intake().data.status == 'pending'
+        && intake().data.birdId == birdId
+        && intake().data.assetKind == assetKind
+        && intake().data.storagePath == 'bird-assets/' + birdId + '/' + assetKind + '/' + intakeId + '/' + fileName
+        && request.resource.contentType == intake().data.declaredContentType
+        && request.resource.size == intake().data.declaredSize;
+      allow read, update, delete: if false;
+    }
+  }
+}

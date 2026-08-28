@@ -1,0 +1,11 @@
+import type { ReactNode } from "react";
+import { displayValue } from "./presentation";
+
+export function PageHeader({eyebrow="Birds My Boss",title,subtitle,actions}:{eyebrow?:string;title:string;subtitle?:string;actions?:ReactNode}){return <header className="page-header"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div>{actions&&<div className="page-actions">{actions}</div>}</header>}
+export function SectionCard({title,subtitle,children,className=""}:{title?:string;subtitle?:string;children:ReactNode;className?:string}){return <section className={`card section-card ${className}`.trim()}>{title&&<div className="section-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div></div>}{children}</section>}
+const statLabels:Record<string,string>={"นก Active":"นกที่ใช้งาน","นก Sold":"นกที่ขายแล้ว","คู่เพาะ Active":"คู่เพาะที่ใช้งาน","รอบเพาะ Active":"รอบเพาะที่ดำเนินอยู่","Reservation Active":"การจองที่ใช้งาน","Sales":"การขาย","Delivery รอดำเนินการ":"การจัดส่งที่รอดำเนินการ","Passport Published":"Passport ที่เผยแพร่"};
+export function StatCard({label,value,tone="teal"}:{label:string;value:ReactNode;tone?:"teal"|"coral"|"green"|"amber"}){return <article className={`stat-card stat-${tone}`}><span>{statLabels[label]??label}</span><strong>{value}</strong></article>}
+const tone=(status:unknown)=>{const value=String(status??"");if(["active","published","completed","received","hatched","delivered"].includes(value))return"success";if(["planned","draft","reserved","in_transit"].includes(value))return"warning";if(["cancelled","disabled","expired","deceased","lost","discarded"].includes(value))return"danger";return"neutral"};
+export function StatusBadge({status}:{status:unknown}){return <span className={`status-badge status-${tone(status)}`}>{displayValue(status)}</span>}
+export function EmptyState({title="ยังไม่มีข้อมูล",description}:{title?:string;description?:string}){return <div className="empty-state"><span aria-hidden="true">○</span><strong>{title}</strong>{description&&<p>{description}</p>}</div>}
+export function InlineMeta({label,children}:{label:string;children:ReactNode}){return <span className="inline-meta"><small>{label}</small><b>{children}</b></span>}
