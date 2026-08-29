@@ -4,14 +4,22 @@ Target project: `birdsmyboss-v1-prod` (`Birds My Boss V1 Production`). Every Pro
 
 ## A. Reviewed Git source and tag
 
-1. Review the pushed `v1-release-baseline` branch at approved commit `ab4c794a932f23cf19df9ad5398c1667565568b5`.
-2. After owner approval, create an immutable release tag (proposed: `v1.0.0`) at the approved commit.
-3. Build and deploy only from that tag/commit. Do not deploy from an unreviewed worktree.
+1. `v1.0.0` is immutable at `35d2bf4ff29df6e17baec742cef6623cf4f1ad60`, but it must not be deployed to Production because it predates explicit Functions regional pinning.
+2. Review the corrected Production source and create the intended immutable release tag `v1.0.1` only after owner approval.
+3. Build and deploy only from that reviewed tag/commit. Do not deploy from an unreviewed worktree.
+
+## Production topology (locked)
+
+- Cloud Firestore: `asia-southeast1` (Singapore)
+- Cloud Storage for Firebase: `asia-southeast1` (Singapore)
+- Cloud Functions for Firebase: `asia-southeast1` (Singapore)
+
+Create the default Production Firestore database and the default Production Storage bucket in `asia-southeast1`. Functions must be explicitly pinned to `asia-southeast1` in `functions/src/index.ts`, and the web client must explicitly initialize Functions with `getFunctions(app, "asia-southeast1")`. Do not rely on an implicit Functions region.
 
 ## B. Production Firebase provisioning
 
 1. Create the separate Firebase project `birdsmyboss-v1-prod`.
-2. Create the default Firestore database and default Storage bucket in that project.
+2. Create the default Firestore database and default Storage bucket in `asia-southeast1`.
 3. Production starts with empty canonical data. DEV fixtures must never be copied, and Legacy migration/backfill is not approved.
 
 ## C. Security, Auth, and Secrets
@@ -26,7 +34,7 @@ Target project: `birdsmyboss-v1-prod` (`Birds My Boss V1 Production`). Every Pro
 
 1. Deploy committed Firestore Rules and indexes explicitly to Production.
 2. Deploy committed Storage Rules explicitly to Production; Storage remains private/default-deny except approved operator intake creates.
-3. Deploy Functions explicitly to Production. Bind `BMB_PUBLIC_MEDIA_KEY` only to `getBirdPassport` and `servePublicPhoto`.
+3. Deploy Functions explicitly to Production in `asia-southeast1`. Bind `BMB_PUBLIC_MEDIA_KEY` only to `getBirdPassport` and `servePublicPhoto`.
 4. Build `web/dist` with the six public Production Firebase client values from `web/.env.example`; `VITE_USE_FIREBASE_EMULATORS` must be absent or not `true`.
 5. Deploy Hosting explicitly to Production. Preserve the SPA rewrite and `/public-media/v1/**` rewrite to `servePublicPhoto`.
 6. Verify the expected 68 Functions, including public `getBirdPassport` and `servePublicPhoto`; all remaining callables require `operator=true`.

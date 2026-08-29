@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { setGlobalOptions } from "firebase-functions/v2";
 import { onCall, onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { getStorage } from "firebase-admin/storage";
@@ -12,6 +13,8 @@ import { getBirdDetails as getBirdDetailsService, getCustomerDetails as getCusto
 import { addBirdDocument as addBirdDocumentService, addBirdPhoto as addBirdPhotoService, archiveBirdDocument as archiveBirdDocumentService, archiveBirdPhoto as archiveBirdPhotoService, beginBirdAssetIntake as beginBirdAssetIntakeService, createCage as createCageService, createEgg as createEggService, createPair as createPairService, finalizeBirdAssetIntake as finalizeBirdAssetIntakeService, recordSexHistory as recordSexHistoryService, recordWeightHistory as recordWeightHistoryService, setPassportPublication as setPassportPublicationService, setPassportStatus as setPassportStatusService, supersedeBirdDocument as supersedeBirdDocumentService } from "./services/phase5c.js";
 import { isSupportedPublicPhotoContentType, resolveEligiblePublicPhoto } from "./services/public-media.js";
 import { attributedFirestore, withOperatorAttribution } from "./services/audit.js";
+
+setGlobalOptions({ region: "asia-southeast1" });
 
 initializeApp();
 const db = attributedFirestore(getFirestore());
