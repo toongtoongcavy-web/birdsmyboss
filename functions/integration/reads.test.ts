@@ -4,7 +4,7 @@ import { Firestore } from "firebase-admin/firestore";
 import { getBirdDetails, getCustomerDetails, getPairDetails, listBirds, listDeliveries, listEligibleCompletedSales, listHandovers, listPairs, listPayments, listReservations } from "../src/services/reads.js";
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
-const prefix = `reads-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const prefix = `!reads-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 test("read DTOs are bounded, filtered, and omit internal fields", async () => {
   const birdId = `${prefix}-bird`, femaleId = `${prefix}-female`, hatchedBirdId = `${prefix}-hatched`, pairId = `${prefix}-pair`, cageId = `${prefix}-cage`, customerId = `${prefix}-customer`, reservationId = `${prefix}-reservation`, saleId = `${prefix}-sale`;
   await db.collection("birds").doc(birdId).set({ ringId: "READ-001", displayName: "Read bird", origin: "external", status: "active", publicToken: "operator-trusted-token", internalNotes: "do not leak" });

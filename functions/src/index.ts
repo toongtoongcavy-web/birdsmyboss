@@ -14,7 +14,7 @@ import { addBirdDocument as addBirdDocumentService, addBirdPhoto as addBirdPhoto
 import { isSupportedPublicPhotoContentType, resolveEligiblePublicPhoto } from "./services/public-media.js";
 import { attributedFirestore, withOperatorAttribution } from "./services/audit.js";
 
-setGlobalOptions({ region: "asia-southeast1" });
+setGlobalOptions({ region: "asia-southeast1", minInstances: 0, maxInstances: 2, concurrency: 10 });
 
 initializeApp();
 const db = attributedFirestore(getFirestore());
@@ -90,10 +90,10 @@ export const getGiveawayDetails = operatorOnly<Record<string, unknown>>((data) =
 export const listDeliveries = operatorOnly<Record<string, unknown>>((data) => listDeliveriesService(db, data));
 export const listHandovers = operatorOnly<Record<string, unknown>>((data) => listHandoversService(db, data));
 export const listEligibleCompletedSales = operatorOnly<Record<string, unknown>>((data) => listEligibleCompletedSalesService(db, data));
-export const getBirdPassport = onCall({ secrets: [publicMediaKey] }, async (request) => resolvePassport(db, request.data?.publicToken, publicMediaKey.value()));
+export const getBirdPassport = onCall({ secrets: [publicMediaKey], minInstances: 0, maxInstances: 1, concurrency: 10, timeoutSeconds: 20 }, async (request) => resolvePassport(db, request.data?.publicToken, publicMediaKey.value()));
 
 const neutralNotFound = (response: import("express").Response) => response.status(404).set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).end();
-export const servePublicPhoto = onRequest({ secrets: [publicMediaKey] }, async (request, response) => {
+export const servePublicPhoto = onRequest({ secrets: [publicMediaKey], minInstances: 0, maxInstances: 1, concurrency: 2, timeoutSeconds: 30 }, async (request, response) => {
   if (request.method !== "GET" && request.method !== "HEAD") {
     neutralNotFound(response);
     return;
