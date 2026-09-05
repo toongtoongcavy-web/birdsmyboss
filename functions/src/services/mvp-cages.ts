@@ -229,18 +229,20 @@ export const moveActivePairToCageMvp = async (db: Firestore, input: Record<strin
     const members = await membersForPairAt(tx, db, pairId, movedOn);
     const male = members.find(member => member.role === "male"); const female = members.find(member => member.role === "female");
     if (!male || !female) fail("failed-precondition", "Active pair must have one male and one female member.");
+    const maleBirdId = male!.birdId;
+    const femaleBirdId = female!.birdId;
     const [pairAssignments, maleAssignments, femaleAssignments] = await Promise.all([
-      tx.get(db.collection("cageAssignments").where("pairId", "==", pairId)), openBirdAssignments(tx, db, male.birdId), openBirdAssignments(tx, db, female.birdId),
+      tx.get(db.collection("cageAssignments").where("pairId", "==", pairId)), openBirdAssignments(tx, db, maleBirdId), openBirdAssignments(tx, db, femaleBirdId),
     ]);
-    await assertCageCanReceivePair(tx, db, cageId, male.birdId, female.birdId, movedOn, pairId);
+    await assertCageCanReceivePair(tx, db, cageId, maleBirdId, femaleBirdId, movedOn, pairId);
     const open = pairAssignments.docs.filter(doc => !doc.data().endsOn);
     if (open.length > 1) fail("failed-precondition", "Pair has more than one open cage assignment.");
     if (open[0]?.data().cageId !== cageId) {
       if (open[0]) tx.update(open[0].ref, { endsOn: movedOn, endedReason: "ย้ายกรงคู่ผสมพันธุ์", updatedAt: now() });
       tx.create(ref(db, "cageAssignments", id()), { pairId, cageId, startsOn: movedOn, createdAt: now(), updatedAt: now() });
     }
-    applyBirdMove(tx, db, male.birdId, cageId, movedOn, maleAssignments, "ย้ายกรงคู่ผสมพันธุ์");
-    applyBirdMove(tx, db, female.birdId, cageId, movedOn, femaleAssignments, "ย้ายกรงคู่ผสมพันธุ์");
+    applyBirdMove(tx, db, maleBirdId, cageId, movedOn, maleAssignments, "ย้ายกรงคู่ผสมพันธุ์");
+    applyBirdMove(tx, db, femaleBirdId, cageId, movedOn, femaleAssignments, "ย้ายกรงคู่ผสมพันธุ์");
     tx.update(pairRef, { cageId, updatedAt: now() });
     return { pairId, cageId };
   });
