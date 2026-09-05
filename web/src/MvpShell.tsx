@@ -32,7 +32,24 @@ export function MvpShell() {
     }, 0);
   };
 
-  useEffect(() => { navigate("Dashboard"); }, []);
+  useEffect(() => {
+    const attach = () => {
+      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>(".mvp-inner .app > aside.nav button"));
+      if (!buttons.length) return undefined;
+      const sync = () => {
+        const index = buttons.findIndex(button => button.classList.contains("active"));
+        if (index >= 0) setRoute(current => current === "Cages" ? current : appRoutes[index]);
+      };
+      const observer = new MutationObserver(sync);
+      buttons.forEach(button => observer.observe(button, { attributes: true, attributeFilter: ["class"] }));
+      sync();
+      return () => observer.disconnect();
+    };
+    let cleanup = attach();
+    if (cleanup) return cleanup;
+    const timer = window.setTimeout(() => { cleanup = attach(); }, 0);
+    return () => { window.clearTimeout(timer); cleanup?.(); };
+  }, []);
 
   return <div className="mvp-shell">
     <aside className="mvp-nav" aria-label="เมนูหลัก">
