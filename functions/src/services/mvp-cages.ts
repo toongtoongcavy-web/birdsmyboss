@@ -26,8 +26,7 @@ const capacityValue = (value: unknown) => {
 
 const readCurrentSex = async (tx: Transaction, db: Firestore, birdId: string): Promise<string> => {
   const snapshot = await tx.get(db.collection("sexHistory").where("birdId", "==", birdId));
-  const entries = snapshot.docs.map(doc => doc.data())
-    .sort((a, b) => String(b.determinedOn ?? "").localeCompare(String(a.determinedOn ?? "")));
+  const entries = snapshot.docs.map(doc => doc.data()).sort((a, b) => String(b.determinedOn ?? "").localeCompare(String(a.determinedOn ?? "")));
   return String(entries[0]?.sex ?? "unknown");
 };
 
@@ -63,10 +62,7 @@ const ancestorIds = async (tx: Transaction, db: Firestore, birdId: string, depth
 };
 
 const validateNewActivePair = async (tx: Transaction, db: Firestore, maleBirdId: string, femaleBirdId: string, activeOn: string): Promise<KinshipResult> => {
-  const [maleSex, femaleSex] = await Promise.all([
-    readCurrentSex(tx, db, maleBirdId),
-    readCurrentSex(tx, db, femaleBirdId),
-  ]);
+  const [maleSex, femaleSex] = await Promise.all([readCurrentSex(tx, db, maleBirdId), readCurrentSex(tx, db, femaleBirdId)]);
   validatePairMembers([
     { pairId: "NEW", birdId: maleBirdId, role: "male", effectiveFrom: activeOn },
     { pairId: "NEW", birdId: femaleBirdId, role: "female", effectiveFrom: activeOn },
@@ -76,7 +72,7 @@ const validateNewActivePair = async (tx: Transaction, db: Firestore, maleBirdId:
     const memberships = await tx.get(db.collection("pairMembers").where("birdId", "==", birdId));
     for (const memberDoc of memberships.docs) {
       const member = memberDoc.data() as PairMember;
-      if (!currentMembersAt([member], activeOn).length) continue;
+      if (!member.pairId || !currentMembersAt([member], activeOn).length) continue;
       const pair = await tx.get(ref(db, "pairs", member.pairId));
       if (pair.exists && pair.data()?.status === "active") fail("failed-precondition", "Bird already has an active pair.");
     }
@@ -87,10 +83,7 @@ const validateNewActivePair = async (tx: Transaction, db: Firestore, maleBirdId:
   const kinship = classifyKinship(maleBirdId, femaleBirdId, birdId => birdId === maleBirdId ? maleParents : femaleParents);
   if (kinship.status === "blocked") fail("failed-precondition", `Pair is blocked by kinship policy: ${kinship.reason}.`);
   if (kinship.status !== "clear") return kinship;
-  const [maleAncestors, femaleAncestors] = await Promise.all([
-    ancestorIds(tx, db, maleBirdId),
-    ancestorIds(tx, db, femaleBirdId),
-  ]);
+  const [maleAncestors, femaleAncestors] = await Promise.all([ancestorIds(tx, db, maleBirdId), ancestorIds(tx, db, femaleBirdId)]);
   return maleAncestors && femaleAncestors && [...maleAncestors].some(ancestor => femaleAncestors.has(ancestor))
     ? { status: "warning", reason: "other_detectable_kinship" }
     : { status: "clear" };
@@ -98,12 +91,12 @@ const validateNewActivePair = async (tx: Transaction, db: Firestore, maleBirdId:
 
 const openBirdAssignments = async (tx: Transaction, db: Firestore, birdId: string) => {
   const snapshot = await tx.get(db.collection("birdCageAssignments").where("birdId", "==", birdId));
-  return snapshot.docs.filter(doc => !doc.data().endsOn);
+  const open = snapshot.docs.filter(doc => !doc.data().endsOn);
+  if (open.length > 1) fail("failed-precondition", "Bird has more than one open cage assignment.");
+  return open;
 };
 
-const moveBirdInTransaction = async (tx: Transaction, db: Firestore, birdId: string, cageId: string, movedOn: string, reason?: string) => {
-  const open = await openBirdAssignments(tx, db, birdId);
-  if (open.length > 1) fail("failed-precondition", "Bird has more than one open cage assignment.");
+const applyBirdMove = (tx: Transaction, db: Firestore, birdId: string, cageId: string, movedOn: string, open: FirebaseFirestore.QueryDocumentSnapshot[], reason?: string) => {
   const current = open[0];
   if (current?.data().cageId === cageId) return false;
   if (current) {
@@ -114,7 +107,7 @@ const moveBirdInTransaction = async (tx: Transaction, db: Firestore, birdId: str
   return true;
 };
 
-const assertCageCanReceivePair = async (tx: Transaction, db: Firestore, cageId: string, maleBirdId: string, femaleBirdId: string, startsOn: string) => {
+const assertCageCanReceivePair = async (tx: Transaction, db: Firestore, cageId: string, maleBirdId: string, femaleBirdId: string, startsOn: string, ignorePairId?: string) => {
   const cage = await tx.get(ref(db, "cages", cageId));
   if (!cage.exists) fail("not-found", "Cage not found.");
   const cageData = cage.data()!;
@@ -130,6 +123,7 @@ const assertCageCanReceivePair = async (tx: Transaction, db: Firestore, cageId: 
   const pairAssignments = await tx.get(db.collection("cageAssignments").where("cageId", "==", cageId));
   for (const assignment of pairAssignments.docs) {
     const data = assignment.data();
+    if (ignorePairId && data.pairId === ignorePairId) continue;
     if (intervalsOverlap(startsOn, undefined, String(data.startsOn), data.endsOn)) fail("failed-precondition", "Breeding cage is already assigned to another pair.");
   }
   return cageData;
@@ -153,22 +147,16 @@ export const createMvpCage = async (db: Firestore, input: Record<string, unknown
 };
 
 export const listMvpCages = async (db: Firestore) => {
-  const [cages, assignments] = await Promise.all([
-    db.collection("cages").get(),
-    db.collection("birdCageAssignments").get(),
-  ]);
+  const [cages, assignments] = await Promise.all([db.collection("cages").get(), db.collection("birdCageAssignments").get()]);
   const occupancy = new Map<string, number>();
   for (const assignment of assignments.docs) if (!assignment.data().endsOn) occupancy.set(String(assignment.data().cageId), (occupancy.get(String(assignment.data().cageId)) ?? 0) + 1);
-  return cages.docs.map(doc => ({ cageId: doc.id, ...doc.data(), occupancyCount: occupancy.get(doc.id) ?? 0 }))
-    .sort((a: any, b: any) => String(a.code ?? "").localeCompare(String(b.code ?? "")));
+  return cages.docs.map(doc => ({ cageId: doc.id, ...doc.data(), occupancyCount: occupancy.get(doc.id) ?? 0 })).sort((a: any, b: any) => String(a.code ?? "").localeCompare(String(b.code ?? "")));
 };
 
 export const listMvpBirds = async (db: Firestore) => {
-  const [birds, cages, assignments, sexHistory] = await Promise.all([
-    db.collection("birds").get(), db.collection("cages").get(), db.collection("birdCageAssignments").get(), db.collection("sexHistory").get(),
-  ]);
+  const [birds, cages, assignments, sexHistory] = await Promise.all([db.collection("birds").get(), db.collection("cages").get(), db.collection("birdCageAssignments").get(), db.collection("sexHistory").get()]);
   const cageMap = new Map(cages.docs.map(doc => [doc.id, doc.data()]));
-  const currentByBird = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+  const currentByBird = new Map<string, any>();
   for (const assignment of assignments.docs) {
     const data = assignment.data(); if (data.endsOn) continue;
     const previous = currentByBird.get(String(data.birdId));
@@ -188,22 +176,25 @@ export const listMvpBirds = async (db: Firestore) => {
 export const assignBirdToCageMvp = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId"); const cageId = requireId(input.cageId, "cageId"); const movedOn = requireDate(input.movedOn, "movedOn");
   return db.runTransaction(async tx => {
-    const [bird, cage, memberships] = await Promise.all([
-      tx.get(ref(db, "birds", birdId)), tx.get(ref(db, "cages", cageId)), tx.get(db.collection("pairMembers").where("birdId", "==", birdId)),
+    const [bird, cage, memberships, currentAssignments, existingAtCage] = await Promise.all([
+      tx.get(ref(db, "birds", birdId)),
+      tx.get(ref(db, "cages", cageId)),
+      tx.get(db.collection("pairMembers").where("birdId", "==", birdId)),
+      openBirdAssignments(tx, db, birdId),
+      tx.get(db.collection("birdCageAssignments").where("cageId", "==", cageId)),
     ]);
     if (!bird.exists) fail("not-found", "Bird not found.");
     if (!cage.exists) fail("not-found", "Cage not found.");
     if (cage.data()?.status !== "active") fail("failed-precondition", "Destination cage must be active.");
     for (const membership of memberships.docs.map(doc => doc.data() as PairMember)) {
-      if (!currentMembersAt([membership], movedOn).length) continue;
+      if (!membership.pairId || !currentMembersAt([membership], movedOn).length) continue;
       const pair = await tx.get(ref(db, "pairs", membership.pairId));
       if (pair.exists && pair.data()?.status === "active" && pair.data()?.cageId !== cageId) fail("failed-precondition", "นกอยู่ในคู่ผสมพันธุ์ที่กำลังใช้งาน กรุณาย้ายทั้งคู่พร้อมกัน");
     }
-    const existingAtCage = await tx.get(db.collection("birdCageAssignments").where("cageId", "==", cageId));
     const openAtCage = existingAtCage.docs.filter(doc => !doc.data().endsOn && doc.data().birdId !== birdId);
     const capacity = typeof cage.data()?.capacity === "number" ? cage.data()?.capacity : undefined;
     if (capacity !== undefined && openAtCage.length >= capacity) fail("failed-precondition", "Cage has reached capacity.");
-    await moveBirdInTransaction(tx, db, birdId, cageId, movedOn, optionalText(input.reason));
+    applyBirdMove(tx, db, birdId, cageId, movedOn, currentAssignments, optionalText(input.reason));
     return { birdId, cageId };
   });
 };
@@ -213,17 +204,18 @@ export const createActivePairInCageMvp = async (db: Firestore, input: Record<str
   if (maleBirdId === femaleBirdId) fail("invalid-argument", "Pair birds must be distinct.");
   const name = optionalText(input.name); const notes = optionalText(input.notes);
   return db.runTransaction(async tx => {
-    const [male, female] = await Promise.all([tx.get(ref(db, "birds", maleBirdId)), tx.get(ref(db, "birds", femaleBirdId))]);
+    const [male, female, maleAssignments, femaleAssignments] = await Promise.all([
+      tx.get(ref(db, "birds", maleBirdId)), tx.get(ref(db, "birds", femaleBirdId)), openBirdAssignments(tx, db, maleBirdId), openBirdAssignments(tx, db, femaleBirdId),
+    ]);
     if (!male.exists || !female.exists) fail("not-found", "Pair bird not found.");
     await assertCageCanReceivePair(tx, db, cageId, maleBirdId, femaleBirdId, startedOn);
     const kinship = await validateNewActivePair(tx, db, maleBirdId, femaleBirdId, startedOn);
-    await moveBirdInTransaction(tx, db, maleBirdId, cageId, startedOn, "จับคู่ผสมพันธุ์");
-    await moveBirdInTransaction(tx, db, femaleBirdId, cageId, startedOn, "จับคู่ผสมพันธุ์");
-    const pairId = id();
+    const pairId = id(); const cageAssignmentId = id();
+    applyBirdMove(tx, db, maleBirdId, cageId, startedOn, maleAssignments, "จับคู่ผสมพันธุ์");
+    applyBirdMove(tx, db, femaleBirdId, cageId, startedOn, femaleAssignments, "จับคู่ผสมพันธุ์");
     tx.create(ref(db, "pairs", pairId), { status: "active", startedOn, cageId, ...(name ? { name } : {}), ...(notes ? { notes } : {}), createdAt: now(), updatedAt: now() });
     tx.create(ref(db, "pairMembers", id()), { pairId, birdId: maleBirdId, role: "male", effectiveFrom: startedOn, createdAt: now(), updatedAt: now() });
     tx.create(ref(db, "pairMembers", id()), { pairId, birdId: femaleBirdId, role: "female", effectiveFrom: startedOn, createdAt: now(), updatedAt: now() });
-    const cageAssignmentId = id();
     tx.create(ref(db, "cageAssignments", cageAssignmentId), { pairId, cageId, startsOn: startedOn, createdAt: now(), updatedAt: now() });
     return { pairId, cageId, kinship };
   });
@@ -237,16 +229,18 @@ export const moveActivePairToCageMvp = async (db: Firestore, input: Record<strin
     const members = await membersForPairAt(tx, db, pairId, movedOn);
     const male = members.find(member => member.role === "male"); const female = members.find(member => member.role === "female");
     if (!male || !female) fail("failed-precondition", "Active pair must have one male and one female member.");
-    await assertCageCanReceivePair(tx, db, cageId, male.birdId, female.birdId, movedOn);
-    const pairAssignments = await tx.get(db.collection("cageAssignments").where("pairId", "==", pairId));
+    const [pairAssignments, maleAssignments, femaleAssignments] = await Promise.all([
+      tx.get(db.collection("cageAssignments").where("pairId", "==", pairId)), openBirdAssignments(tx, db, male.birdId), openBirdAssignments(tx, db, female.birdId),
+    ]);
+    await assertCageCanReceivePair(tx, db, cageId, male.birdId, female.birdId, movedOn, pairId);
     const open = pairAssignments.docs.filter(doc => !doc.data().endsOn);
     if (open.length > 1) fail("failed-precondition", "Pair has more than one open cage assignment.");
     if (open[0]?.data().cageId !== cageId) {
       if (open[0]) tx.update(open[0].ref, { endsOn: movedOn, endedReason: "ย้ายกรงคู่ผสมพันธุ์", updatedAt: now() });
       tx.create(ref(db, "cageAssignments", id()), { pairId, cageId, startsOn: movedOn, createdAt: now(), updatedAt: now() });
     }
-    await moveBirdInTransaction(tx, db, male.birdId, cageId, movedOn, "ย้ายกรงคู่ผสมพันธุ์");
-    await moveBirdInTransaction(tx, db, female.birdId, cageId, movedOn, "ย้ายกรงคู่ผสมพันธุ์");
+    applyBirdMove(tx, db, male.birdId, cageId, movedOn, maleAssignments, "ย้ายกรงคู่ผสมพันธุ์");
+    applyBirdMove(tx, db, female.birdId, cageId, movedOn, femaleAssignments, "ย้ายกรงคู่ผสมพันธุ์");
     tx.update(pairRef, { cageId, updatedAt: now() });
     return { pairId, cageId };
   });
@@ -255,12 +249,13 @@ export const moveActivePairToCageMvp = async (db: Firestore, input: Record<strin
 export const createExternalBirdInCageMvp = async (db: Firestore, input: Record<string, unknown>) => {
   const ringId = normalizeRingId(input.ringId); const displayName = text(input.displayName, "displayName"); const cageId = requireId(input.cageId, "cageId");
   const origin = enumValue(input.origin, "origin", ["external", "purchased", "rescued", "unknown"]); const acquiredOn = input.acquiredOn ? requireDate(input.acquiredOn, "acquiredOn") : undefined; const mutation = optionalText(input.mutation);
-  const movedOn = input.movedOn ? requireDate(input.movedOn, "movedOn") : (acquiredOn ?? requireDate(input.createdOn ?? new Date().toISOString().slice(0, 10), "movedOn"));
+  const movedOn = requireDate(input.movedOn, "movedOn");
   return db.runTransaction(async tx => {
-    const [duplicate, cage] = await Promise.all([tx.get(db.collection("birds").where("ringId", "==", ringId)), tx.get(ref(db, "cages", cageId))]);
+    const [duplicate, cage, occupants] = await Promise.all([
+      tx.get(db.collection("birds").where("ringId", "==", ringId)), tx.get(ref(db, "cages", cageId)), tx.get(db.collection("birdCageAssignments").where("cageId", "==", cageId)),
+    ]);
     if (!duplicate.empty) fail("already-exists", "ringId is already assigned to a bird.");
     if (!cage.exists || cage.data()?.status !== "active") fail("failed-precondition", "Destination cage must be active.");
-    const occupants = await tx.get(db.collection("birdCageAssignments").where("cageId", "==", cageId));
     const openCount = occupants.docs.filter(doc => !doc.data().endsOn).length; const capacity = typeof cage.data()?.capacity === "number" ? cage.data()?.capacity : undefined;
     if (capacity !== undefined && openCount >= capacity) fail("failed-precondition", "Cage has reached capacity.");
     const birdId = id();
