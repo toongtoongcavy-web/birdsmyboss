@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="th">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Birds My Boss — Clear TEST Data</title><style>body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 18px;line-height:1.5}button{padding:12px 18px;font-weight:700}.warn{background:#fff3cd;padding:14px;border-radius:10px}pre{white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px}</style></head>
+<body><h1>Clear TEST Data</h1><p class="warn">เครื่องมือนี้ตั้งใจใช้กับโปรเจกต์ DEV/TEST เท่านั้น ตรวจสอบ Firebase config และรายชื่อ collection ก่อนใช้งานจริง</p><p>เปิดไฟล์นี้ผ่าน Firebase Hosting หรือ local server แล้วกดปุ่มเพื่อลบเอกสารใน collection ที่กำหนดแบบ batch</p><button id="clear">ล้างข้อมูล TEST</button><pre id="log">พร้อมทำงาน</pre>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getFirestore, collection, getDocs, writeBatch, doc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+const firebaseConfig = { projectId: 'birdsmyboss-v1-dev' };
+const app=initializeApp(firebaseConfig), db=getFirestore(app);
+const collections=['assetIntakes','birds','breedingCycles','cageAssignments','cages','customers','deliveries','documents','eggs','giveaways','handovers','pairMembers','pairs','payments','photos','priceHistory','refunds','reservations','saleTimeline','sales','sexHistory','weightHistory'];
+const log=document.querySelector('#log');
+async function clearCollection(name){let total=0;while(true){const snap=await getDocs(collection(db,name));if(snap.empty)break;for(let i=0;i<snap.docs.length;i+=450){const batch=writeBatch(db);snap.docs.slice(i,i+450).forEach(d=>batch.delete(doc(db,name,d.id)));await batch.commit();total+=Math.min(450,snap.docs.length-i);}if(snap.size===0)break;}return total;}
+document.querySelector('#clear').onclick=async()=>{if(!confirm('ยืนยันล้างข้อมูล TEST ใน birdsmyboss-v1-dev?'))return;log.textContent='กำลังล้าง…';try{for(const name of collections){const n=await clearCollection(name);log.textContent+=`\n${name}: ${n}`;}log.textContent+='\nเสร็จแล้ว';}catch(e){log.textContent+='\nERROR: '+e.message;console.error(e);}};
+</script></body></html>
