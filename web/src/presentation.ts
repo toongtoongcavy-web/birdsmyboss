@@ -79,4 +79,10 @@ const fieldLabels: Record<string, string> = {
 };
 
 export const displayValue = (value: unknown) => valueLabels[String(value)] ?? String(value ?? "-");
+const breedingCycleStatusLabels: Record<string, string> = {
+  active: "เปิดรอบแล้ว",
+  closed: valueLabels.closed,
+  cancelled: valueLabels.cancelled,
+};
+export const displayBreedingCycleStatus = (value: unknown) => breedingCycleStatusLabels[String(value)] ?? displayValue(value);
 export const displayFieldName = (value: string) => fieldLabels[value] ?? value.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, letter => letter.toUpperCase());
