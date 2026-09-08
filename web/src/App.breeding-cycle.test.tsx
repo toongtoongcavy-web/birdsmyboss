@@ -32,6 +32,37 @@ it("shows cycle-specific Thai status labels throughout the Breeding ledger",asyn
   expect(within(cycleSection).getByRole("button",{name:/14\/06\/2026.*สถานะ: ยกเลิก/})).toBeTruthy();
 });
 
+it("allows Add Egg only for active cycles while keeping closed-cycle eggs viewable",async()=>{
+  const closedEgg={eggId:"closed-egg",sequenceNo:1,laidOn:"2026-07-15",status:"laid"};
+  cycles=[
+    {breedingCycleId:"active-cycle",startedOn:"2026-08-14",status:"active",eggs:[]},
+    {breedingCycleId:"closed-cycle",startedOn:"2026-07-14",status:"closed",eggs:[closedEgg]},
+    {breedingCycleId:"cancelled-cycle",startedOn:"2026-06-14",status:"cancelled",eggs:[]},
+  ];
+  const detail=await open();
+
+  fireEvent.click(within(detail).getByRole("button",{name:/14\/08\/2026.*เปิดรอบแล้ว/}));
+  let selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!;
+  expect(within(selected).getByRole("button",{name:"เพิ่มไข่"})).toBeTruthy();
+  expect(within(selected).getByRole("textbox",{name:"วันที่ไข่"})).toBeTruthy();
+
+  fireEvent.click(within(detail).getByRole("button",{name:/14\/07\/2026.*ปิดรอบแล้ว/}));
+  selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!;
+  expect(within(selected).queryByRole("button",{name:"เพิ่มไข่"})).toBeNull();
+  expect(within(selected).queryByRole("textbox",{name:"วันที่ไข่"})).toBeNull();
+  expect(within(selected).getByText("รอบเพาะนี้ปิดแล้ว ไม่สามารถเพิ่มไข่ได้")).toBeTruthy();
+  const egg=within(selected).getByRole("button",{name:/ไข่ลำดับ 1.*15\/07\/2026/});
+  expect(egg).toBeTruthy(); fireEvent.click(egg);
+  expect(within(detail).getByRole("heading",{name:"Egg Detail"})).toBeTruthy();
+  fireEvent.click(within(detail).getByRole("button",{name:"กลับไปรายการไข่"}));
+
+  fireEvent.click(within(detail).getByRole("button",{name:/14\/06\/2026.*ยกเลิก/}));
+  selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!;
+  expect(within(selected).queryByRole("button",{name:"เพิ่มไข่"})).toBeNull();
+  expect(within(selected).queryByRole("textbox",{name:"วันที่ไข่"})).toBeNull();
+  expect(within(selected).getByText("รอบเพาะนี้ถูกยกเลิกแล้ว ไม่สามารถเพิ่มไข่ได้")).toBeTruthy();
+});
+
 it("creates a cycle and egg from authoritative Pair context without exposing UUID inputs",async()=>{
   const detail=await open(); expect(detail.textContent).not.toContain("pair-uuid"); expect(within(detail).queryByLabelText(/Pair ID/i)).toBeNull();
   const cycleForm=within(detail).getByRole("heading",{name:"สร้างรอบเพาะ"}).closest("form")!;
