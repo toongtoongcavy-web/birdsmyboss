@@ -126,13 +126,13 @@ export const refundPayment = async (db: Firestore, input: Record<string, unknown
 
 export const createSale = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId"); const customerId = requireId(input.customerId, "customerId"); const createdOn = requireDate(input.createdOn, "createdOn"); const reservationId = input.reservationId === undefined ? undefined : requireId(input.reservationId, "reservationId");
-  if (reservationId && (hasOwn(input, "agreedPrice") || hasOwn(input, "currency"))) fail("invalid-argument", "Reservation conversion must not supply agreement price fields.");
-  const directSnapshot = reservationId ? {} : agreementSnapshot(input);
+  const suppliedSnapshot = agreementSnapshot(input);
+  const hasSuppliedSnapshot = hasOwn(suppliedSnapshot, "agreedPrice");
   return db.runTransaction(async (tx) => {
     const [bird, customer, reservation, sales, reservationSales] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(ref(db, "customers", customerId)), reservationId ? tx.get(ref(db, "reservations", reservationId)) : Promise.resolve(undefined), birdSaleSnapshots(tx, db, birdId), reservationId ? tx.get(db.collection("sales").where("reservationId", "==", reservationId)) : Promise.resolve(undefined)]);
     if (!bird.exists || !customer.exists) fail("not-found", "Bird or customer not found."); requireActiveCustomer(customer.data()); requireAvailableBird(bird.data()); await assertNoConflictingGiveaway(tx, db, birdId); assertNoCompetingSale(sales[0], sales[1]);
-    let snapshot = directSnapshot;
-    if (reservationId) { const reservationData = reservation?.data(); if (!reservation?.exists || reservationData?.status !== "active") fail("failed-precondition", "Reservation must be active."); const activeReservation = reservationData as Record<string, unknown>; if (activeReservation.birdId !== birdId || activeReservation.customerId !== customerId) fail("failed-precondition", "Reservation does not match sale bird and customer."); if (reservationSales?.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale."); snapshot = agreementSnapshot(activeReservation); }
+    let snapshot = suppliedSnapshot;
+    if (reservationId) { const reservationData = reservation?.data(); if (!reservation?.exists || reservationData?.status !== "active") fail("failed-precondition", "Reservation must be active."); const activeReservation = reservationData as Record<string, unknown>; if (activeReservation.birdId !== birdId || activeReservation.customerId !== customerId) fail("failed-precondition", "Reservation does not match sale bird and customer."); if (reservationSales?.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale."); const reservationSnapshot = agreementSnapshot(activeReservation); if (hasOwn(reservationSnapshot, "agreedPrice")) { if (hasSuppliedSnapshot) fail("invalid-argument", "Reservation agreement price cannot be overwritten during conversion."); snapshot = reservationSnapshot; } }
     const saleId = id(); tx.create(ref(db, "sales", saleId), { birdId, customerId, createdOn, ...(reservationId ? { reservationId } : {}), ...snapshot, status: "draft", createdAt: now(), updatedAt: now() }); timeline(tx, db, saleId, "sale_created", { reservationId: reservationId ?? null }); return { saleId };
   });
 };
