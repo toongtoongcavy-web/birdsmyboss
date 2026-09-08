@@ -85,4 +85,15 @@ const breedingCycleStatusLabels: Record<string, string> = {
   cancelled: valueLabels.cancelled,
 };
 export const displayBreedingCycleStatus = (value: unknown) => breedingCycleStatusLabels[String(value)] ?? displayValue(value);
+const customerStatusLabels: Record<string, string> = {
+  active: "ใช้งานอยู่",
+  inactive: "ไม่ใช้งาน",
+};
+export const displayCustomerStatus = (value: unknown) => customerStatusLabels[String(value)] ?? displayValue(value);
+const reservationStatusLabels: Record<string, string> = {
+  active: "กำลังจอง",
+  cancelled: "ยกเลิกการจอง",
+  expired: "การจองหมดอายุ",
+};
+export const displayReservationStatus = (value: unknown) => reservationStatusLabels[String(value)] ?? displayValue(value);
 export const displayFieldName = (value: string) => fieldLabels[value] ?? value.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, letter => letter.toUpperCase());
