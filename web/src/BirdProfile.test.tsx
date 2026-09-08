@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { BirdProfile } from "./BirdProfile";
 
@@ -14,5 +14,13 @@ describe("signature Bird Profile",()=>{
   it("uses only an explicitly published trusted photo",()=>{
     const {rerender}=render(<BirdProfile data={{...data,photos:[{publicUrl:"https://example.test/private.jpg",isPublicOnPassport:false}]}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
     expect(screen.queryByRole("img")).toBeNull();rerender(<BirdProfile data={{...data,photos:[{publicUrl:"https://example.test/published.jpg",isPublicOnPassport:true,caption:"Sunny portrait"}]}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);expect(screen.getByRole("img",{name:"ภาพของ Sunny"})).toBeTruthy();
+  });
+
+  it("shows the authoritative current cage and a truthful unassigned state",()=>{
+    const {rerender}=render(<BirdProfile data={{...data,currentCageId:"cage-id",currentCageCode:"A-01",currentCageName:"Garden Aviary"}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    const profile=screen.getAllByLabelText("ข้อมูลประจำตัวนก").at(-1)!.closest<HTMLElement>(".bird-profile")!;
+    expect(within(profile).getByText("กรงปัจจุบัน")).toBeTruthy();expect(within(profile).getByText("A-01 — Garden Aviary")).toBeTruthy();expect(profile.textContent).not.toContain("cage-id");
+    rerender(<BirdProfile data={{...data,currentCageId:null,currentCageCode:null,currentCageName:null}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    expect(within(profile).getByText("ยังไม่ได้จัดกรง")).toBeTruthy();
   });
 });

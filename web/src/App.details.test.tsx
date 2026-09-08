@@ -7,6 +7,7 @@ import { App } from "./App";
 const birdDetail = (sexHistory: Array<Record<string, unknown>> = [], weightHistory: Array<Record<string, unknown>> = []) => ({ birdId: "b1", ringId: "GC-001", displayName: "Bird", status: "active", parentage: { male: { ringId: "M-1" }, female: { ringId: "F-1" } }, sexHistory, weightHistory, photos: [], documents: [] });
 const defaultInvoke = async (name: string) => {
   if (name === "listBirds") return [{ birdId: "b1", ringId: "GC-001", displayName: "Bird" }];
+  if (name === "listMvpBirds") return [{ birdId: "b1", currentCageId: "cage-uuid", currentCageCode: "CAGE-01", currentCageName: "Main Cage" }];
   if (name === "listPairs") return [{ pairId: "p1", status: "draft", startedOn: "2026-08-14", members: [{ role: "male", birdId: "b1", displayName: "Father", ringId: "M-1", sex: "male" }, { role: "female", birdId: "b2", displayName: "Mother", ringId: "F-1", sex: "female" }] }];
   if (name === "listCages") return [{ cageId: "cage-uuid", code: "CAGE-01", name: "Main Cage", status: "active" }];
   if (name === "listCustomers") return [{ customerId: "c1", displayName: "Customer" }];
@@ -23,6 +24,8 @@ const openBird = async () => { render(<App />); fireEvent.click(await screen.fin
 const fill = (form: HTMLElement, method: string) => { const selects=within(form).getAllByRole("combobox"); fireEvent.change(selects[0],{target:{value:"female"}}); fireEvent.change(selects[1],{target:{value:method}}); fireEvent.change(within(form).getByRole("textbox",{name:"วันที่"}),{target:{value:"13082026"}}); };
 
 it("opens Bird Detail without exposing its internal ID in the registry", async () => { render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Birds" })); const row=await screen.findByRole("button", { name: /Ring ID: GC-001/ }); expect(row.textContent).not.toContain("b1"); fireEvent.click(row); expect(await screen.findByText("พ่อแม่: M-1 / F-1")).toBeTruthy(); });
+
+it("shows the authoritative current cage from listMvpBirds on Bird Profile", async () => { const form=await openBird(); const profile=form.closest<HTMLElement>(".bird-profile")!; expect(within(profile).getByText("กรงปัจจุบัน")).toBeTruthy(); expect(within(profile).getByText("CAGE-01 — Main Cage")).toBeTruthy(); expect(profile.textContent).not.toContain("cage-uuid"); });
 
 it("shows only canonical method labels and values", async () => {
   const form=await openBird(); const [sex, method]=within(form).getAllByRole("combobox");
