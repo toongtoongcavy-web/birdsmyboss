@@ -4,7 +4,7 @@ const valueLabels: Record<string, string> = {
   cancelled: "ยกเลิก",
   closed: "ปิดรอบแล้ว",
   completed: "ขายเสร็จสิ้น",
-  confirmed: "ยืนยันการขาย",
+  confirmed: "ยืนยันแล้ว",
   deceased: "เสียชีวิต",
   delivered: "จัดส่งแล้ว",
   disabled: "ปิดการเผยแพร่",

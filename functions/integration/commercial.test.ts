@@ -35,8 +35,8 @@ test("commercial: reservation payment/refunds retain records and never create re
 
 test("commercial: reservation-to-sale preserves records, creates timeline, and completion is unique", async () => {
   const { customerId } = await customer(); const birdId = await bird(); const { reservationId } = await createReservation(db, { birdId, customerId, reservedOn: "2026-01-01" }); const { paymentId } = await recordPayment(db, { reservationId, amount: 100, currency: "THB", receivedOn: "2026-01-01", paymentMethod: "transfer" });
-  const { saleId } = await createSale(db, { birdId, customerId, reservationId, createdOn: "2026-01-02" }); const sale = await db.collection("sales").doc(saleId).get(); assert.equal(sale.data()?.reservationId, reservationId);
-  await assert.rejects(completeSale(db, { saleId, completedOn: "2026-01-03" })); await confirmSale(db, { saleId }); await completeSale(db, { saleId, completedOn: "2026-01-03" }); assert.equal((await db.collection("reservations").doc(reservationId).get()).data()?.status, "completed"); assert.equal((await db.collection("payments").doc(paymentId).get()).exists, true);
+  const { saleId } = await createSale(db, { birdId, customerId, reservationId, createdOn: "2026-01-02" }); const sale = await db.collection("sales").doc(saleId).get(); assert.equal(sale.data()?.reservationId, reservationId); assert.equal(sale.data()?.status, "confirmed");
+  await assert.rejects(confirmSale(db, { saleId })); await completeSale(db, { saleId, completedOn: "2026-01-03" }); assert.equal((await db.collection("reservations").doc(reservationId).get()).data()?.status, "completed"); assert.equal((await db.collection("payments").doc(paymentId).get()).exists, true);
   const timeline = await db.collection("saleTimeline").where("saleId", "==", saleId).get(); assert.deepEqual(timeline.docs.map((d) => d.data().eventType).sort(), ["sale_completed", "sale_created"]); assert.equal((await db.collection("sales").doc(saleId).get()).data()?.status, "completed");
   await assert.rejects(createSale(db, { birdId, customerId, createdOn: "2026-01-04" }));
 });
@@ -93,7 +93,7 @@ test("commercial: locked eligibility and transition rejections are authoritative
   await assert.rejects(createSale(db, { birdId, customerId, reservationId, createdOn: "2026-01-03" }));
   await cancelSale(db, { saleId });
   const next = await createSale(db, { birdId, customerId, reservationId, createdOn: "2026-01-03" });
-  await confirmSale(db, { saleId: next.saleId }); await cancelSale(db, { saleId: next.saleId });
+  await assert.rejects(confirmSale(db, { saleId: next.saleId })); await cancelSale(db, { saleId: next.saleId });
   await assert.rejects(confirmSale(db, { saleId: next.saleId })); await assert.rejects(completeSale(db, { saleId: next.saleId, completedOn: "2026-01-04" }));
 });
 
@@ -137,11 +137,11 @@ test("commercial: agreement price snapshots are explicit, copied, and independen
   const fallbackPayload = { birdId: fallbackBird, customerId, reservationId: fallbackReservation.reservationId, createdOn: "2026-09-09", agreedPrice: 1000, currency: "THB" };
   const fallbackSale = await createSale(db, fallbackPayload);
   const fallbackSaleDoc = await db.collection("sales").doc(fallbackSale.saleId).get();
-  assert.equal(fallbackSaleDoc.data()?.reservationId, fallbackReservation.reservationId); assert.equal(fallbackSaleDoc.data()?.agreedPrice, 1000); assert.equal(fallbackSaleDoc.data()?.currency, "THB"); assert.equal(fallbackSaleDoc.data()?.createdOn, "2026-09-09"); assert.equal(fallbackSaleDoc.data()?.status, "draft");
+  assert.equal(fallbackSaleDoc.data()?.reservationId, fallbackReservation.reservationId); assert.equal(fallbackSaleDoc.data()?.agreedPrice, 1000); assert.equal(fallbackSaleDoc.data()?.currency, "THB"); assert.equal(fallbackSaleDoc.data()?.createdOn, "2026-09-09"); assert.equal(fallbackSaleDoc.data()?.status, "confirmed");
   await assert.rejects(createSale(db, fallbackPayload), /Bird already has an open sale|Reservation already has a non-cancelled sale/);
   assert.equal((await db.collection("sales").where("reservationId", "==", fallbackReservation.reservationId).get()).size, 1);
   const direct = await createSale(db, { birdId: directBird, customerId, createdOn: "2026-01-02", agreedPrice: 99.99, currency: "THB" });
-  assert.equal((await db.collection("sales").doc(direct.saleId).get()).data()?.agreedPrice, 99.99);
+  assert.equal((await db.collection("sales").doc(direct.saleId).get()).data()?.agreedPrice, 99.99); assert.equal((await db.collection("sales").doc(direct.saleId).get()).data()?.status, "draft");
   for (const invalid of [{ agreedPrice: 2 }, { currency: "THB" }, { agreedPrice: 0, currency: "THB" }, { agreedPrice: -1, currency: "THB" }, { agreedPrice: NaN, currency: "THB" }, { agreedPrice: Infinity, currency: "THB" }, { agreedPrice: 2, currency: "USD" }]) await assert.rejects(createSale(db, { birdId: await bird(), customerId, createdOn: "2026-01-02", ...invalid }));
   await createPriceHistory(db, { birdId: directBird, amount: 1, currency: "THB", effectiveOn: "2026-01-01", kind: "list" });
   await createPriceHistory(db, { birdId: directBird, amount: 200, currency: "THB", effectiveOn: "2027-01-01", kind: "offer" });
