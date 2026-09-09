@@ -26,7 +26,9 @@ export const invoke = async (name: string, data: unknown) => {
 };
 
 export const thaiError = (e: unknown) => {
-  const message = String((e as { message?: string })?.message ?? "");
+  const error = (e ?? {}) as { code?: unknown; message?: unknown };
+  const message = String(error.message ?? "").replace(/\s+/g, " ").trim();
+  const code = String(error.code ?? "").replace(/^functions\//, "").replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
   if (message.includes("ringId")) return "รหัสห่วงขานี้มีอยู่ในระบบแล้ว";
   if (message.includes("active reservation")) return "นกตัวนี้มีการจองที่ยังใช้งานอยู่";
   if (message.includes("active pair")) return "นกตัวนี้อยู่ในคู่ผสมพันธุ์ที่กำลังใช้งานอยู่";
@@ -34,5 +36,12 @@ export const thaiError = (e: unknown) => {
   if (message.includes("Destination cage must be active")) return "กรงปลายทางไม่อยู่ในสถานะพร้อมใช้งาน";
   if (message.includes("capacity")) return "กรงนี้มีนกเต็มตามความจุแล้ว";
   if (message.includes("overlap")) return "มีการใช้งานซ้อนทับในช่วงเวลาดังกล่าว";
+  if (message.includes("Reservation conversion must not supply agreement price fields")) return "ระบบสร้างการขายยังไม่รองรับราคาที่ส่งมาพร้อมการจอง กรุณาอัปเดต Functions (รหัส invalid-argument)";
+  if (message.includes("Reservation agreement price cannot be overwritten")) return "ไม่สามารถเปลี่ยนราคาที่ตกลงไว้ในการจองได้";
+  if (message.includes("Reservation must be active")) return "สร้างการขายได้เฉพาะจากการจองที่กำลังใช้งานอยู่";
+  if (message.includes("Reservation does not match sale bird and customer")) return "ข้อมูลนกหรือลูกค้าไม่ตรงกับการจอง";
+  if (message.includes("Reservation already has a non-cancelled sale")) return "การจองนี้มีรายการขายอยู่แล้ว";
+  const detail = message.slice(0, 240);
+  if (code || detail) return `ไม่สามารถบันทึกข้อมูลได้${code ? ` (รหัส ${code})` : ""}${detail ? `: ${detail}` : ""}`;
   return "ไม่สามารถบันทึกข้อมูลได้ กรุณาตรวจสอบอีกครั้ง";
 };

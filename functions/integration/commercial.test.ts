@@ -134,9 +134,12 @@ test("commercial: agreement price snapshots are explicit, copied, and independen
   const unpricedSale = await createSale(db, { birdId: unpricedBird, customerId, reservationId: noPrice.reservationId, createdOn: "2026-01-02" });
   assert.equal((await db.collection("sales").doc(unpricedSale.saleId).get()).data()?.agreedPrice, undefined);
   const fallbackBird = await bird(); const fallbackReservation = await createReservation(db, { birdId: fallbackBird, ...base });
-  const fallbackSale = await createSale(db, { birdId: fallbackBird, customerId, reservationId: fallbackReservation.reservationId, createdOn: "2026-01-02", agreedPrice: 875, currency: "THB" });
+  const fallbackPayload = { birdId: fallbackBird, customerId, reservationId: fallbackReservation.reservationId, createdOn: "2026-09-09", agreedPrice: 1000, currency: "THB" };
+  const fallbackSale = await createSale(db, fallbackPayload);
   const fallbackSaleDoc = await db.collection("sales").doc(fallbackSale.saleId).get();
-  assert.equal(fallbackSaleDoc.data()?.reservationId, fallbackReservation.reservationId); assert.equal(fallbackSaleDoc.data()?.agreedPrice, 875); assert.equal(fallbackSaleDoc.data()?.currency, "THB");
+  assert.equal(fallbackSaleDoc.data()?.reservationId, fallbackReservation.reservationId); assert.equal(fallbackSaleDoc.data()?.agreedPrice, 1000); assert.equal(fallbackSaleDoc.data()?.currency, "THB"); assert.equal(fallbackSaleDoc.data()?.createdOn, "2026-09-09"); assert.equal(fallbackSaleDoc.data()?.status, "draft");
+  await assert.rejects(createSale(db, fallbackPayload), /Bird already has an open sale|Reservation already has a non-cancelled sale/);
+  assert.equal((await db.collection("sales").where("reservationId", "==", fallbackReservation.reservationId).get()).size, 1);
   const direct = await createSale(db, { birdId: directBird, customerId, createdOn: "2026-01-02", agreedPrice: 99.99, currency: "THB" });
   assert.equal((await db.collection("sales").doc(direct.saleId).get()).data()?.agreedPrice, 99.99);
   for (const invalid of [{ agreedPrice: 2 }, { currency: "THB" }, { agreedPrice: 0, currency: "THB" }, { agreedPrice: -1, currency: "THB" }, { agreedPrice: NaN, currency: "THB" }, { agreedPrice: Infinity, currency: "THB" }, { agreedPrice: 2, currency: "USD" }]) await assert.rejects(createSale(db, { birdId: await bird(), customerId, createdOn: "2026-01-02", ...invalid }));
