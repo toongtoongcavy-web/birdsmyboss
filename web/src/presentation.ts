@@ -2,6 +2,8 @@ const valueLabels: Record<string, string> = {
   active: "อยู่ในฟาร์ม",
   archived: "เก็บถาวร",
   cancelled: "ยกเลิก",
+  card: "บัตรเครดิต/เดบิต",
+  cash: "เงินสด",
   closed: "ปิดรอบแล้ว",
   completed: "ขายเสร็จสิ้น",
   confirmed: "ยืนยันแล้ว",
@@ -27,9 +29,11 @@ const valueLabels: Record<string, string> = {
   partial_refund: "คืนเงินบางส่วน",
   planned: "วางแผนรอบเพาะ",
   published: "เผยแพร่แล้ว",
+  received: "รับเงินแล้ว",
   sale: "การขาย",
   sold: "ขายแล้ว",
   superseded: "ถูกแทนที่",
+  transfer: "โอนเงิน / พร้อมเพย์",
   unknown: "ไม่ทราบเพศ",
 
   // Values below are intentionally left as their current English labels until
@@ -43,7 +47,6 @@ const valueLabels: Record<string, string> = {
   lost: "Lost",
   offer: "Offer",
   purchased: "Purchased",
-  received: "Received",
   rescued: "Rescued",
   reserved: "Reserved",
   retired: "Retired",
