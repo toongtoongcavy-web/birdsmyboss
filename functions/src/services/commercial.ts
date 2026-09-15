@@ -102,6 +102,22 @@ export const recordPayment = async (db: Firestore, input: Record<string, unknown
   const amount = requirePositive(input.amount, "amount"); const currency = requireId(input.currency, "currency"); const receivedOn = requireDate(input.receivedOn, "receivedOn"); const paymentMethod = requireId(input.paymentMethod, "paymentMethod");
   return db.runTransaction(async (tx) => {
     const owner = await tx.get(ref(db, reservationId ? "reservations" : "sales", reservationId ?? saleId!)); if (!owner.exists) fail("not-found", "Payment owner not found.");
+    const ownerData = owner.data() as Record<string, unknown>;
+    if (reservationId) {
+      const linkedSales = await tx.get(db.collection("sales").where("reservationId", "==", reservationId));
+      if (linkedSales.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale; record further payments on the sale.");
+    }
+    const linkedReservationId = saleId && typeof ownerData.reservationId === "string" ? ownerData.reservationId : undefined;
+    const paymentQueries = await Promise.all([
+      tx.get(db.collection("payments").where(reservationId ? "reservationId" : "saleId", "==", reservationId ?? saleId!)),
+      linkedReservationId ? tx.get(db.collection("payments").where("reservationId", "==", linkedReservationId)) : Promise.resolve(undefined),
+    ]);
+    const applicablePayments = [...paymentQueries[0].docs, ...(paymentQueries[1]?.docs ?? [])].filter((payment) => payment.data().status === "received");
+    const refundQueries = await Promise.all(applicablePayments.map((payment) => tx.get(db.collection("refunds").where("paymentId", "==", payment.id))));
+    const totalReceived = applicablePayments.reduce((sum, payment) => sum + Number(payment.data().amount ?? 0), 0);
+    const totalRefunded = refundQueries.flatMap((refunds) => refunds.docs).reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0);
+    const agreedPrice = ownerData.agreedPrice;
+    if (typeof agreedPrice === "number" && Number.isFinite(agreedPrice) && amount > agreedPrice - (totalReceived - totalRefunded)) fail("failed-precondition", "Payment amount exceeds the remaining agreement balance.");
     const paymentId = id(); tx.create(ref(db, "payments", paymentId), { ...(reservationId ? { reservationId, purpose: "deposit" } : { saleId, purpose: "sale_payment" }), amount, currency, receivedOn, paymentMethod, status: "received", createdAt: now(), updatedAt: now() });
     if (saleId) timeline(tx, db, saleId, "payment_recorded", { paymentId, amount }); return { paymentId };
   });
@@ -129,10 +145,10 @@ export const createSale = async (db: Firestore, input: Record<string, unknown>) 
   const suppliedSnapshot = agreementSnapshot(input);
   const hasSuppliedSnapshot = hasOwn(suppliedSnapshot, "agreedPrice");
   return db.runTransaction(async (tx) => {
-    const [bird, customer, reservation, sales, reservationSales] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(ref(db, "customers", customerId)), reservationId ? tx.get(ref(db, "reservations", reservationId)) : Promise.resolve(undefined), birdSaleSnapshots(tx, db, birdId), reservationId ? tx.get(db.collection("sales").where("reservationId", "==", reservationId)) : Promise.resolve(undefined)]);
+    const [bird, customer, reservation, sales, reservationSales, reservationPayments] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(ref(db, "customers", customerId)), reservationId ? tx.get(ref(db, "reservations", reservationId)) : Promise.resolve(undefined), birdSaleSnapshots(tx, db, birdId), reservationId ? tx.get(db.collection("sales").where("reservationId", "==", reservationId)) : Promise.resolve(undefined), reservationId ? tx.get(db.collection("payments").where("reservationId", "==", reservationId)) : Promise.resolve(undefined)]);
     if (!bird.exists || !customer.exists) fail("not-found", "Bird or customer not found."); requireActiveCustomer(customer.data()); requireAvailableBird(bird.data()); await assertNoConflictingGiveaway(tx, db, birdId); assertNoCompetingSale(sales[0], sales[1]);
     let snapshot = suppliedSnapshot;
-    if (reservationId) { const reservationData = reservation?.data(); if (!reservation?.exists || reservationData?.status !== "active") fail("failed-precondition", "Reservation must be active."); const activeReservation = reservationData as Record<string, unknown>; if (activeReservation.birdId !== birdId || activeReservation.customerId !== customerId) fail("failed-precondition", "Reservation does not match sale bird and customer."); if (reservationSales?.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale."); const reservationSnapshot = agreementSnapshot(activeReservation); if (hasOwn(reservationSnapshot, "agreedPrice")) { if (hasSuppliedSnapshot) fail("invalid-argument", "Reservation agreement price cannot be overwritten during conversion."); snapshot = reservationSnapshot; } }
+    if (reservationId) { const reservationData = reservation?.data(); if (!reservation?.exists || reservationData?.status !== "active") fail("failed-precondition", "Reservation must be active."); const activeReservation = reservationData as Record<string, unknown>; if (activeReservation.birdId !== birdId || activeReservation.customerId !== customerId) fail("failed-precondition", "Reservation does not match sale bird and customer."); if (reservationSales?.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale."); const reservationSnapshot = agreementSnapshot(activeReservation); if (hasOwn(reservationSnapshot, "agreedPrice")) { if (hasSuppliedSnapshot) fail("invalid-argument", "Reservation agreement price cannot be overwritten during conversion."); snapshot = reservationSnapshot; } const receivedPayments = reservationPayments?.docs.filter((payment) => payment.data().status === "received") ?? []; const refundQueries = await Promise.all(receivedPayments.map((payment) => tx.get(db.collection("refunds").where("paymentId", "==", payment.id)))); const paid = receivedPayments.reduce((sum, payment) => sum + Number(payment.data().amount ?? 0), 0) - refundQueries.flatMap((refunds) => refunds.docs).reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0); if (typeof snapshot.agreedPrice === "number" && paid > snapshot.agreedPrice) fail("failed-precondition", "Reservation payments exceed the Sale agreement price."); }
     const saleId = id(); tx.create(ref(db, "sales", saleId), { birdId, customerId, createdOn, ...(reservationId ? { reservationId } : {}), ...snapshot, status: reservationId ? "confirmed" : "draft", createdAt: now(), updatedAt: now() }); timeline(tx, db, saleId, "sale_created", { reservationId: reservationId ?? null }); return { saleId };
   });
 };

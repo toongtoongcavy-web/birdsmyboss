@@ -41,6 +41,29 @@ test("commercial: reservation-to-sale preserves records, creates timeline, and c
   await assert.rejects(createSale(db, { birdId, customerId, createdOn: "2026-01-04" }));
 });
 
+test("commercial: linked Reservation deposits enforce the Sale balance transactionally", async () => {
+  const { customerId } = await customer(); const birdId = await bird();
+  const { reservationId } = await createReservation(db, { birdId, customerId, reservedOn: "2026-09-01", agreedPrice: 1000, currency: "THB" });
+  const deposit = await recordPayment(db, { reservationId, amount: 200, currency: "THB", receivedOn: "2026-09-01", paymentMethod: "transfer" });
+  const { saleId } = await createSale(db, { birdId, customerId, reservationId, createdOn: "2026-09-09" });
+  await assert.rejects(recordPayment(db, { reservationId, amount: 1, currency: "THB", receivedOn: "2026-09-09", paymentMethod: "cash" }), /record further payments on the sale/);
+  await assert.rejects(recordPayment(db, { saleId, amount: 801, currency: "THB", receivedOn: "2026-09-09", paymentMethod: "cash" }), /remaining agreement balance/);
+  const balancePayment = await recordPayment(db, { saleId, amount: 800, currency: "THB", receivedOn: "2026-09-09", paymentMethod: "cash" });
+  await assert.rejects(recordPayment(db, { saleId, amount: 1, currency: "THB", receivedOn: "2026-09-09", paymentMethod: "cash" }), /remaining agreement balance/);
+  await refundPayment(db, { paymentId: balancePayment.paymentId, outcome: "partial_refund", amount: 100, reason: "adjustment", refundedOn: "2026-09-10" });
+  await recordPayment(db, { saleId, amount: 100, currency: "THB", receivedOn: "2026-09-10", paymentMethod: "transfer" });
+  assert.equal((await db.collection("payments").doc(deposit.paymentId).get()).data()?.reservationId, reservationId);
+
+  const unpricedBird = await bird(); const unpricedReservation = await createReservation(db, { birdId: unpricedBird, customerId, reservedOn: "2026-09-01" });
+  await recordPayment(db, { reservationId: unpricedReservation.reservationId, amount: 200, currency: "THB", receivedOn: "2026-09-01", paymentMethod: "transfer" });
+  await assert.rejects(createSale(db, { birdId: unpricedBird, customerId, reservationId: unpricedReservation.reservationId, agreedPrice: 199, currency: "THB", createdOn: "2026-09-09" }), /payments exceed the Sale agreement price/);
+
+  const concurrentBird = await bird(); const concurrentReservation = await createReservation(db, { birdId: concurrentBird, customerId, reservedOn: "2026-09-01", agreedPrice: 100, currency: "THB" }); const concurrentSale = await createSale(db, { birdId: concurrentBird, customerId, reservationId: concurrentReservation.reservationId, createdOn: "2026-09-09" });
+  const retries = await Promise.allSettled([recordPayment(db, { saleId: concurrentSale.saleId, amount: 100, currency: "THB", receivedOn: "2026-09-09", paymentMethod: "cash" }), recordPayment(db, { saleId: concurrentSale.saleId, amount: 100, currency: "THB", receivedOn: "2026-09-09", paymentMethod: "cash" })]);
+  assert.equal(retries.filter((result) => result.status === "fulfilled").length, 1);
+  assert.equal((await db.collection("payments").where("saleId", "==", concurrentSale.saleId).get()).size, 1);
+});
+
 test("commercial: reservation terminal transitions and race-safe sale link rules", async () => {
   const { customerId } = await customer(); const birdId = await bird();
   const { reservationId } = await createReservation(db, { birdId, customerId, reservedOn: "2026-01-01", expiresOn: "2026-01-10" });

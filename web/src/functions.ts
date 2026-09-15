@@ -41,6 +41,9 @@ export const thaiError = (e: unknown) => {
   if (message.includes("Reservation must be active")) return "สร้างการขายได้เฉพาะจากการจองที่กำลังใช้งานอยู่";
   if (message.includes("Reservation does not match sale bird and customer")) return "ข้อมูลนกหรือลูกค้าไม่ตรงกับการจอง";
   if (message.includes("Reservation already has a non-cancelled sale")) return "การจองนี้มีรายการขายอยู่แล้ว";
+  if (message.includes("record further payments on the sale")) return "สร้างการขายแล้ว กรุณารับชำระเงินต่อในรายการขาย";
+  if (message.includes("Payment amount exceeds the remaining agreement balance")) return "จำนวนเงินเกินยอดคงเหลือของการขาย";
+  if (message.includes("Reservation payments exceed the Sale agreement price")) return "ยอดมัดจำเดิมสูงกว่าราคาขายที่ตกลง กรุณาตรวจสอบราคา";
   const detail = message.slice(0, 240);
   if (code || detail) return `ไม่สามารถบันทึกข้อมูลได้${code ? ` (รหัส ${code})` : ""}${detail ? `: ${detail}` : ""}`;
   return "ไม่สามารถบันทึกข้อมูลได้ กรุณาตรวจสอบอีกครั้ง";
