@@ -3,7 +3,7 @@ import test from "node:test";
 import { Firestore, Timestamp } from "firebase-admin/firestore";
 import { cancelReservation, cancelSale, completeSale, confirmSale, createCustomer, createPriceHistory, createReservation, createSale, expireReservation, recordPayment, refundPayment } from "../src/services/commercial.js";
 import { completeHandover, createDelivery } from "../src/services/phase4.js";
-import { listBirdPriceHistory, listSaleTimeline } from "../src/services/reads.js";
+import { listBirdPriceHistory, listReservations, listSaleTimeline } from "../src/services/reads.js";
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -77,6 +77,25 @@ test("commercial: reservation terminal transitions and race-safe sale link rules
   await assert.rejects(cancelReservation(db, { reservationId: reservation3.reservationId }));
   await cancelSale(db, { saleId: sale.saleId });
   assert.equal((await db.collection("reservations").doc(reservation3.reservationId).get()).data()?.status, "active");
+});
+
+test("commercial: overdue Reservations expire authoritatively while converted history does not", async () => {
+  const { customerId } = await customer();
+  const overdueBird = await bird(); const overdueId = key("overdue-reservation");
+  await db.collection("reservations").doc(overdueId).set({ birdId: overdueBird, customerId, reservedOn: "2026-09-09", expiresOn: "2026-09-10", status: "active", ...stamp });
+  const listed = await listReservations(db, { limit: 50 });
+  assert.equal(listed.find((reservation) => reservation.reservationId === overdueId)?.status, "expired");
+  assert.equal((await db.collection("reservations").doc(overdueId).get()).data()?.status, "expired");
+  await assert.rejects(recordPayment(db, { reservationId: overdueId, amount: 1, currency: "THB", receivedOn: "2026-09-15", paymentMethod: "cash" }), /expired or inactive/);
+  await assert.rejects(createSale(db, { birdId: overdueBird, customerId, reservationId: overdueId, createdOn: "2026-09-15", agreedPrice: 1000, currency: "THB" }), /expired or inactive/);
+
+  const convertedBird = await bird(); const convertedId = key("converted-reservation"); const convertedSaleId = key("converted-sale");
+  await db.collection("reservations").doc(convertedId).set({ birdId: convertedBird, customerId, reservedOn: "2026-09-09", expiresOn: "2026-09-10", status: "active", ...stamp });
+  await db.collection("sales").doc(convertedSaleId).set({ birdId: convertedBird, customerId, reservationId: convertedId, createdOn: "2026-09-09", status: "confirmed", ...stamp });
+  const convertedHistory = await listReservations(db, { limit: 50 });
+  assert.equal(convertedHistory.find((reservation) => reservation.reservationId === convertedId)?.status, "active");
+  assert.equal((await db.collection("reservations").doc(convertedId).get()).data()?.status, "active");
+  await assert.rejects(expireReservation(db, { reservationId: convertedId, expiredOn: "2026-09-15" }), /non-cancelled sale/);
 });
 
 test("commercial: availability, sale transitions, delivery and handover boundaries", async () => {

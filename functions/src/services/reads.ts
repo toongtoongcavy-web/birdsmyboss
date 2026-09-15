@@ -68,7 +68,24 @@ export const listBreedingCycles = (db: Firestore, input: Record<string, unknown>
 export const listEggs = (db: Firestore, input: Record<string, unknown>) => list(db, "eggs", input, (eggId, d) => ({ eggId, cycleId: d.cycleId, sequenceNo: d.sequenceNo, laidOn: d.laidOn ?? null, expectedHatchOn: d.expectedHatchOn ?? null, status: d.status }));
 export const listCustomers = (db: Firestore, input: Record<string, unknown>) => list(db, "customers", input, customer);
 export const getCustomerDetails = async (db: Firestore, input: Record<string, unknown>) => { const customerId = requireId(input.customerId, "customerId"); const c = await db.collection("customers").doc(customerId).get(); if (!c.exists) fail("not-found", "Customer not found."); const [reservations, sales] = await Promise.all([db.collection("reservations").where("customerId", "==", customerId).limit(25).get(), db.collection("sales").where("customerId", "==", customerId).limit(25).get()]); return { ...customer(customerId, c.data()!), reservations: reservations.docs.map(x => ({ reservationId: x.id, birdId: x.data().birdId, status: x.data().status, reservedOn: x.data().reservedOn })), sales: sales.docs.map(x => sale(x.id, x.data())) }; };
-export const listReservations = (db: Firestore, input: Record<string, unknown>) => list(db, "reservations", input, (reservationId, d) => ({ reservationId, birdId: d.birdId, customerId: d.customerId, reservedOn: d.reservedOn, expiresOn: d.expiresOn ?? null, ...priceSnapshot(d), status: d.status }));
+export const listReservations = async (db: Firestore, input: Record<string, unknown>) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const reservations = await db.collection("reservations").limit(limitOf(input.limit)).get();
+  return Promise.all(reservations.docs.map(async (reservation) => {
+    const initial = reservation.data();
+    if (initial.status !== "active" || typeof initial.expiresOn !== "string" || initial.expiresOn >= today) return { reservationId: reservation.id, birdId: initial.birdId, customerId: initial.customerId, reservedOn: initial.reservedOn, expiresOn: initial.expiresOn ?? null, ...priceSnapshot(initial), status: initial.status };
+    const current = await db.runTransaction(async (tx) => {
+      const [fresh, linkedSales] = await Promise.all([tx.get(reservation.ref), tx.get(db.collection("sales").where("reservationId", "==", reservation.id))]);
+      const data = fresh.data()!;
+      if (data.status === "active" && typeof data.expiresOn === "string" && data.expiresOn < today && !linkedSales.docs.some((sale) => sale.data().status !== "cancelled")) {
+        tx.update(reservation.ref, { status: "expired", updatedAt: new Date() });
+        return { ...data, status: "expired" };
+      }
+      return data;
+    });
+    return { reservationId: reservation.id, birdId: current.birdId, customerId: current.customerId, reservedOn: current.reservedOn, expiresOn: current.expiresOn ?? null, ...priceSnapshot(current), status: current.status };
+  }));
+};
 export const listSales = (db: Firestore, input: Record<string, unknown>) => list(db, "sales", input, sale);
 export const listBirdPriceHistory = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId");

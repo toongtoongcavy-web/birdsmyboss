@@ -39,6 +39,7 @@ export const thaiError = (e: unknown) => {
   if (message.includes("Reservation conversion must not supply agreement price fields")) return "ระบบสร้างการขายยังไม่รองรับราคาที่ส่งมาพร้อมการจอง กรุณาอัปเดต Functions (รหัส invalid-argument)";
   if (message.includes("Reservation agreement price cannot be overwritten")) return "ไม่สามารถเปลี่ยนราคาที่ตกลงไว้ในการจองได้";
   if (message.includes("Reservation must be active")) return "สร้างการขายได้เฉพาะจากการจองที่กำลังใช้งานอยู่";
+  if (message.includes("Reservation is expired or inactive")) return "การจองหมดอายุหรือไม่อยู่ในสถานะใช้งานแล้ว";
   if (message.includes("Reservation does not match sale bird and customer")) return "ข้อมูลนกหรือลูกค้าไม่ตรงกับการจอง";
   if (message.includes("Reservation already has a non-cancelled sale")) return "การจองนี้มีรายการขายอยู่แล้ว";
   if (message.includes("record further payments on the sale")) return "สร้างการขายแล้ว กรุณารับชำระเงินต่อในรายการขาย";
