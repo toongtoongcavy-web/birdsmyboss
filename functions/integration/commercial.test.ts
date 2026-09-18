@@ -23,6 +23,32 @@ test("commercial invariants: terminal birds remain readable but cannot re-enter 
   }
 });
 
+test("commercial eligibility follows active Reservations and every non-cancelled Sale state", async () => {
+  const { customerId } = await customer();
+
+  const reservedBird = await bird();
+  const reservation = await createReservation(db, { birdId: reservedBird, customerId, reservedOn: "2026-09-19" });
+  await assert.rejects(createReservation(db, { birdId: reservedBird, customerId, reservedOn: "2026-09-19" }), /active reservation/);
+  await assert.rejects(createSale(db, { birdId: reservedBird, customerId, createdOn: "2026-09-19" }), /convert that reservation/);
+  const converted = await createSale(db, { birdId: reservedBird, customerId, reservationId: reservation.reservationId, createdOn: "2026-09-19", agreedPrice: 1000, currency: "THB" });
+  assert.equal((await db.collection("sales").doc(converted.saleId).get()).data()?.status, "confirmed");
+
+  for (const status of ["draft", "confirmed", "completed"]) {
+    const committedBird = await bird();
+    await db.collection("sales").doc(key(`${status}-sale`)).set({ birdId: committedBird, customerId, status, createdOn: "2026-09-19", ...stamp });
+    await assert.rejects(createReservation(db, { birdId: committedBird, customerId, reservedOn: "2026-09-19" }), /sale/);
+    await assert.rejects(createSale(db, { birdId: committedBird, customerId, createdOn: "2026-09-19" }), /sale/);
+  }
+
+  const cancelledReservationBird = await bird();
+  await db.collection("sales").doc(key("cancelled-reservation-sale")).set({ birdId: cancelledReservationBird, customerId, status: "cancelled", createdOn: "2026-09-19", ...stamp });
+  assert.ok((await createReservation(db, { birdId: cancelledReservationBird, customerId, reservedOn: "2026-09-19" })).reservationId);
+
+  const cancelledDirectBird = await bird();
+  await db.collection("sales").doc(key("cancelled-direct-sale")).set({ birdId: cancelledDirectBird, customerId, status: "cancelled", createdOn: "2026-09-19", ...stamp });
+  assert.ok((await createSale(db, { birdId: cancelledDirectBird, customerId, createdOn: "2026-09-19" })).saleId);
+});
+
 test("commercial: customer validation and concurrent reservation allow one active record", async () => {
   await assert.rejects(createCustomer(db, {}));
   const { customerId } = await customer(); const birdId = await bird();
