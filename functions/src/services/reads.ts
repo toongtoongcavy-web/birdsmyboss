@@ -90,7 +90,7 @@ export const listSales = (db: Firestore, input: Record<string, unknown>) => list
 export const listBirdPriceHistory = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId");
   const records = await db.collection("priceHistory").where("birdId", "==", birdId).limit(50).get();
-  return records.docs.map(doc => ({ priceHistoryId: doc.id, amount: doc.data().amount, currency: doc.data().currency, effectiveOn: doc.data().effectiveOn, kind: doc.data().kind, validUntil: doc.data().validUntil ?? null, notes: doc.data().notes ?? null }))
+  return records.docs.map(doc => ({ priceHistoryId: doc.id, amount: doc.data().amount, currency: doc.data().currency, effectiveOn: doc.data().effectiveOn, kind: doc.data().kind, validUntil: doc.data().validUntil ?? null, notes: doc.data().notes ?? null, sourceType: doc.data().sourceType ?? null, saleId: doc.data().saleId ?? null }))
     .sort((a, b) => String(b.effectiveOn).localeCompare(String(a.effectiveOn)) || String(b.priceHistoryId).localeCompare(String(a.priceHistoryId)));
 };
 export const listSaleTimeline = async (db: Firestore, input: Record<string, unknown>) => {

@@ -36,16 +36,15 @@ const valueLabels: Record<string, string> = {
   transfer: "โอนเงิน / พร้อมเพย์",
   unknown: "ไม่ทราบเพศ",
 
-  // Values below are intentionally left as their current English labels until
-  // the owner explicitly approves Thai wording in the mapping workbook.
+  // Values without an approved Thai mapping remain in their current English form.
   deposit: "Deposit",
   discarded: "Discarded",
   dna: "DNA",
-  final: "Final",
+  final: "ราคาสุดท้าย",
   given_away: "Given Away",
-  list: "List",
+  list: "ราคาตั้งขาย",
   lost: "Lost",
-  offer: "Offer",
+  offer: "ราคาที่เสนอ",
   purchased: "Purchased",
   rescued: "Rescued",
   reserved: "Reserved",
