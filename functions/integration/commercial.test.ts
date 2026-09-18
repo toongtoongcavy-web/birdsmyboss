@@ -3,7 +3,7 @@ import test from "node:test";
 import { Firestore, Timestamp } from "firebase-admin/firestore";
 import { cancelReservation, cancelSale, completeSale, confirmSale, createCustomer, createPriceHistory, createReservation, createSale, expireReservation, recordPayment, refundPayment } from "../src/services/commercial.js";
 import { completeHandover, createDelivery } from "../src/services/phase4.js";
-import { listBirdPriceHistory, listReservations, listSaleTimeline } from "../src/services/reads.js";
+import { getBirdDetails, listBirdPriceHistory, listReservations, listSaleTimeline } from "../src/services/reads.js";
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -12,6 +12,16 @@ const key = (v: string) => `${v}-${suffix}-${sequence++}`;
 const stamp = { createdAt: new Date(), updatedAt: new Date() };
 const customer = () => createCustomer(db, { displayName: key("Customer") });
 const bird = async () => { const birdId = key("bird"); await db.collection("birds").doc(birdId).set({ ringId: key("ring"), origin: "external", displayName: birdId, status: "active", ...stamp }); return birdId; };
+
+test("commercial invariants: terminal birds remain readable but cannot re-enter Reservation or Direct Sale", async () => {
+  const { customerId } = await customer();
+  for (const status of ["sold", "given_away", "deceased", "lost"]) {
+    const birdId = await bird(); await db.collection("birds").doc(birdId).update({ status });
+    assert.equal((await getBirdDetails(db, { birdId })).status, status);
+    await assert.rejects(createReservation(db, { birdId, customerId, reservedOn: "2026-09-18" }), /no longer available/);
+    await assert.rejects(createSale(db, { birdId, customerId, createdOn: "2026-09-18" }), /no longer available/);
+  }
+});
 
 test("commercial: customer validation and concurrent reservation allow one active record", async () => {
   await assert.rejects(createCustomer(db, {}));

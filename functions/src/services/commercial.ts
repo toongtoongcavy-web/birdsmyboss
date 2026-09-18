@@ -30,7 +30,7 @@ const requireActiveCustomer = (data: Record<string, unknown> | undefined) => {
   if (data?.status !== "active") fail("failed-precondition", "Customer must be active for new commercial records.");
 };
 const requireAvailableBird = (data: Record<string, unknown> | undefined) => {
-  if (["sold", "given_away"].includes(String(data?.status))) fail("failed-precondition", "Bird is no longer available for a commercial workflow.");
+  if (["sold", "given_away", "deceased", "lost"].includes(String(data?.status))) fail("failed-precondition", "Bird is no longer available for a commercial workflow.");
 };
 const birdSaleSnapshots = (tx: Transaction, db: Firestore, birdId: string) => Promise.all([
   tx.get(db.collection("sales").where("birdId", "==", birdId).where("status", "in", openSaleStatuses)),

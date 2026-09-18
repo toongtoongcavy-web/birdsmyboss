@@ -7,6 +7,7 @@ import { intervalsOverlap, normalizeRingId, requireDate, requireId } from "../do
 const now = () => FieldValue.serverTimestamp();
 const id = () => crypto.randomUUID();
 const ref = (db: Firestore, collection: string, docId: string) => db.collection(collection).doc(docId);
+const terminalBirdStatuses = ["sold", "given_away", "deceased", "lost"];
 const text = (value: unknown, name: string) => {
   if (typeof value !== "string" || !value.trim()) fail("invalid-argument", `${name} is required.`);
   return (value as string).trim();
@@ -115,7 +116,8 @@ const assertCageCanReceivePair = async (tx: Transaction, db: Firestore, cageId: 
   if (cageData.type && cageData.type !== "breeding") fail("failed-precondition", "Active pairs must use a breeding cage.");
 
   const birdAssignments = await tx.get(db.collection("birdCageAssignments").where("cageId", "==", cageId));
-  const otherBirds = birdAssignments.docs.filter(doc => !doc.data().endsOn && ![maleBirdId, femaleBirdId].includes(String(doc.data().birdId)));
+  const openOtherBirds = birdAssignments.docs.filter(doc => !doc.data().endsOn && ![maleBirdId, femaleBirdId].includes(String(doc.data().birdId)));
+  const otherBirds = (await Promise.all(openOtherBirds.map(async assignment => ({ assignment, bird: await tx.get(ref(db, "birds", String(assignment.data().birdId))) })))).filter(({ bird }) => !terminalBirdStatuses.includes(String(bird.data()?.status)));
   if (otherBirds.length) fail("failed-precondition", "Breeding cage already contains another bird.");
   const capacity = typeof cageData.capacity === "number" ? cageData.capacity : undefined;
   if (capacity !== undefined && capacity < 2) fail("failed-precondition", "Breeding cage capacity must allow two birds.");
@@ -147,9 +149,10 @@ export const createMvpCage = async (db: Firestore, input: Record<string, unknown
 };
 
 export const listMvpCages = async (db: Firestore) => {
-  const [cages, assignments] = await Promise.all([db.collection("cages").get(), db.collection("birdCageAssignments").get()]);
+  const [cages, assignments, birds] = await Promise.all([db.collection("cages").get(), db.collection("birdCageAssignments").get(), db.collection("birds").get()]);
+  const statusByBird = new Map(birds.docs.map(doc => [doc.id, String(doc.data().status)]));
   const occupancy = new Map<string, number>();
-  for (const assignment of assignments.docs) if (!assignment.data().endsOn) occupancy.set(String(assignment.data().cageId), (occupancy.get(String(assignment.data().cageId)) ?? 0) + 1);
+  for (const assignment of assignments.docs) if (!assignment.data().endsOn && !terminalBirdStatuses.includes(statusByBird.get(String(assignment.data().birdId)) ?? "")) occupancy.set(String(assignment.data().cageId), (occupancy.get(String(assignment.data().cageId)) ?? 0) + 1);
   return cages.docs.map(doc => ({ cageId: doc.id, ...doc.data(), occupancyCount: occupancy.get(doc.id) ?? 0 })).sort((a: any, b: any) => String(a.code ?? "").localeCompare(String(b.code ?? "")));
 };
 
@@ -168,7 +171,7 @@ export const listMvpBirds = async (db: Firestore) => {
     if (!previous || String(previous.determinedOn ?? "") < String(data.determinedOn ?? "")) sexByBird.set(String(data.birdId), data);
   }
   return birds.docs.map(doc => {
-    const bird = doc.data(); const assignment = currentByBird.get(doc.id)?.data(); const cage = assignment ? cageMap.get(String(assignment.cageId)) : undefined;
+    const bird = doc.data(); const assignment = terminalBirdStatuses.includes(String(bird.status)) ? undefined : currentByBird.get(doc.id)?.data(); const cage = assignment ? cageMap.get(String(assignment.cageId)) : undefined;
     return { birdId: doc.id, ...bird, currentSex: sexByBird.get(doc.id)?.sex ?? "unknown", currentCageId: assignment?.cageId ?? null, currentCageCode: cage?.code ?? null, currentCageName: cage?.name ?? null, currentCageType: cage?.type ?? null };
   }).sort((a: any, b: any) => String(a.ringId ?? "").localeCompare(String(b.ringId ?? "")));
 };
@@ -191,7 +194,8 @@ export const assignBirdToCageMvp = async (db: Firestore, input: Record<string, u
       const pair = await tx.get(ref(db, "pairs", membership.pairId));
       if (pair.exists && pair.data()?.status === "active" && pair.data()?.cageId !== cageId) fail("failed-precondition", "นกอยู่ในคู่ผสมพันธุ์ที่กำลังใช้งาน กรุณาย้ายทั้งคู่พร้อมกัน");
     }
-    const openAtCage = existingAtCage.docs.filter(doc => !doc.data().endsOn && doc.data().birdId !== birdId);
+    const openCandidates = existingAtCage.docs.filter(doc => !doc.data().endsOn && doc.data().birdId !== birdId);
+    const openAtCage = (await Promise.all(openCandidates.map(async assignment => ({ assignment, bird: await tx.get(ref(db, "birds", String(assignment.data().birdId))) })))).filter(({ bird }) => !terminalBirdStatuses.includes(String(bird.data()?.status)));
     const capacity = typeof cage.data()?.capacity === "number" ? cage.data()?.capacity : undefined;
     if (capacity !== undefined && openAtCage.length >= capacity) fail("failed-precondition", "Cage has reached capacity.");
     applyBirdMove(tx, db, birdId, cageId, movedOn, currentAssignments, optionalText(input.reason));
@@ -258,7 +262,8 @@ export const createExternalBirdInCageMvp = async (db: Firestore, input: Record<s
     ]);
     if (!duplicate.empty) fail("already-exists", "ringId is already assigned to a bird.");
     if (!cage.exists || cage.data()?.status !== "active") fail("failed-precondition", "Destination cage must be active.");
-    const openCount = occupants.docs.filter(doc => !doc.data().endsOn).length; const capacity = typeof cage.data()?.capacity === "number" ? cage.data()?.capacity : undefined;
+    const openCandidates = occupants.docs.filter(doc => !doc.data().endsOn);
+    const openCount = (await Promise.all(openCandidates.map(async assignment => ({ assignment, bird: await tx.get(ref(db, "birds", String(assignment.data().birdId))) })))).filter(({ bird }) => !terminalBirdStatuses.includes(String(bird.data()?.status))).length; const capacity = typeof cage.data()?.capacity === "number" ? cage.data()?.capacity : undefined;
     if (capacity !== undefined && openCount >= capacity) fail("failed-precondition", "Cage has reached capacity.");
     const birdId = id();
     tx.create(ref(db, "birds", birdId), { ringId, origin, displayName, status: "active", passportStatus: "draft", ...(mutation ? { mutation } : {}), ...(acquiredOn ? { acquiredOn } : {}), createdAt: now(), updatedAt: now() });
