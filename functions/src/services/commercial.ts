@@ -4,6 +4,7 @@ import { requireDate, requireId } from "../domain/validation.js";
 
 const id = () => crypto.randomUUID();
 const now = () => FieldValue.serverTimestamp();
+const today = () => new Date().toISOString().slice(0, 10);
 const ref = (db: Firestore, collection: string, value: string) => db.collection(collection).doc(value);
 const openSaleStatuses = ["draft", "confirmed"];
 const nonCancelled = (status: unknown) => status !== "cancelled";
@@ -29,7 +30,7 @@ const requireActiveCustomer = (data: Record<string, unknown> | undefined) => {
   if (data?.status !== "active") fail("failed-precondition", "Customer must be active for new commercial records.");
 };
 const requireAvailableBird = (data: Record<string, unknown> | undefined) => {
-  if (["sold", "given_away"].includes(String(data?.status))) fail("failed-precondition", "Bird is no longer available for a commercial workflow.");
+  if (["sold", "given_away", "deceased", "lost"].includes(String(data?.status))) fail("failed-precondition", "Bird is no longer available for a commercial workflow.");
 };
 const birdSaleSnapshots = (tx: Transaction, db: Firestore, birdId: string) => Promise.all([
   tx.get(db.collection("sales").where("birdId", "==", birdId).where("status", "in", openSaleStatuses)),
@@ -70,7 +71,11 @@ export const createReservation = async (db: Firestore, input: Record<string, unk
     if (!bird.exists) fail("not-found", "Bird not found."); if (!customer.exists) fail("not-found", "Customer not found.");
     requireActiveCustomer(customer.data()); requireAvailableBird(bird.data());
     await assertNoConflictingGiveaway(tx, db, birdId);
-    if (!activeReservations.empty) fail("failed-precondition", "Bird already has an active reservation.");
+    const overdueReservations = activeReservations.docs.filter((reservation) => typeof reservation.data().expiresOn === "string" && reservation.data().expiresOn < today());
+    const overdueSales = await Promise.all(overdueReservations.map((reservation) => tx.get(db.collection("sales").where("reservationId", "==", reservation.id))));
+    const expirableIds = new Set(overdueReservations.filter((_, index) => !overdueSales[index].docs.some((sale) => nonCancelled(sale.data().status))).map((reservation) => reservation.id));
+    for (const reservation of activeReservations.docs.filter((entry) => expirableIds.has(entry.id))) tx.update(reservation.ref, { status: "expired", updatedAt: now() });
+    if (activeReservations.docs.some((reservation) => !expirableIds.has(reservation.id))) fail("failed-precondition", "Bird already has an active reservation.");
     assertNoCompetingSale(sales[0], sales[1]);
     const reservationId = id();
     tx.create(ref(db, "reservations", reservationId), { birdId, customerId, reservedOn, ...(expiresOn ? { expiresOn } : {}), ...snapshot, status: "active", createdAt: now(), updatedAt: now() });
@@ -102,6 +107,23 @@ export const recordPayment = async (db: Firestore, input: Record<string, unknown
   const amount = requirePositive(input.amount, "amount"); const currency = requireId(input.currency, "currency"); const receivedOn = requireDate(input.receivedOn, "receivedOn"); const paymentMethod = requireId(input.paymentMethod, "paymentMethod");
   return db.runTransaction(async (tx) => {
     const owner = await tx.get(ref(db, reservationId ? "reservations" : "sales", reservationId ?? saleId!)); if (!owner.exists) fail("not-found", "Payment owner not found.");
+    const ownerData = owner.data() as Record<string, unknown>;
+    if (reservationId) {
+      if (ownerData.status !== "active" || (typeof ownerData.expiresOn === "string" && ownerData.expiresOn < today())) fail("failed-precondition", "Reservation is expired or inactive.");
+      const linkedSales = await tx.get(db.collection("sales").where("reservationId", "==", reservationId));
+      if (linkedSales.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale; record further payments on the sale.");
+    }
+    const linkedReservationId = saleId && typeof ownerData.reservationId === "string" ? ownerData.reservationId : undefined;
+    const paymentQueries = await Promise.all([
+      tx.get(db.collection("payments").where(reservationId ? "reservationId" : "saleId", "==", reservationId ?? saleId!)),
+      linkedReservationId ? tx.get(db.collection("payments").where("reservationId", "==", linkedReservationId)) : Promise.resolve(undefined),
+    ]);
+    const applicablePayments = [...paymentQueries[0].docs, ...(paymentQueries[1]?.docs ?? [])].filter((payment) => payment.data().status === "received");
+    const refundQueries = await Promise.all(applicablePayments.map((payment) => tx.get(db.collection("refunds").where("paymentId", "==", payment.id))));
+    const totalReceived = applicablePayments.reduce((sum, payment) => sum + Number(payment.data().amount ?? 0), 0);
+    const totalRefunded = refundQueries.flatMap((refunds) => refunds.docs).reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0);
+    const agreedPrice = ownerData.agreedPrice;
+    if (typeof agreedPrice === "number" && Number.isFinite(agreedPrice) && amount > agreedPrice - (totalReceived - totalRefunded)) fail("failed-precondition", "Payment amount exceeds the remaining agreement balance.");
     const paymentId = id(); tx.create(ref(db, "payments", paymentId), { ...(reservationId ? { reservationId, purpose: "deposit" } : { saleId, purpose: "sale_payment" }), amount, currency, receivedOn, paymentMethod, status: "received", createdAt: now(), updatedAt: now() });
     if (saleId) timeline(tx, db, saleId, "payment_recorded", { paymentId, amount }); return { paymentId };
   });
@@ -126,14 +148,16 @@ export const refundPayment = async (db: Firestore, input: Record<string, unknown
 
 export const createSale = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId"); const customerId = requireId(input.customerId, "customerId"); const createdOn = requireDate(input.createdOn, "createdOn"); const reservationId = input.reservationId === undefined ? undefined : requireId(input.reservationId, "reservationId");
-  if (reservationId && (hasOwn(input, "agreedPrice") || hasOwn(input, "currency"))) fail("invalid-argument", "Reservation conversion must not supply agreement price fields.");
-  const directSnapshot = reservationId ? {} : agreementSnapshot(input);
+  const suppliedSnapshot = agreementSnapshot(input);
+  const hasSuppliedSnapshot = hasOwn(suppliedSnapshot, "agreedPrice");
   return db.runTransaction(async (tx) => {
-    const [bird, customer, reservation, sales, reservationSales] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(ref(db, "customers", customerId)), reservationId ? tx.get(ref(db, "reservations", reservationId)) : Promise.resolve(undefined), birdSaleSnapshots(tx, db, birdId), reservationId ? tx.get(db.collection("sales").where("reservationId", "==", reservationId)) : Promise.resolve(undefined)]);
+    const [bird, customer, reservation, sales, reservationSales, reservationPayments] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(ref(db, "customers", customerId)), reservationId ? tx.get(ref(db, "reservations", reservationId)) : Promise.resolve(undefined), birdSaleSnapshots(tx, db, birdId), reservationId ? tx.get(db.collection("sales").where("reservationId", "==", reservationId)) : Promise.resolve(undefined), reservationId ? tx.get(db.collection("payments").where("reservationId", "==", reservationId)) : Promise.resolve(undefined)]);
     if (!bird.exists || !customer.exists) fail("not-found", "Bird or customer not found."); requireActiveCustomer(customer.data()); requireAvailableBird(bird.data()); await assertNoConflictingGiveaway(tx, db, birdId); assertNoCompetingSale(sales[0], sales[1]);
-    let snapshot = directSnapshot;
-    if (reservationId) { const reservationData = reservation?.data(); if (!reservation?.exists || reservationData?.status !== "active") fail("failed-precondition", "Reservation must be active."); const activeReservation = reservationData as Record<string, unknown>; if (activeReservation.birdId !== birdId || activeReservation.customerId !== customerId) fail("failed-precondition", "Reservation does not match sale bird and customer."); if (reservationSales?.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale."); snapshot = agreementSnapshot(activeReservation); }
-    const saleId = id(); tx.create(ref(db, "sales", saleId), { birdId, customerId, createdOn, ...(reservationId ? { reservationId } : {}), ...snapshot, status: "draft", createdAt: now(), updatedAt: now() }); timeline(tx, db, saleId, "sale_created", { reservationId: reservationId ?? null }); return { saleId };
+    let snapshot = suppliedSnapshot;
+    if (reservationId) { const reservationData = reservation?.data(); if (!reservation?.exists || reservationData?.status !== "active" || (typeof reservationData.expiresOn === "string" && reservationData.expiresOn < today())) fail("failed-precondition", "Reservation is expired or inactive."); const activeReservation = reservationData as Record<string, unknown>; if (activeReservation.birdId !== birdId || activeReservation.customerId !== customerId) fail("failed-precondition", "Reservation does not match sale bird and customer."); if (reservationSales?.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale."); const reservationSnapshot = agreementSnapshot(activeReservation); if (hasOwn(reservationSnapshot, "agreedPrice")) { if (hasSuppliedSnapshot) fail("invalid-argument", "Reservation agreement price cannot be overwritten during conversion."); snapshot = reservationSnapshot; } const receivedPayments = reservationPayments?.docs.filter((payment) => payment.data().status === "received") ?? []; const refundQueries = await Promise.all(receivedPayments.map((payment) => tx.get(db.collection("refunds").where("paymentId", "==", payment.id)))); const paid = receivedPayments.reduce((sum, payment) => sum + Number(payment.data().amount ?? 0), 0) - refundQueries.flatMap((refunds) => refunds.docs).reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0); if (typeof snapshot.agreedPrice === "number" && paid > snapshot.agreedPrice) fail("failed-precondition", "Reservation payments exceed the Sale agreement price."); }
+    const saleId = id(); tx.create(ref(db, "sales", saleId), { birdId, customerId, createdOn, ...(reservationId ? { reservationId } : {}), ...snapshot, status: reservationId ? "confirmed" : "draft", createdAt: now(), updatedAt: now() });
+    if (reservationId && typeof snapshot.agreedPrice === "number" && snapshot.currency === "THB") tx.create(ref(db, "priceHistory", `sale-${saleId}`), { birdId, amount: snapshot.agreedPrice, currency: snapshot.currency, effectiveOn: createdOn, kind: "final", sourceType: "sale", saleId, createdAt: now() });
+    timeline(tx, db, saleId, "sale_created", { reservationId: reservationId ?? null }); return { saleId };
   });
 };
 
@@ -143,12 +167,13 @@ export const createPriceHistory = async (db: Firestore, input: Record<string, un
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 0) fail("invalid-argument", "amount must be a finite number greater than or equal to zero.");
   if (input.currency !== "THB") fail("invalid-argument", "Only THB is supported for Price History.");
   const effectiveOn = requireDate(input.effectiveOn, "effectiveOn");
-  if (input.kind !== "list" && input.kind !== "offer" && input.kind !== "final") fail("invalid-argument", "kind must be list, offer, or final.");
+  if (input.kind !== "list" && input.kind !== "offer") fail("invalid-argument", "Manual Price History kind must be list or offer.");
   const validUntil = input.validUntil === undefined ? undefined : requireDate(input.validUntil, "validUntil");
   if (validUntil && validUntil < effectiveOn) fail("invalid-argument", "validUntil cannot precede effectiveOn.");
   return db.runTransaction(async (tx) => {
-    const bird = await tx.get(ref(db, "birds", birdId));
+    const [bird, history] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(db.collection("priceHistory").where("birdId", "==", birdId))]);
     if (!bird.exists) fail("not-found", "Bird not found.");
+    if (history.docs.some(doc => doc.data().kind === "final" && doc.data().sourceType === "sale")) fail("failed-precondition", "Sale-derived final Price History locks manual pricing.");
     const priceHistoryId = id();
     tx.create(ref(db, "priceHistory", priceHistoryId), { birdId, amount, currency: "THB", effectiveOn, kind: input.kind, ...(validUntil ? { validUntil } : {}), ...(typeof input.notes === "string" && input.notes.trim() ? { notes: input.notes.trim() } : {}), createdAt: now() });
     return { priceHistoryId };
@@ -163,6 +188,7 @@ export const confirmSale = async (db: Firestore, input: Record<string, unknown>)
     const [bird, customer, reservation, sales] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(ref(db, "customers", requireId(data.customerId, "sale.customerId"))), typeof data.reservationId === "string" ? tx.get(ref(db, "reservations", data.reservationId)) : Promise.resolve(undefined), birdSaleSnapshots(tx, db, birdId)]);
     if (!bird.exists || !customer.exists) fail("not-found", "Bird or customer not found."); requireAvailableBird(bird.data()); requireActiveCustomer(customer.data()); await assertNoConflictingGiveaway(tx, db, birdId); assertNoCompetingSale(sales[0], sales[1], saleId);
     if (data.reservationId && (!reservation?.exists || reservation.data()?.status !== "active")) fail("failed-precondition", "Linked reservation must remain active.");
+    if (typeof data.agreedPrice === "number" && data.currency === "THB") tx.create(ref(db, "priceHistory", `sale-${saleId}`), { birdId, amount: data.agreedPrice, currency: data.currency, effectiveOn: requireDate(data.createdOn, "sale.createdOn"), kind: "final", sourceType: "sale", saleId, createdAt: now() });
     tx.update(saleRef, { status: "confirmed", updatedAt: now() }); return { saleId, status: "confirmed" };
   });
 };
@@ -172,8 +198,12 @@ export const completeSale = async (db: Firestore, input: Record<string, unknown>
   return db.runTransaction(async (tx) => {
     const saleRef = ref(db, "sales", saleId); const sale = await tx.get(saleRef); if (!sale.exists) fail("not-found", "Sale not found."); const data = sale.data()!;
     if (data.status !== "confirmed") fail("failed-precondition", "Only a confirmed sale can be completed."); const birdId = requireId(data.birdId, "sale.birdId"); const reservationId = typeof data.reservationId === "string" ? data.reservationId : undefined;
-    const [bird, completed, reservation] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(db.collection("sales").where("birdId", "==", birdId).where("status", "==", "completed")), reservationId ? tx.get(ref(db, "reservations", reservationId)) : Promise.resolve(undefined)]);
+    const [bird, completed, reservation, salePayments, reservationPayments] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(db.collection("sales").where("birdId", "==", birdId).where("status", "==", "completed")), reservationId ? tx.get(ref(db, "reservations", reservationId)) : Promise.resolve(undefined), tx.get(db.collection("payments").where("saleId", "==", saleId)), reservationId ? tx.get(db.collection("payments").where("reservationId", "==", reservationId)) : Promise.resolve(undefined)]);
     if (!bird.exists) fail("not-found", "Bird not found."); requireAvailableBird(bird.data()); await assertNoConflictingGiveaway(tx, db, birdId); if (!completed.empty) fail("failed-precondition", "Bird already has a completed sale."); if (reservationId && (!reservation?.exists || reservation.data()?.status !== "active")) fail("failed-precondition", "Linked reservation must remain active.");
+    const receivedPayments = [...salePayments.docs, ...(reservationPayments?.docs ?? [])].filter(payment => payment.data().status === "received");
+    const refundQueries = await Promise.all(receivedPayments.map(payment => tx.get(db.collection("refunds").where("paymentId", "==", payment.id))));
+    const netPaid = receivedPayments.reduce((sum, payment) => sum + Number(payment.data().amount ?? 0), 0) - refundQueries.flatMap(refunds => refunds.docs).reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0);
+    if (typeof data.agreedPrice !== "number" || !Number.isFinite(data.agreedPrice) || data.agreedPrice - netPaid > 0) fail("failed-precondition", "Sale must be fully paid before completion.");
     tx.update(saleRef, { status: "completed", completedOn, updatedAt: now() }); if (reservationId) tx.update(ref(db, "reservations", reservationId), { status: "completed", updatedAt: now() }); timeline(tx, db, saleId, "sale_completed", { birdId, completedOn }); return { saleId, status: "completed" };
   });
 };

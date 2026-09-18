@@ -19,13 +19,57 @@ beforeEach(()=>{cycles=[];mocks.invoke.mockImplementation(baseInvoke);});
 afterEach(()=>{cleanup();mocks.invoke.mockReset();});
 const open=async()=>{render(<App/>);fireEvent.click(await screen.findByRole("button",{name:"Breeding"}));fireEvent.click(await screen.findByRole("button",{name:/Father.*M-01/}));return(await screen.findByRole("heading",{name:/คู่.*รายละเอียด/})).closest("section")!;};
 
+it("shows cycle-specific Thai status labels throughout the Breeding ledger",async()=>{
+  cycles=[
+    {breedingCycleId:"open-cycle",startedOn:"2026-08-14",status:"active",eggs:[]},
+    {breedingCycleId:"closed-cycle",startedOn:"2026-07-14",status:"closed",eggs:[]},
+    {breedingCycleId:"cancelled-cycle",startedOn:"2026-06-14",status:"cancelled",eggs:[]},
+  ];
+  const detail=await open();
+  const cycleSection=within(detail).getByRole("heading",{name:"รอบเพาะและไข่"}).closest("section")!;
+  expect(within(cycleSection).getByRole("button",{name:/14\/08\/2026.*สถานะ: เปิดรอบแล้ว/})).toBeTruthy();
+  expect(within(cycleSection).getByRole("button",{name:/14\/07\/2026.*สถานะ: ปิดรอบแล้ว/})).toBeTruthy();
+  expect(within(cycleSection).getByRole("button",{name:/14\/06\/2026.*สถานะ: ยกเลิก/})).toBeTruthy();
+});
+
+it("allows Add Egg only for active cycles while keeping closed-cycle eggs viewable",async()=>{
+  const closedEgg={eggId:"closed-egg",sequenceNo:1,laidOn:"2026-07-15",status:"laid"};
+  cycles=[
+    {breedingCycleId:"active-cycle",startedOn:"2026-08-14",status:"active",eggs:[]},
+    {breedingCycleId:"closed-cycle",startedOn:"2026-07-14",status:"closed",eggs:[closedEgg]},
+    {breedingCycleId:"cancelled-cycle",startedOn:"2026-06-14",status:"cancelled",eggs:[]},
+  ];
+  const detail=await open();
+
+  fireEvent.click(within(detail).getByRole("button",{name:/14\/08\/2026.*เปิดรอบแล้ว/}));
+  let selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!;
+  expect(within(selected).getByRole("button",{name:"เพิ่มไข่"})).toBeTruthy();
+  expect(within(selected).getByRole("textbox",{name:"วันที่ไข่"})).toBeTruthy();
+
+  fireEvent.click(within(detail).getByRole("button",{name:/14\/07\/2026.*ปิดรอบแล้ว/}));
+  selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!;
+  expect(within(selected).queryByRole("button",{name:"เพิ่มไข่"})).toBeNull();
+  expect(within(selected).queryByRole("textbox",{name:"วันที่ไข่"})).toBeNull();
+  expect(within(selected).getByText("รอบเพาะนี้ปิดแล้ว ไม่สามารถเพิ่มไข่ได้")).toBeTruthy();
+  const egg=within(selected).getByRole("button",{name:/ไข่ลำดับ 1.*15\/07\/2026/});
+  expect(egg).toBeTruthy(); fireEvent.click(egg);
+  expect(within(detail).getByRole("heading",{name:"Egg Detail"})).toBeTruthy();
+  fireEvent.click(within(detail).getByRole("button",{name:"กลับไปรายการไข่"}));
+
+  fireEvent.click(within(detail).getByRole("button",{name:/14\/06\/2026.*ยกเลิก/}));
+  selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!;
+  expect(within(selected).queryByRole("button",{name:"เพิ่มไข่"})).toBeNull();
+  expect(within(selected).queryByRole("textbox",{name:"วันที่ไข่"})).toBeNull();
+  expect(within(selected).getByText("รอบเพาะนี้ถูกยกเลิกแล้ว ไม่สามารถเพิ่มไข่ได้")).toBeTruthy();
+});
+
 it("creates a cycle and egg from authoritative Pair context without exposing UUID inputs",async()=>{
   const detail=await open(); expect(detail.textContent).not.toContain("pair-uuid"); expect(within(detail).queryByLabelText(/Pair ID/i)).toBeNull();
   const cycleForm=within(detail).getByRole("heading",{name:"สร้างรอบเพาะ"}).closest("form")!;
   expect(cycleForm.textContent).toContain("Father"); expect(cycleForm.textContent).toContain("M-01"); expect(cycleForm.textContent).toContain("Mother"); expect(cycleForm.textContent).toContain("F-01"); expect(cycleForm.textContent).toContain("CAGE-01 / Main Cage");
   const cycleDate=within(cycleForm).getByRole("textbox",{name:"วันเริ่มรอบเพาะ"}) as HTMLInputElement; fireEvent.change(cycleDate,{target:{value:"14082026"}}); expect(cycleDate.value).toBe("14/08/2026"); fireEvent.submit(cycleForm);
   await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith("createBreedingCycle",{pairId:"pair-uuid",startedOn:"2026-08-14"})); expect(await within(detail).findByText("สร้างรอบเพาะสำเร็จ")).toBeTruthy(); expect(cycleDate.value).toBe("");
-  const selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!; expect(selected.textContent).toContain("เริ่ม: 14/08/2026"); expect(selected.textContent).toContain("สถานะ: Active"); expect(selected.textContent).not.toContain("cycle-uuid");
+  const selected=within(detail).getByRole("heading",{name:"รอบเพาะที่เลือก"}).closest("section")!; expect(selected.textContent).toContain("เริ่ม: 14/08/2026"); expect(selected.textContent).toContain("สถานะ: เปิดรอบแล้ว"); expect(selected.textContent).not.toContain("cycle-uuid");
   const eggForm=within(selected).getByRole("heading",{name:"เพิ่มไข่"}).closest("form")!; expect(within(eggForm).queryByLabelText(/Cycle ID/i)).toBeNull(); expect(eggForm.textContent).toContain("ลำดับ: 1"); const eggDate=within(eggForm).getByRole("textbox",{name:"วันที่ไข่"}) as HTMLInputElement; fireEvent.change(eggDate,{target:{value:"15082026"}}); expect(eggDate.value).toBe("15/08/2026"); fireEvent.submit(eggForm);
   await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith("createEgg",{cycleId:"cycle-uuid",sequenceNo:1,laidOn:"2026-08-15"})); expect(await within(detail).findByText("เพิ่มไข่สำเร็จ")).toBeTruthy(); expect(eggDate.value).toBe(""); expect(within(detail).getByText(/ไข่ลำดับ 1.*15\/08\/2026.*Laid/)).toBeTruthy(); expect(within(detail).getByText("ลำดับ: 2")).toBeTruthy(); expect(detail.textContent).not.toContain("egg-uuid"); expect(mocks.invoke.mock.calls.filter(([name])=>name==="getPairDetails")).toHaveLength(3);
 });
@@ -33,13 +77,13 @@ it("creates a cycle and egg from authoritative Pair context without exposing UUI
 it("preserves Cycle and Egg dates and avoids false readback on failure",async()=>{
   cycles=[{breedingCycleId:"cycle-uuid",startedOn:"2026-08-14",status:"active",eggs:[]}]; mocks.invoke.mockImplementation(async(name:string,payload?:Record<string,unknown>)=>{if(name==="createBreedingCycle"||name==="createEgg")throw new Error("failed");return baseInvoke(name,payload);});
   const detail=await open(); const cycleForm=within(detail).getByRole("heading",{name:"สร้างรอบเพาะ"}).closest("form")!; const cycleDate=within(cycleForm).getByRole("textbox",{name:"วันเริ่มรอบเพาะ"}) as HTMLInputElement; fireEvent.change(cycleDate,{target:{value:"16082026"}}); fireEvent.submit(cycleForm); expect(await within(cycleForm).findByText("เกิดข้อผิดพลาด")).toBeTruthy(); expect(cycleDate.value).toBe("16/08/2026");
-  fireEvent.click(within(detail).getByRole("button",{name:/รอบเพาะ.*14\/08\/2026.*Active.*ไข่: 0/})); const eggForm=within(detail).getByRole("heading",{name:"เพิ่มไข่"}).closest("form")!; const eggDate=within(eggForm).getByRole("textbox",{name:"วันที่ไข่"}) as HTMLInputElement; fireEvent.change(eggDate,{target:{value:"17082026"}}); fireEvent.submit(eggForm); expect(await within(eggForm).findByText("เกิดข้อผิดพลาด")).toBeTruthy(); expect(eggDate.value).toBe("17/08/2026"); expect(within(detail).getAllByText((_,element)=>element?.textContent==="ไข่: 0").length).toBeGreaterThan(0); expect(mocks.invoke.mock.calls.filter(([name])=>name==="getPairDetails")).toHaveLength(1);
+  fireEvent.click(within(detail).getByRole("button",{name:/รอบเพาะ.*14\/08\/2026.*เปิดรอบแล้ว.*ไข่: 0/})); const eggForm=within(detail).getByRole("heading",{name:"เพิ่มไข่"}).closest("form")!; const eggDate=within(eggForm).getByRole("textbox",{name:"วันที่ไข่"}) as HTMLInputElement; fireEvent.change(eggDate,{target:{value:"17082026"}}); fireEvent.submit(eggForm); expect(await within(eggForm).findByText("เกิดข้อผิดพลาด")).toBeTruthy(); expect(eggDate.value).toBe("17/08/2026"); expect(within(detail).getAllByText((_,element)=>element?.textContent==="ไข่: 0").length).toBeGreaterThan(0); expect(mocks.invoke.mock.calls.filter(([name])=>name==="getPairDetails")).toHaveLength(1);
 });
 
 it("opens Egg Detail from the selected Cycle and hatches through the trusted contextual operation",async()=>{
   cycles=[{breedingCycleId:"cycle-uuid",startedOn:"2026-08-14",status:"active",eggs:[{eggId:"egg-uuid",sequenceNo:1,laidOn:"2026-08-15",status:"laid"}]}];
-  const detail=await open(); fireEvent.click(within(detail).getByRole("button",{name:/รอบเพาะ.*14\/08\/2026.*Active.*ไข่: 1/})); fireEvent.click(within(detail).getByRole("button",{name:/ไข่ลำดับ 1.*15\/08\/2026.*Laid/}));
-  const eggDetail=within(detail).getByRole("heading",{name:"Egg Detail"}).closest("section")!; expect(eggDetail.textContent).toContain("ลำดับไข่: 1"); expect(eggDetail.textContent).toContain("วันที่ไข่: 15/08/2026"); expect(eggDetail.textContent).toContain("Status: Laid"); expect(eggDetail.textContent).toContain("รอบเพาะ: 14/08/2026 · Active"); expect(eggDetail.textContent).toContain("พ่อ: Father · Ring ID: M-01"); expect(eggDetail.textContent).toContain("แม่: Mother · Ring ID: F-01"); expect(eggDetail.textContent).toContain("กรง: CAGE-01 / Main Cage"); expect(eggDetail.textContent).not.toContain("egg-uuid"); expect(within(eggDetail).queryByLabelText(/Egg ID/i)).toBeNull();
+  const detail=await open(); fireEvent.click(within(detail).getByRole("button",{name:/รอบเพาะ.*14\/08\/2026.*เปิดรอบแล้ว.*ไข่: 1/})); fireEvent.click(within(detail).getByRole("button",{name:/ไข่ลำดับ 1.*15\/08\/2026.*Laid/}));
+  const eggDetail=within(detail).getByRole("heading",{name:"Egg Detail"}).closest("section")!; expect(eggDetail.textContent).toContain("ลำดับไข่: 1"); expect(eggDetail.textContent).toContain("วันที่ไข่: 15/08/2026"); expect(eggDetail.textContent).toContain("Status: Laid"); expect(eggDetail.textContent).toContain("รอบเพาะ: 14/08/2026 · เปิดรอบแล้ว"); expect(eggDetail.textContent).toContain("พ่อ: Father · Ring ID: M-01"); expect(eggDetail.textContent).toContain("แม่: Mother · Ring ID: F-01"); expect(eggDetail.textContent).toContain("กรง: CAGE-01 / Main Cage"); expect(eggDetail.textContent).not.toContain("egg-uuid"); expect(within(eggDetail).queryByLabelText(/Egg ID/i)).toBeNull();
   const form=within(eggDetail).getByRole("heading",{name:"บันทึกการฟักและสร้างนก"}).closest("form")!; fireEvent.change(within(form).getByRole("textbox",{name:"Ring ID ของลูกนก"}),{target:{value:"CHICK-01"}}); fireEvent.change(within(form).getByRole("textbox",{name:"ชื่อลูกนก"}),{target:{value:"Junior"}}); fireEvent.change(within(form).getByRole("textbox",{name:"Mutation ของลูกนก"}),{target:{value:"Green"}}); const date=within(form).getByRole("textbox",{name:"วันฟัก"}) as HTMLInputElement; fireEvent.change(date,{target:{value:"16082026"}}); expect(date.value).toBe("16/08/2026"); fireEvent.submit(form);
   await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith("createBirdFromEgg",{eggId:"egg-uuid",ringId:"CHICK-01",displayName:"Junior",origin:"farm_hatched",mutation:"Green",hatchedOn:"2026-08-16"})); expect(await within(detail).findByText("Status: Hatched")).toBeTruthy(); expect(within(detail).getByText("ไข่ฟักแล้ว")).toBeTruthy(); expect(detail.textContent).not.toContain("egg-uuid"); expect(mocks.invoke.mock.calls.filter(([name])=>name==="getPairDetails")).toHaveLength(2);
 });
