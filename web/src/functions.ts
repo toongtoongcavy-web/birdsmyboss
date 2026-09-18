@@ -44,6 +44,8 @@ export const thaiError = (e: unknown) => {
   if (message.includes("Reservation already has a non-cancelled sale")) return "การจองนี้มีรายการขายอยู่แล้ว";
   if (message.includes("record further payments on the sale")) return "สร้างการขายแล้ว กรุณารับชำระเงินต่อในรายการขาย";
   if (message.includes("Payment amount exceeds the remaining agreement balance")) return "จำนวนเงินเกินยอดคงเหลือของการขาย";
+  if (message.includes("Sale must be fully paid before completion")) return "ยังมียอดคงเหลือ ต้องชำระครบก่อนปิดการขาย";
+  if (message.includes("Sale-derived final Price History locks manual pricing")) return "มีราคาสุดท้ายจากการขายแล้ว ไม่สามารถเพิ่มราคาตั้งขายหรือราคาที่เสนอได้";
   if (message.includes("Delivery cannot be created after completed handover")) return "ส่งมอบนกแล้ว ไม่สามารถสร้างการจัดส่งเพิ่มได้";
   if (message.includes("Reservation payments exceed the Sale agreement price")) return "ยอดมัดจำเดิมสูงกว่าราคาขายที่ตกลง กรุณาตรวจสอบราคา";
   const detail = message.slice(0, 240);
