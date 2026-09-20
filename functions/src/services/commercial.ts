@@ -168,13 +168,15 @@ export const createPriceHistory = async (db: Firestore, input: Record<string, un
   if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 0) fail("invalid-argument", "amount must be a finite number greater than or equal to zero.");
   if (input.currency !== "THB") fail("invalid-argument", "Only THB is supported for Price History.");
   const effectiveOn = requireDate(input.effectiveOn, "effectiveOn");
-  if (input.kind !== "list" && input.kind !== "offer") fail("invalid-argument", "Manual Price History kind must be list or offer.");
+  if (input.kind !== "purchase" && input.kind !== "list" && input.kind !== "offer") fail("invalid-argument", "Manual Price History kind must be purchase, list, or offer.");
   const validUntil = input.validUntil === undefined ? undefined : requireDate(input.validUntil, "validUntil");
   if (validUntil && validUntil < effectiveOn) fail("invalid-argument", "validUntil cannot precede effectiveOn.");
   return db.runTransaction(async (tx) => {
     const [bird, history] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(db.collection("priceHistory").where("birdId", "==", birdId))]);
     if (!bird.exists) fail("not-found", "Bird not found.");
-    if (history.docs.some(doc => doc.data().kind === "final" && doc.data().sourceType === "sale")) fail("failed-precondition", "Sale-derived final Price History locks manual pricing.");
+    const externallyAcquired = ["external", "purchased", "rescued", "unknown"].includes(String(bird.data()?.origin));
+    if (input.kind === "purchase" && !externallyAcquired) fail("failed-precondition", "Purchase Price History is only allowed for externally acquired birds.");
+    if (input.kind !== "purchase" && history.docs.some(doc => doc.data().kind === "final" && doc.data().sourceType === "sale")) fail("failed-precondition", "Sale-derived final Price History locks manual pricing.");
     const priceHistoryId = id();
     tx.create(ref(db, "priceHistory", priceHistoryId), { birdId, amount, currency: "THB", effectiveOn, kind: input.kind, ...(validUntil ? { validUntil } : {}), ...(typeof input.notes === "string" && input.notes.trim() ? { notes: input.notes.trim() } : {}), createdAt: now() });
     return { priceHistoryId };

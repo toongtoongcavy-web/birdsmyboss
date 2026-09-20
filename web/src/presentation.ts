@@ -45,6 +45,7 @@ const valueLabels: Record<string, string> = {
   list: "ราคาตั้งขาย",
   lost: "Lost",
   offer: "ราคาที่เสนอ",
+  purchase: "ราคาซื้อเข้า",
   purchased: "Purchased",
   rescued: "Rescued",
   reserved: "Reserved",
