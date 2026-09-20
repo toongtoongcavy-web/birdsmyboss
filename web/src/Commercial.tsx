@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { DateInput } from "./DateInput";
 import { isoToThaiDisplay } from "./date";
 import { invoke, thaiError } from "./functions";
-import { displayCustomerStatus, displayReservationStatus, displayValue } from "./presentation";
+import { displayCustomerStatus, displayReservationStatus, displaySaleTimelineEvent, displayValue } from "./presentation";
 import { OrangeRing } from "./bmb-design-system";
 import { EmptyState, StatusBadge } from "./ui";
 import "./Sales.css";
@@ -18,7 +18,7 @@ const customerIdentity=(customer:Row)=>`${show(customer.displayName)} · ${show(
 function BirdIdentity({bird,compact=false}:{bird:Row;compact?:boolean}){return <span className={`sales-bird-identity${compact?" sales-bird-identity--compact":""}`}><OrangeRing variant="compact"/><span><small>BIRD IDENTITY</small><strong>{show(bird.displayName)}</strong><em>Ring ID: {show(bird.ringId)}</em></span></span>}
 function CustomerIdentity({customer}:{customer:Row}){return <span className="sales-customer-identity"><small>CUSTOMER</small><strong>{show(customer.displayName)}</strong><span>{show(customer.phone)}</span><span>{show(customer.email)}</span></span>}
 function PriceSnapshot({record}:{record:Row}){return typeof record.agreedPrice==="number"&&record.currency==="THB"?<p className="sales-truth-note"><strong>ราคาที่ตกลง:</strong> {show(record.agreedPrice)} THB <small>เป็น snapshot ของข้อตกลง ไม่เปลี่ยนตามประวัติราคา</small></p>:<p className="sales-truth-note">ยังไม่มีการบันทึกราคาที่ตกลง</p>}
-function SaleTimeline({saleId}:{saleId:string}){const [events,setEvents]=useState<Row[]>([]);const [error,setError]=useState("");useEffect(()=>{void Promise.resolve(invoke("listSaleTimeline",{saleId})).then(value=>setEvents(Array.isArray(value)?value:[])).catch(caught=>setError(thaiError(caught)));},[saleId]);return <section className="sale-related" aria-label="ประวัติการขาย"><h4>ประวัติการขาย</h4>{error?<p role="alert">{error}</p>:events.length?events.map(event=><p key={String(event.saleTimelineId)}><span>{isoToThaiDisplay(event.occurredAt)||show(event.occurredAt)}</span><strong>{show(event.eventType)}</strong></p>):<p className="sales-truth-note">ยังไม่มีเหตุการณ์การขายที่บันทึกไว้</p>}</section>}
+function SaleTimeline({saleId}:{saleId:string}){const [events,setEvents]=useState<Row[]>([]);const [error,setError]=useState("");useEffect(()=>{void Promise.resolve(invoke("listSaleTimeline",{saleId})).then(value=>setEvents(Array.isArray(value)?value:[])).catch(caught=>setError(thaiError(caught)));},[saleId]);return <section className="sale-related" aria-label="ประวัติการขาย"><h4>ประวัติการขาย</h4>{error?<p role="alert">{error}</p>:events.length?events.map(event=><p key={String(event.saleTimelineId)}><span>{isoToThaiDisplay(event.occurredAt)||show(event.occurredAt)}</span><strong>{displaySaleTimelineEvent(event.eventType)}</strong></p>):<p className="sales-truth-note">ยังไม่มีเหตุการณ์การขายที่บันทึกไว้</p>}</section>}
 
 function Selector({kind,rows,selected,onSelect,excluded=[]}:{kind:"bird"|"customer";rows:Row[];selected:Row|null;onSelect:(row:Row|null)=>void;excluded?:string[]}){
   const [query,setQuery]=useState(""); const idKey=kind==="bird"?"birdId":"customerId",normalized=query.trim().toLocaleLowerCase();

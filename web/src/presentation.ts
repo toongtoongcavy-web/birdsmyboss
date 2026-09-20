@@ -107,4 +107,11 @@ const reservationStatusLabels: Record<string, string> = {
   expired: "การจองหมดอายุ",
 };
 export const displayReservationStatus = (value: unknown) => reservationStatusLabels[String(value)] ?? displayValue(value);
+const saleTimelineEventLabels: Record<string, string> = {
+  sale_created: "สร้างรายการขาย",
+  payment_recorded: "บันทึกการชำระเงิน",
+  refund_decision_recorded: "บันทึกผลการคืนเงิน",
+  sale_completed: "ปิดการขาย",
+};
+export const displaySaleTimelineEvent = (value: unknown) => saleTimelineEventLabels[String(value)] ?? String(value ?? "-").replace(/_/g, " ");
 export const displayFieldName = (value: string) => fieldLabels[value] ?? value.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, letter => letter.toUpperCase());
