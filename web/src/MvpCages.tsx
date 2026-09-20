@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DateInput } from "./DateInput";
 import { invoke, thaiError } from "./functions";
-import { PageHeader, SectionCard, StatusBadge } from "./ui";
+import { BirdStatusBadge, PageHeader, SectionCard } from "./ui";
 
 type Row = Record<string, any>;
 
@@ -135,5 +135,5 @@ function CageList({ cages }: { cages: Row[] }) {
 }
 
 function BirdCageList({ birds }: { birds: Row[] }) {
-  return <SectionCard title="นกและกรงปัจจุบัน">{birds.length ? <div className="list">{birds.map(bird => <div className="row" key={bird.birdId}><span><b>{birdLabel(bird)}</b><small>{sexLabel[bird.currentSex] ?? bird.currentSex ?? "-"} · {bird.mutation ?? "-"}</small></span><span><b>{currentCageLabel(bird)}</b></span><StatusBadge status={bird.status} /></div>)}</div> : <p className="muted">ยังไม่มีข้อมูลนก</p>}</SectionCard>;
+  return <SectionCard title="นกและกรงปัจจุบัน">{birds.length ? <div className="list">{birds.map(bird => <div className="row" key={bird.birdId}><span><b>{birdLabel(bird)}</b><small>{sexLabel[bird.currentSex] ?? bird.currentSex ?? "-"} · {bird.mutation ?? "-"}</small></span><span><b>{currentCageLabel(bird)}</b></span><BirdStatusBadge status={bird.status} /></div>)}</div> : <p className="muted">ยังไม่มีข้อมูลนก</p>}</SectionCard>;
 }

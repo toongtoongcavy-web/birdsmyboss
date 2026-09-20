@@ -4,7 +4,7 @@ import { isoToThaiDisplay } from "./date";
 import { invoke, thaiError } from "./functions";
 import { displayCustomerStatus, displayReservationStatus, displaySaleTimelineEvent, displayValue } from "./presentation";
 import { OrangeRing } from "./bmb-design-system";
-import { EmptyState, StatusBadge } from "./ui";
+import { EmptyState, StatusBadge, birdVisualClass } from "./ui";
 import "./Sales.css";
 import "./SalesResponsive.css";
 import "./SalesFinal.css";
@@ -15,7 +15,7 @@ const show=displayValue;
 const identity=(bird:Row)=>`${show(bird.displayName)} · Ring ID: ${show(bird.ringId)} · ${show(bird.mutation)} · ${show(bird.currentSex)} · ${show(bird.status)} · ${show(bird.origin)}`;
 const customerIdentity=(customer:Row)=>`${show(customer.displayName)} · ${show(customer.phone)} · ${show(customer.email)} · ${displayCustomerStatus(customer.status)}`;
 
-function BirdIdentity({bird,compact=false}:{bird:Row;compact?:boolean}){return <span className={`sales-bird-identity${compact?" sales-bird-identity--compact":""}`}><OrangeRing variant="compact"/><span><small>BIRD IDENTITY</small><strong>{show(bird.displayName)}</strong><em>Ring ID: {show(bird.ringId)}</em></span></span>}
+function BirdIdentity({bird,compact=false}:{bird:Row;compact?:boolean}){return <span className={`sales-bird-identity${compact?" sales-bird-identity--compact":""} ${birdVisualClass(bird.status)}`}><OrangeRing variant="compact"/><span><small>BIRD IDENTITY</small><strong>{show(bird.displayName)}</strong><em>Ring ID: {show(bird.ringId)}</em></span></span>}
 function CustomerIdentity({customer}:{customer:Row}){return <span className="sales-customer-identity"><small>CUSTOMER</small><strong>{show(customer.displayName)}</strong><span>{show(customer.phone)}</span><span>{show(customer.email)}</span></span>}
 function PriceSnapshot({record}:{record:Row}){return typeof record.agreedPrice==="number"&&record.currency==="THB"?<p className="sales-truth-note"><strong>ราคาที่ตกลง:</strong> {show(record.agreedPrice)} THB <small>เป็น snapshot ของข้อตกลง ไม่เปลี่ยนตามประวัติราคา</small></p>:<p className="sales-truth-note">ยังไม่มีการบันทึกราคาที่ตกลง</p>}
 function SaleTimeline({saleId}:{saleId:string}){const [events,setEvents]=useState<Row[]>([]);const [error,setError]=useState("");useEffect(()=>{void Promise.resolve(invoke("listSaleTimeline",{saleId})).then(value=>setEvents(Array.isArray(value)?value:[])).catch(caught=>setError(thaiError(caught)));},[saleId]);return <section className="sale-related" aria-label="ประวัติการขาย"><h4>ประวัติการขาย</h4>{error?<p role="alert">{error}</p>:events.length?events.map(event=><p key={String(event.saleTimelineId)}><span>{isoToThaiDisplay(event.occurredAt)||show(event.occurredAt)}</span><strong>{displaySaleTimelineEvent(event.eventType)}</strong></p>):<p className="sales-truth-note">ยังไม่มีเหตุการณ์การขายที่บันทึกไว้</p>}</section>}

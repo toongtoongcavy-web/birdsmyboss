@@ -4,6 +4,7 @@ import { DateInput } from "./DateInput";
 import { isoToThaiDisplay } from "./date";
 import { invoke, thaiError } from "./functions";
 import { displayValue } from "./presentation";
+import { birdVisualClass } from "./ui";
 import "./DeliveryHandover.css";
 
 type Row = Record<string, any>;
@@ -12,7 +13,7 @@ const show = displayValue;
 
 function BirdIdentity({ bird, sold = false }: { bird?: Row; sold?: boolean }) {
   if (!bird) return <p className="final-passage-missing">ไม่พบข้อมูลนกในรายการอ่านที่เชื่อถือได้</p>;
-  return <div className="final-passage-bird"><OrangeRing variant="selected"/><span><small>BIRD IDENTITY</small><strong>{show(bird.displayName)}</strong><em>Ring ID: {show(bird.ringId)}</em>{bird.mutation && <i>{show(bird.mutation)}</i>}</span>{sold && bird.status === "sold" && <ProvenanceMarker>{show("sold")}</ProvenanceMarker>}</div>;
+  return <div className={`final-passage-bird ${birdVisualClass(bird.status)}`}><OrangeRing variant="selected"/><span><small>BIRD IDENTITY</small><strong>{show(bird.displayName)}</strong><em>Ring ID: {show(bird.ringId)}</em>{bird.mutation && <i>{show(bird.mutation)}</i>}</span>{sold && bird.status === "sold" && <ProvenanceMarker>{show("sold")}</ProvenanceMarker>}</div>;
 }
 
 function CustomerContext({ customer }: { customer?: Row }) {

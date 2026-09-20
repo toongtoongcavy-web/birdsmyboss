@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { isoToThaiDisplay } from "./date";
 import { displayOrigin, displayValue } from "./presentation";
-import { EmptyState, StatusBadge } from "./ui";
+import { BirdStatusBadge, EmptyState, StatusBadge, birdVisualClass } from "./ui";
 import { OrangeRing } from "./bmb-design-system";
 
 type Row=Record<string,any>;
@@ -21,9 +21,9 @@ const currentCage = (data: Row) => data.currentCageCode
 export function BirdProfile({data,currentSex,sexHistory,weightHistory,forms,passport,priceHistory}:{data:Row;currentSex:unknown;sexHistory:Row[];weightHistory:Row[];forms:ReactNode;passport:ReactNode;priceHistory?:ReactNode}) {
   const parentage=data.parentage as Row|null;const father=parentage?.male as Row|undefined,mother=parentage?.female as Row|undefined;const photos=Array.isArray(data.photos)?data.photos as Row[]:[];
   return <div className="bird-profile">
-    <section className="bird-identity-hero" aria-label="ข้อมูลประจำตัวนก">
+    <section className={`bird-identity-hero ${birdVisualClass(data.status)}`} aria-label="ข้อมูลประจำตัวนก">
       <BirdPortrait name={data.displayName} photos={photos}/>
-      <div className="bird-identity-copy"><span className="profile-kicker">Birds My Boss · Bird Profile</span><div className="bird-name-line"><h2>{value(data.displayName)}</h2><StatusBadge status={data.status}/></div><div className="ring-identity"><OrangeRing variant="standard"/><small>RING ID</small><strong>{value(data.ringId)}</strong></div><div className="identity-meta-grid"><IdentityMeta label="Mutation">{value(data.mutation)}</IdentityMeta><IdentityMeta label="เพศ">{value(currentSex)}</IdentityMeta><IdentityMeta label="วันฟัก / วันเกิด">{isoToThaiDisplay(data.hatchedOn)||"-"}</IdentityMeta><IdentityMeta label="แหล่งที่มา">{displayOrigin(data.origin)}</IdentityMeta><IdentityMeta label="กรงปัจจุบัน">{currentCage(data)}</IdentityMeta></div></div>
+      <div className="bird-identity-copy"><span className="profile-kicker">Birds My Boss · Bird Profile</span><div className="bird-name-line"><h2>{value(data.displayName)}</h2><BirdStatusBadge status={data.status}/></div><div className="ring-identity"><OrangeRing variant="standard"/><small>RING ID</small><strong>{value(data.ringId)}</strong></div><div className="identity-meta-grid"><IdentityMeta label="Mutation">{value(data.mutation)}</IdentityMeta><IdentityMeta label="เพศ">{value(currentSex)}</IdentityMeta><IdentityMeta label="วันฟัก / วันเกิด">{isoToThaiDisplay(data.hatchedOn)||"-"}</IdentityMeta><IdentityMeta label="แหล่งที่มา">{displayOrigin(data.origin)}</IdentityMeta><IdentityMeta label="กรงปัจจุบัน">{currentCage(data)}</IdentityMeta></div></div>
       <aside className="passport-seal"><span>PASS</span><small>Passport</small><StatusBadge status={data.passportStatus??"draft"}/></aside>
     </section>
 

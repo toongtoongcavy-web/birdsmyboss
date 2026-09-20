@@ -9,7 +9,15 @@ describe("signature Bird Profile",()=>{
     render(<BirdProfile data={data} currentSex="male" sexHistory={[{sex:"male",method:"dna",determinedOn:"2025-08-10"}]} weightHistory={[{weightGrams:92,measuredOn:"2026-08-10"}]} forms={<div>forms</div>} passport={<div>passport controls</div>}/>);
     expect(screen.getByRole("heading",{name:"Sunny"})).toBeTruthy();expect(screen.getAllByText("BMB-2401").length).toBeGreaterThan(0);expect(screen.getByLabelText("ยังไม่มีภาพนกที่เผยแพร่")).toBeTruthy();
     expect(screen.getByText("อยู่ในฟาร์ม")).toBeTruthy();
+    expect(screen.getByLabelText("ข้อมูลประจำตัวนก").className).toContain("bird-visual-current");
     expect(screen.getByText("Atlas")).toBeTruthy();expect(screen.getByText("Luna")).toBeTruthy();expect(screen.getByRole("heading",{name:"Bird Passport"})).toBeTruthy();expect(document.body.textContent).not.toContain("internal-bird-id");
+  });
+
+  it("visually recedes a terminal Bird while preserving its profile",()=>{
+    render(<BirdProfile data={{...data,status:"sold"}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    expect(screen.getAllByLabelText("ข้อมูลประจำตัวนก").at(-1)?.className).toContain("bird-visual-terminal");
+    expect(screen.getByText("ขายแล้ว").className).toContain("bird-visual-terminal");
+    expect(screen.getAllByRole("heading",{name:"Sunny"}).at(-1)).toBeTruthy();
   });
 
   it("uses only an explicitly published trusted photo",()=>{
