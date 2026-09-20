@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Firestore } from "firebase-admin/firestore";
 import { activatePair, createExternalBird } from "../src/services/firestore.js";
+import { createExternalBirdInCageMvp } from "../src/services/mvp-cages.js";
 import { createPair, recordSexHistory } from "../src/services/phase5c.js";
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
@@ -19,10 +20,11 @@ test("external and purchased birds use canonical fields and normalized unique ri
   await assert.rejects(createExternalBird(db, { ringId: external.ringId.toLowerCase(), displayName: "Duplicate", origin: "external" }));
 });
 
-test("invalid lineage inputs and legacy rescued origin reject", async () => {
+test("external-entry functions reject farm-hatched and legacy rescued origins", async () => {
   const base = { ringId: ring("invalid"), displayName: "Invalid", origin: "external" };
-  await assert.doesNotReject(createExternalBird(db, { ...base, ringId: ring("farm-hatched"), origin: "farm_hatched" }));
+  await rejects({ ...base, origin: "farm_hatched" });
   await rejects({ ...base, origin: "rescued" });
+  await assert.rejects(createExternalBirdInCageMvp(db, { ...base, origin: "farm_hatched", cageId: "unused-cage", movedOn: "2026-01-01" }));
   await rejects({ ...base, eggId: "egg" });
   await rejects({ ...base, fatherId: "father" });
   await rejects({ ...base, motherId: "mother" });

@@ -12,8 +12,10 @@ it("keeps external Bird creation separate and moves Egg creation out of the gene
   expect(screen.queryByRole("heading", { name: "สร้างนกจากไข่" })).toBeNull();
   expect(screen.queryByText(/Egg ID/)).toBeNull();
   const origin = within(external).getByRole("combobox");
-  expect(within(origin).getAllByRole("option").map(x => [x.textContent, x.getAttribute("value")])).toEqual([["เลือก", ""], ["ฟักในฟาร์ม", "farm_hatched"], ["ซื้อเข้าฟาร์ม", "purchased"], ["รับเข้าจากภายนอก", "external"], ["ไม่ทราบแหล่งที่มา", "unknown"]]);
+  expect(within(origin).getAllByRole("option").map(x => [x.textContent, x.getAttribute("value")])).toEqual([["เลือก", ""], ["ซื้อเข้าฟาร์ม", "purchased"], ["รับเข้าจากภายนอก", "external"], ["ไม่ทราบแหล่งที่มา", "unknown"]]);
+  expect(within(origin).queryByRole("option", { name: "ฟักในฟาร์ม" })).toBeNull();
   expect(within(origin).queryByRole("option", { name: /rescued/i })).toBeNull();
+  expect(within(external).getAllByText("วันฟัก/วันเกิด")).toHaveLength(1);
 });
 
 it("keeps the external form reset after the created Bird appears during refresh", async () => {
