@@ -141,11 +141,11 @@ function BreedingWorkspace({pairs,cages,birds,refresh}:{pairs:Row[];cages:Row[];
   </>;
 }
 
-export function App() {
-  const [page, setPage] = useState<Page>("Dashboard"); const [data, setData] = useState<Record<string, Row[]>>({}); const [summary, setSummary] = useState<Row | null>(null); const [error, setError] = useState("");
+export function App({ initialPage = "Dashboard" }: { initialPage?: Page }) {
+  const [page, setPage] = useState<Page>(initialPage); const [data, setData] = useState<Record<string, Row[]>>({}); const [summary, setSummary] = useState<Row | null>(null); const [error, setError] = useState("");
   const refresh = async () => { const names = ["listBirds", "listCages", "listPairs", "listBreedingCycles", "listEggs", "listCustomers", "listReservations", "listPayments", "listRefunds", "listSales", "listGiveaways", "listDeliveries", "listHandovers", "listEligibleCompletedSales"]; try { const result = await Promise.all(names.map(n => invoke(n, { limit: n === "listBirds" ? 50 : 25 }) as Promise<Row[]>)); setData(Object.fromEntries(names.map((n, i) => [n, result[i]]))); setSummary(await invoke("getDashboardSummary", {}) as Row); } catch (caught) { setError(thaiError(caught)); } };
   useEffect(() => { void refresh(); }, []);
-  useEffect(() => { if(page!=="Birds")return; void (async()=>{try{const birds=await invoke("listBirds",{limit:50}) as Row[];setData(current=>({...current,listBirds:birds}));}catch(caught){setError(thaiError(caught));}})(); }, [page]);
+  useEffect(() => { if(page!=="Birds"||page===initialPage)return; void (async()=>{try{const birds=await invoke("listBirds",{limit:50}) as Row[];setData(current=>({...current,listBirds:birds}));}catch(caught){setError(thaiError(caught));}})(); }, [page,initialPage]);
   const f = (title: string, operation: string, fields: FormField[]) => <Form title={title} operation={operation} fields={fields} refresh={refresh} initialValues={operation === "createExternalBird" ? { origin: "external" } : {}} resetOnSuccess={operation === "createExternalBird"||operation==="createCustomer"}/>;
   return <div className="app"><aside className="nav"><div className="brand">Birds My Boss<small className="muted">Farm System V1</small></div>{pages.map(p => <button key={p} className={page === p ? "active" : ""} aria-current={page===p?"page":undefined} onClick={() => setPage(p)}>{p}</button>)}</aside><main>{error && <p role="alert">{error}</p>}
     {page === "Dashboard" && <Dashboard data={data} summary={summary} navigate={setPage}/>}
