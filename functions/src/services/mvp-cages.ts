@@ -8,6 +8,9 @@ const now = () => FieldValue.serverTimestamp();
 const id = () => crypto.randomUUID();
 const ref = (db: Firestore, collection: string, docId: string) => db.collection(collection).doc(docId);
 const terminalBirdStatuses = ["sold", "given_away", "deceased", "lost"];
+const assertCurrentFarmBird = (bird: FirebaseFirestore.DocumentSnapshot, message = "Terminal bird cannot participate in current cage operations.") => {
+  if (terminalBirdStatuses.includes(String(bird.data()?.status))) fail("failed-precondition", message);
+};
 const text = (value: unknown, name: string) => {
   if (typeof value !== "string" || !value.trim()) fail("invalid-argument", `${name} is required.`);
   return (value as string).trim();
@@ -187,6 +190,7 @@ export const assignBirdToCageMvp = async (db: Firestore, input: Record<string, u
       tx.get(db.collection("birdCageAssignments").where("cageId", "==", cageId)),
     ]);
     if (!bird.exists) fail("not-found", "Bird not found.");
+    assertCurrentFarmBird(bird);
     if (!cage.exists) fail("not-found", "Cage not found.");
     if (cage.data()?.status !== "active") fail("failed-precondition", "Destination cage must be active.");
     for (const membership of memberships.docs.map(doc => doc.data() as PairMember)) {
@@ -212,6 +216,8 @@ export const createActivePairInCageMvp = async (db: Firestore, input: Record<str
       tx.get(ref(db, "birds", maleBirdId)), tx.get(ref(db, "birds", femaleBirdId)), openBirdAssignments(tx, db, maleBirdId), openBirdAssignments(tx, db, femaleBirdId),
     ]);
     if (!male.exists || !female.exists) fail("not-found", "Pair bird not found.");
+    assertCurrentFarmBird(male);
+    assertCurrentFarmBird(female);
     await assertCageCanReceivePair(tx, db, cageId, maleBirdId, femaleBirdId, startedOn);
     const kinship = await validateNewActivePair(tx, db, maleBirdId, femaleBirdId, startedOn);
     const pairId = id(); const cageAssignmentId = id();
@@ -235,9 +241,12 @@ export const moveActivePairToCageMvp = async (db: Firestore, input: Record<strin
     if (!male || !female) fail("failed-precondition", "Active pair must have one male and one female member.");
     const maleBirdId = male!.birdId;
     const femaleBirdId = female!.birdId;
-    const [pairAssignments, maleAssignments, femaleAssignments] = await Promise.all([
-      tx.get(db.collection("cageAssignments").where("pairId", "==", pairId)), openBirdAssignments(tx, db, maleBirdId), openBirdAssignments(tx, db, femaleBirdId),
+    const [maleBird, femaleBird, pairAssignments, maleAssignments, femaleAssignments] = await Promise.all([
+      tx.get(ref(db, "birds", maleBirdId)), tx.get(ref(db, "birds", femaleBirdId)), tx.get(db.collection("cageAssignments").where("pairId", "==", pairId)), openBirdAssignments(tx, db, maleBirdId), openBirdAssignments(tx, db, femaleBirdId),
     ]);
+    if (!maleBird.exists || !femaleBird.exists) fail("not-found", "Pair bird not found.");
+    assertCurrentFarmBird(maleBird);
+    assertCurrentFarmBird(femaleBird);
     await assertCageCanReceivePair(tx, db, cageId, maleBirdId, femaleBirdId, movedOn, pairId);
     const open = pairAssignments.docs.filter(doc => !doc.data().endsOn);
     if (open.length > 1) fail("failed-precondition", "Pair has more than one open cage assignment.");

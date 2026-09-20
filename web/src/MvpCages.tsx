@@ -16,6 +16,7 @@ const cageStatusLabel: Record<string, string> = {
   inactive: "เลิกใช้งาน",
 };
 const sexLabel: Record<string, string> = { male: "ตัวผู้", female: "ตัวเมีย", unknown: "ไม่ทราบเพศ" };
+const terminalBirdStatuses = new Set(["sold", "given_away", "deceased", "lost"]);
 const birdLabel = (bird?: Row | null) => bird ? `${bird.ringId ?? "-"} — ${bird.displayName ?? "-"}` : "-";
 const cageLabel = (cage?: Row | null) => cage ? `${cage.code ?? "-"} — ${cage.name ?? "-"}` : "ยังไม่ได้จัดกรง";
 const currentCageLabel = (bird?: Row | null) => bird?.currentCageCode ? `${bird.currentCageCode} — ${bird.currentCageName ?? ""}` : "ยังไม่ได้จัดกรง";
@@ -38,6 +39,7 @@ export function MvpCages() {
     finally { setLoading(false); }
   };
   useEffect(() => { void refresh(); }, []);
+  const currentFarmBirds = birds.filter(bird => !terminalBirdStatuses.has(String(bird.status)));
 
   return <>
     <PageHeader title="ข้อมูลกรง" subtitle="สร้างกรง จัดนกเข้ากรง และจับคู่โดยให้ตำแหน่งนกกับกรงตรงกันเสมอ" />
@@ -47,13 +49,13 @@ export function MvpCages() {
       <div className="form-grid">
         <CreateCageForm refresh={refresh} />
         <CreateBirdInCageForm cages={cages} refresh={refresh} />
-        <MoveBirdForm birds={birds} cages={cages} refresh={refresh} />
+        <MoveBirdForm birds={currentFarmBirds} cages={cages} refresh={refresh} />
       </div>
     </div>
-    <PairInCageForm birds={birds} cages={cages} refresh={refresh} />
+    <PairInCageForm birds={currentFarmBirds} cages={cages} refresh={refresh} />
     <div className="form-grid" style={{ marginTop: 18 }}>
       <CageList cages={cages} />
-      <BirdCageList birds={birds} />
+      <BirdCageList birds={currentFarmBirds} />
     </div>
   </>;
 }
