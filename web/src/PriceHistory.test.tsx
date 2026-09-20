@@ -19,8 +19,9 @@ it("offers purchase, list, and offer in Thai for an external Bird and submits pu
     { priceHistoryId: "offer", amount: 2000, currency: "THB", effectiveOn: "2026-08-25", kind: "offer" },
     { priceHistoryId: "legacy-final", amount: 1750, currency: "THB", effectiveOn: "2026-08-26", kind: "final" },
   ] : { priceHistoryId: "new" });
-  render(<PriceHistory birdId="external-bird" origin="external" onSaved={vi.fn()}/>);
+  const { container } = render(<PriceHistory birdId="external-bird" origin="external" onSaved={vi.fn()}/>);
   expect(await screen.findByText("900 THB")).toBeTruthy();
+  expect([...container.querySelectorAll(".history-ledger > article strong")].map(node => node.textContent)).toEqual(["900 THB", "2500.5 THB", "2000 THB", "1750 THB"]);
   expect(screen.getAllByText(/ราคาซื้อเข้า/).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/ราคาสุดท้าย/).length).toBeGreaterThan(0);
   expect(options()).toEqual([

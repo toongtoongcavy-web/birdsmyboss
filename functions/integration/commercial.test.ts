@@ -263,7 +263,7 @@ test("commercial: agreement price snapshots are explicit, copied, and independen
   await assert.rejects(createPriceHistory(db, { birdId: directBird, amount: 1, currency: "THB", effectiveOn: "2027-01-01", kind: "offer" }), /locks manual pricing/);
   await createPriceHistory(db, { birdId: directBird, amount: 50, currency: "THB", effectiveOn: "2027-01-01", kind: "purchase" });
   const priceHistory = await listBirdPriceHistory(db, { birdId: manualBird });
-  assert.deepEqual(priceHistory.map(entry => entry.amount), [150, 200, 1, 500, 77]);
+  assert.deepEqual(priceHistory.map(entry => entry.amount), [77, 500, 1, 200, 150]);
   assert.equal(priceHistory.find(entry => entry.amount === 77)?.kind, "final");
   assert.equal((await db.collection("sales").doc(direct.saleId).get()).data()?.agreedPrice, 99.99);
   await assert.rejects(createPriceHistory(db, { birdId: manualBird, amount: -1, currency: "THB", effectiveOn: "2026-01-01", kind: "list" }));

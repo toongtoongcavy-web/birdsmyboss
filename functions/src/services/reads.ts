@@ -10,6 +10,12 @@ const customer = (id: string, d: Record<string, unknown>) => ({ customerId: id, 
 const priceSnapshot = (d: Record<string, unknown>) => typeof d.agreedPrice === "number" && d.currency === "THB" ? { agreedPrice: d.agreedPrice, currency: "THB" } : {};
 const sale = (id: string, d: Record<string, unknown>) => ({ saleId: id, birdId: d.birdId, customerId: d.customerId, reservationId: d.reservationId ?? null, ...priceSnapshot(d), status: d.status, createdOn: d.createdOn, completedOn: d.completedOn ?? null });
 const timestampValue = (value: unknown) => value && typeof (value as { toMillis?: unknown }).toMillis === "function" ? (value as { toMillis: () => number }).toMillis() : new Date(String(value ?? 0)).getTime();
+const optionalTimestampValue = (value: unknown) => {
+  if (value && typeof (value as { toMillis?: unknown }).toMillis === "function") return (value as { toMillis: () => number }).toMillis();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string" || typeof value === "number") { const parsed = new Date(value).getTime(); if (Number.isFinite(parsed)) return parsed; }
+  return Number.POSITIVE_INFINITY;
+};
 const timelineDate = (value: unknown) => value && typeof (value as { toDate?: unknown }).toDate === "function"
   ? (value as { toDate: () => Date }).toDate().toISOString().slice(0, 10)
   : typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null;
@@ -90,8 +96,9 @@ export const listSales = (db: Firestore, input: Record<string, unknown>) => list
 export const listBirdPriceHistory = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId");
   const records = await db.collection("priceHistory").where("birdId", "==", birdId).limit(50).get();
-  return records.docs.map(doc => ({ priceHistoryId: doc.id, amount: doc.data().amount, currency: doc.data().currency, effectiveOn: doc.data().effectiveOn, kind: doc.data().kind, validUntil: doc.data().validUntil ?? null, notes: doc.data().notes ?? null, sourceType: doc.data().sourceType ?? null, saleId: doc.data().saleId ?? null }))
-    .sort((a, b) => String(b.effectiveOn).localeCompare(String(a.effectiveOn)) || String(b.priceHistoryId).localeCompare(String(a.priceHistoryId)));
+  return records.docs.map(doc => ({ priceHistoryId: doc.id, amount: doc.data().amount, currency: doc.data().currency, effectiveOn: doc.data().effectiveOn, kind: doc.data().kind, validUntil: doc.data().validUntil ?? null, notes: doc.data().notes ?? null, sourceType: doc.data().sourceType ?? null, saleId: doc.data().saleId ?? null, createdAt: doc.data().createdAt }))
+    .sort((a, b) => String(a.effectiveOn).localeCompare(String(b.effectiveOn)) || optionalTimestampValue(a.createdAt) - optionalTimestampValue(b.createdAt) || String(a.priceHistoryId).localeCompare(String(b.priceHistoryId)))
+    .map(({ createdAt: _createdAt, ...record }) => record);
 };
 export const listSaleTimeline = async (db: Firestore, input: Record<string, unknown>) => {
   const saleId = requireId(input.saleId, "saleId");
