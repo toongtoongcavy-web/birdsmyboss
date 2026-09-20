@@ -3,7 +3,7 @@ import { OrangeRing, ProvenanceMarker } from "./bmb-design-system";
 import { PassportAdmin } from "./components/PassportAdmin";
 import { isoToThaiDisplay } from "./date";
 import { invoke, thaiError } from "./functions";
-import { displayValue } from "./presentation";
+import { displayOrigin, displayValue } from "./presentation";
 import "./Passport.css";
 
 type Row = Record<string, any>;
@@ -22,7 +22,7 @@ export function PassportWorkflow({ birds, handovers, onRefresh }: { birds: Row[]
   const parentage = detail?.parentage as Row | null | undefined;
   if (selected && detail) return <section className="passport-control passport-control-detail">
     <header><div><small>THE LIVING RECORD</small><h2>Passport Detail</h2></div><button type="button" className="passport-control-back" onClick={() => { setSelected(null); setDetail(null); }}>เลือกนกตัวอื่น</button></header>
-    <section className="passport-control-identity"><OrangeRing variant="selected"/><div><h3>{displayValue(detail.displayName)}</h3><p>Ring ID: {displayValue(detail.ringId)} · {displayValue(detail.mutation)}</p><p>วันฟัก/วันเกิด: {isoToThaiDisplay(detail.hatchedOn) || "-"} · {displayValue(detail.origin)}</p></div></section>
+    <section className="passport-control-identity"><OrangeRing variant="selected"/><div><h3>{displayValue(detail.displayName)}</h3><p>Ring ID: {displayValue(detail.ringId)} · {displayValue(detail.mutation)}</p><p>วันฟัก/วันเกิด: {isoToThaiDisplay(detail.hatchedOn) || "-"} · {displayOrigin(detail.origin)}</p></div></section>
     <section className="living-record-identity"><div><small>เพศ</small><strong>{displayValue(selected.currentSex ?? "unknown")}</strong></div><div><small>สถานะนก</small><strong>{displayValue(detail.status)}</strong></div><div><small>พ่อ Ring ID</small><strong>{displayValue((parentage?.male as Row | undefined)?.ringId)}</strong></div><div><small>แม่ Ring ID</small><strong>{displayValue((parentage?.female as Row | undefined)?.ringId)}</strong></div></section>
     {completed && <section className="provenance-fact"><i aria-hidden="true"/><div><small>HANDOVER PROVENANCE</small><ProvenanceMarker>วันส่งมอบ: {isoToThaiDisplay(completed.handoverOn) || "-"}</ProvenanceMarker></div></section>}
     <PassportAdmin birdId={String(detail.birdId)} passportStatus={detail.passportStatus} publicToken={detail.publicToken} photos={detail.photos} documents={detail.documents} onChanged={refetch}/>

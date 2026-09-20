@@ -24,4 +24,9 @@ describe("signature Bird Profile",()=>{
     rerender(<BirdProfile data={{...data,currentCageId:null,currentCageCode:null,currentCageName:null}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
     expect(within(profile).getByText("ยังไม่ได้จัดกรง")).toBeTruthy();
   });
+
+  it("keeps legacy rescued provenance readable as external intake",()=>{
+    render(<BirdProfile data={{...data,origin:"rescued"}} currentSex="unknown" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    expect(screen.getByText("รับเข้าจากภายนอก")).toBeTruthy();
+  });
 });

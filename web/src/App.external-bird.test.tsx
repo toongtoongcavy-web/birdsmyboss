@@ -12,8 +12,8 @@ it("keeps external Bird creation separate and moves Egg creation out of the gene
   expect(screen.queryByRole("heading", { name: "สร้างนกจากไข่" })).toBeNull();
   expect(screen.queryByText(/Egg ID/)).toBeNull();
   const origin = within(external).getByRole("combobox");
-  expect(within(origin).getAllByRole("option").map(x => [x.textContent, x.getAttribute("value")])).toEqual([["เลือก", ""], ["External", "external"], ["Purchased", "purchased"], ["Rescued", "rescued"], ["Unknown", "unknown"]]);
-  expect(within(origin).queryByRole("option", { name: "farm_hatched" })).toBeNull();
+  expect(within(origin).getAllByRole("option").map(x => [x.textContent, x.getAttribute("value")])).toEqual([["เลือก", ""], ["ฟักในฟาร์ม", "farm_hatched"], ["ซื้อเข้าฟาร์ม", "purchased"], ["รับเข้าจากภายนอก", "external"], ["ไม่ทราบแหล่งที่มา", "unknown"]]);
+  expect(within(origin).queryByRole("option", { name: /rescued/i })).toBeNull();
 });
 
 it("keeps the external form reset after the created Bird appears during refresh", async () => {
@@ -49,8 +49,8 @@ it("preserves external Bird values on failure without exposing a generic Egg ID 
   const mutation = within(external).getByText("Mutation/สี").querySelector("input") as HTMLInputElement;
   fireEvent.change(extInputs[0], { target: { value: "EXT-FAIL" } }); fireEvent.change(extInputs[1], { target: { value: "Retry me" } }); fireEvent.change(mutation, { target: { value: "Green" } });
   const extDate = within(external).getByLabelText("วันฟัก/วันเกิด") as HTMLInputElement; fireEvent.change(extDate, { target: { value: "02022026" } });
-  fireEvent.change(within(external).getByRole("combobox"), { target: { value: "rescued" } });
+  fireEvent.change(within(external).getByRole("combobox"), { target: { value: "purchased" } });
   fireEvent.click(within(external).getByRole("button", { name: "บันทึก" })); await screen.findByText("error");
-  expect(extInputs[0].value).toBe("EXT-FAIL"); expect(extInputs[1].value).toBe("Retry me"); expect(mutation.value).toBe("Green"); expect(extDate.value).toBe("02/02/2026"); expect((within(external).getByRole("combobox") as HTMLSelectElement).value).toBe("rescued");
+  expect(extInputs[0].value).toBe("EXT-FAIL"); expect(extInputs[1].value).toBe("Retry me"); expect(mutation.value).toBe("Green"); expect(extDate.value).toBe("02/02/2026"); expect((within(external).getByRole("combobox") as HTMLSelectElement).value).toBe("purchased");
   expect(screen.queryByText(/Egg ID/)).toBeNull();
 });

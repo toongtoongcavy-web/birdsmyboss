@@ -210,6 +210,7 @@ test("commercial: agreement price snapshots are explicit, copied, and independen
   const pricedBird = await bird();
   const unpricedBird = await bird();
   const directBird = await bird();
+  await db.collection("birds").doc(directBird).update({ origin: "purchased" });
   const base = { customerId, reservedOn: "2026-01-01" };
   const noPrice = await createReservation(db, { birdId: unpricedBird, ...base });
   assert.equal((await db.collection("reservations").doc(noPrice.reservationId).get()).data()?.agreedPrice, undefined);
@@ -251,12 +252,15 @@ test("commercial: agreement price snapshots are explicit, copied, and independen
   assert.equal((await db.collection("priceHistory").where("saleId", "==", cancelled.saleId).get()).size, 0);
   for (const invalid of [{ agreedPrice: 2 }, { currency: "THB" }, { agreedPrice: 0, currency: "THB" }, { agreedPrice: -1, currency: "THB" }, { agreedPrice: NaN, currency: "THB" }, { agreedPrice: Infinity, currency: "THB" }, { agreedPrice: 2, currency: "USD" }]) await assert.rejects(createSale(db, { birdId: await bird(), customerId, createdOn: "2026-01-02", ...invalid }));
   const manualBird = await bird();
+  await db.collection("birds").doc(manualBird).update({ origin: "purchased" });
   await createPriceHistory(db, { birdId: manualBird, amount: 500, currency: "THB", effectiveOn: "2025-02-01", kind: "purchase" });
   await createPriceHistory(db, { birdId: manualBird, amount: 1, currency: "THB", effectiveOn: "2026-01-01", kind: "list" });
   await createPriceHistory(db, { birdId: manualBird, amount: 200, currency: "THB", effectiveOn: "2027-01-01", kind: "offer" });
   await assert.rejects(createPriceHistory(db, { birdId: manualBird, amount: 300, currency: "THB", effectiveOn: "2027-01-02", kind: "final" }), /purchase, list, or offer/);
-  const farmHatchedBird = await bird(); await db.collection("birds").doc(farmHatchedBird).update({ origin: "farm_hatched" });
-  await assert.rejects(createPriceHistory(db, { birdId: farmHatchedBird, amount: 300, currency: "THB", effectiveOn: "2027-01-02", kind: "purchase" }), /externally acquired/);
+  for (const origin of ["external", "farm_hatched", "unknown", "rescued"]) {
+    const ineligibleBird = await bird(); await db.collection("birds").doc(ineligibleBird).update({ origin });
+    await assert.rejects(createPriceHistory(db, { birdId: ineligibleBird, amount: 300, currency: "THB", effectiveOn: "2027-01-02", kind: "purchase" }), /purchased birds/);
+  }
   await db.collection("priceHistory").doc(key("legacy-final")).set({ birdId: manualBird, amount: 77, currency: "THB", effectiveOn: "2025-01-01", kind: "final", ...stamp });
   await createPriceHistory(db, { birdId: manualBird, amount: 150, currency: "THB", effectiveOn: "2027-01-02", kind: "offer" });
   await assert.rejects(createPriceHistory(db, { birdId: directBird, amount: 1, currency: "THB", effectiveOn: "2027-01-01", kind: "list" }), /locks manual pricing/);

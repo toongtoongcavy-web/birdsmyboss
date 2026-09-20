@@ -254,7 +254,7 @@ export const moveActivePairToCageMvp = async (db: Firestore, input: Record<strin
 
 export const createExternalBirdInCageMvp = async (db: Firestore, input: Record<string, unknown>) => {
   const ringId = normalizeRingId(input.ringId); const displayName = text(input.displayName, "displayName"); const cageId = requireId(input.cageId, "cageId");
-  const origin = enumValue(input.origin, "origin", ["external", "purchased", "rescued", "unknown"]); const acquiredOn = input.acquiredOn ? requireDate(input.acquiredOn, "acquiredOn") : undefined; const mutation = optionalText(input.mutation);
+  const origin = enumValue(input.origin, "origin", ["farm_hatched", "purchased", "external", "unknown"]); const acquiredOn = input.acquiredOn ? requireDate(input.acquiredOn, "acquiredOn") : undefined; const mutation = optionalText(input.mutation);
   const movedOn = requireDate(input.movedOn, "movedOn");
   return db.runTransaction(async tx => {
     const [duplicate, cage, occupants] = await Promise.all([

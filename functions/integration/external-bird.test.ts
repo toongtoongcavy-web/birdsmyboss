@@ -19,9 +19,10 @@ test("external and purchased birds use canonical fields and normalized unique ri
   await assert.rejects(createExternalBird(db, { ringId: external.ringId.toLowerCase(), displayName: "Duplicate", origin: "external" }));
 });
 
-test("invalid lineage inputs and farm_hatched origin reject", async () => {
+test("invalid lineage inputs and legacy rescued origin reject", async () => {
   const base = { ringId: ring("invalid"), displayName: "Invalid", origin: "external" };
-  await rejects({ ...base, origin: "farm_hatched" });
+  await assert.doesNotReject(createExternalBird(db, { ...base, ringId: ring("farm-hatched"), origin: "farm_hatched" }));
+  await rejects({ ...base, origin: "rescued" });
   await rejects({ ...base, eggId: "egg" });
   await rejects({ ...base, fatherId: "father" });
   await rejects({ ...base, motherId: "mother" });

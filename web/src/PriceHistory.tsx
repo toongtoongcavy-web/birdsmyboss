@@ -7,26 +7,25 @@ import { EmptyState } from "./ui";
 
 type Row = Record<string, any>;
 
-const externalOrigins = new Set(["external", "purchased", "rescued", "unknown"]);
 const kindLabels: Record<string, string> = { purchase: "ราคาซื้อเข้า", list: "ราคาตั้งขาย", offer: "ราคาที่เสนอ" };
 
 export function PriceHistory({ birdId, origin, onSaved }: { birdId: string; origin: string; onSaved: () => Promise<void> }) {
-  const externallyAcquired = externalOrigins.has(origin);
+  const purchaseEligible = origin === "purchased";
   const [rows, setRows] = useState<Row[]>([]);
   const [amount, setAmount] = useState("");
   const [effectiveOn, setEffectiveOn] = useState("");
-  const [kind, setKind] = useState(externallyAcquired ? "purchase" : "list");
+  const [kind, setKind] = useState(purchaseEligible ? "purchase" : "list");
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const hasSaleFinal = rows.some(row => row.kind === "final" && row.sourceType === "sale");
-  const allowedKinds = hasSaleFinal ? (externallyAcquired ? ["purchase"] : []) : (externallyAcquired ? ["purchase", "list", "offer"] : ["list", "offer"]);
+  const allowedKinds = hasSaleFinal ? (purchaseEligible ? ["purchase"] : []) : (purchaseEligible ? ["purchase", "list", "offer"] : ["list", "offer"]);
   const load = async () => {
     try { setRows(await invoke("listBirdPriceHistory", { birdId }) as Row[]); }
     catch (error) { setMessage(thaiError(error)); }
   };
   useEffect(() => { void load(); }, [birdId]);
-  useEffect(() => { if (!allowedKinds.includes(kind) && allowedKinds[0]) setKind(allowedKinds[0]); }, [hasSaleFinal, externallyAcquired]);
+  useEffect(() => { if (!allowedKinds.includes(kind) && allowedKinds[0]) setKind(allowedKinds[0]); }, [hasSaleFinal, purchaseEligible]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const numeric = Number(amount);
@@ -42,7 +41,7 @@ export function PriceHistory({ birdId, origin, onSaved }: { birdId: string; orig
   return <section className="history-ledger" aria-label="ประวัติราคา">
     <header><h3>ประวัติราคา: {rows.length}</h3><p>บันทึกราคาเชิงประวัติ ไม่ใช่ราคาที่ระบบเลือกให้อัตโนมัติ</p></header>
     {rows.length ? rows.map((row, index) => <article key={String(row.priceHistoryId)}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{displayValue(row.amount)} {displayValue(row.currency)}</strong><small>{displayValue(row.kind)} · มีผล {isoToThaiDisplay(row.effectiveOn) || "-"}{row.validUntil ? ` ถึง ${isoToThaiDisplay(row.validUntil) || "-"}` : ""}</small>{row.kind === "final" && row.sourceType === "sale" ? <small>บันทึกอัตโนมัติจากการขาย</small> : null}{row.notes ? <small>{displayValue(row.notes)}</small> : null}</div></article>) : <EmptyState title="ยังไม่มีประวัติราคา" description="การไม่มีราคาไม่ได้หมายถึงให้เปล่าหรือราคาเป็นศูนย์"/>}
-    {hasSaleFinal ? <p className="sales-truth-note">{externallyAcquired ? "มีราคาสุดท้ายจากการขายแล้ว ราคาตั้งขายและราคาที่เสนอถูกล็อก แต่ยังบันทึกราคาซื้อเข้าได้" : "มีราคาสุดท้ายจากการขายแล้ว ไม่สามารถเพิ่มราคาตั้งขายหรือราคาที่เสนอได้"}</p> : null}
+    {hasSaleFinal ? <p className="sales-truth-note">{purchaseEligible ? "มีราคาสุดท้ายจากการขายแล้ว ราคาตั้งขายและราคาที่เสนอถูกล็อก แต่ยังบันทึกราคาซื้อเข้าได้" : "มีราคาสุดท้ายจากการขายแล้ว ไม่สามารถเพิ่มราคาตั้งขายหรือราคาที่เสนอได้"}</p> : null}
     {allowedKinds.length ? <form className="card" onSubmit={submit}>
       <h4>บันทึกประวัติราคา</h4>
       <label className="field">ราคา (THB) *<input required type="number" min="0" step="any" aria-label="ราคาประวัติ" value={amount} onChange={event => setAmount(event.target.value)} /></label>

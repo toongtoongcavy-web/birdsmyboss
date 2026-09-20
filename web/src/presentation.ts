@@ -46,8 +46,8 @@ const valueLabels: Record<string, string> = {
   lost: "Lost",
   offer: "ราคาที่เสนอ",
   purchase: "ราคาซื้อเข้า",
-  purchased: "Purchased",
-  rescued: "Rescued",
+  purchased: "ซื้อเข้าฟาร์ม",
+  rescued: "รับเข้าจากภายนอก",
   reserved: "Reserved",
   retired: "Retired",
   sale_payment: "Sale Payment",
@@ -82,6 +82,14 @@ const fieldLabels: Record<string, string> = {
 };
 
 export const displayValue = (value: unknown) => valueLabels[String(value)] ?? String(value ?? "-");
+const originLabels: Record<string, string> = {
+  farm_hatched: "ฟักในฟาร์ม",
+  purchased: "ซื้อเข้าฟาร์ม",
+  external: "รับเข้าจากภายนอก",
+  unknown: "ไม่ทราบแหล่งที่มา",
+  rescued: "รับเข้าจากภายนอก",
+};
+export const displayOrigin = (value: unknown) => originLabels[String(value)] ?? displayValue(value);
 const breedingCycleStatusLabels: Record<string, string> = {
   active: "เปิดรอบแล้ว",
   closed: valueLabels.closed,

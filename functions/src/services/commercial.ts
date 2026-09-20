@@ -174,8 +174,8 @@ export const createPriceHistory = async (db: Firestore, input: Record<string, un
   return db.runTransaction(async (tx) => {
     const [bird, history] = await Promise.all([tx.get(ref(db, "birds", birdId)), tx.get(db.collection("priceHistory").where("birdId", "==", birdId))]);
     if (!bird.exists) fail("not-found", "Bird not found.");
-    const externallyAcquired = ["external", "purchased", "rescued", "unknown"].includes(String(bird.data()?.origin));
-    if (input.kind === "purchase" && !externallyAcquired) fail("failed-precondition", "Purchase Price History is only allowed for externally acquired birds.");
+    const purchasedBird = bird.data()?.origin === "purchased";
+    if (input.kind === "purchase" && !purchasedBird) fail("failed-precondition", "Purchase Price History is only allowed for purchased birds.");
     if (input.kind !== "purchase" && history.docs.some(doc => doc.data().kind === "final" && doc.data().sourceType === "sale")) fail("failed-precondition", "Sale-derived final Price History locks manual pricing.");
     const priceHistoryId = id();
     tx.create(ref(db, "priceHistory", priceHistoryId), { birdId, amount, currency: "THB", effectiveOn, kind: input.kind, ...(validUntil ? { validUntil } : {}), ...(typeof input.notes === "string" && input.notes.trim() ? { notes: input.notes.trim() } : {}), createdAt: now() });

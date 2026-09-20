@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { OrangeRing } from "../bmb-design-system";
 import { isoToThaiDisplay } from "../date";
 import { invoke, thaiError } from "../functions";
-import { displayValue } from "../presentation";
+import { displayOrigin, displayValue } from "../presentation";
 import "../Passport.css";
 
 type Passport = {
@@ -43,7 +43,7 @@ function PublishedEvidence({ passport }: { passport: Passport }) {
 export function PublicPassportRecord({ passport }: { passport: Passport }) {
   return <article className="living-record-public">
     <header className="living-record-header"><OrangeRing variant="selected"/><div><small className="living-record-eyebrow">THE LIVING RECORD</small><h1>Bird Passport</h1><p>บันทึกข้อมูลสาธารณะที่ฟาร์มเลือกเผยแพร่สำหรับนกตัวนี้</p><em className="living-record-ring">Ring ID: {passport.ringId ?? "-"}</em></div></header>
-    <section className="living-record-identity" aria-label="ข้อมูลประจำตัวนก"><div><small>Mutation</small><strong>{passport.mutation ?? "-"}</strong></div><div><small>Sex</small><strong>{displayValue(passport.sex)}</strong></div><div><small>วันฟัก</small><strong>{date(passport.hatchedOn)}</strong></div><div><small>Origin</small><strong>{displayValue(passport.origin)}</strong></div></section>
+    <section className="living-record-identity" aria-label="ข้อมูลประจำตัวนก"><div><small>Mutation</small><strong>{passport.mutation ?? "-"}</strong></div><div><small>Sex</small><strong>{displayValue(passport.sex)}</strong></div><div><small>วันฟัก</small><strong>{date(passport.hatchedOn)}</strong></div><div><small>Origin</small><strong>{displayOrigin(passport.origin)}</strong></div></section>
     <LineageTrace parentage={passport.parentage}/>
     <PublishedEvidence passport={passport}/>
     {passport.handoverOn && <section className="provenance-fact"><i aria-hidden="true"/><div><small className="living-record-eyebrow">PROVENANCE FACT</small><strong>วันส่งมอบ: {date(passport.handoverOn)}</strong><p>วันที่บันทึกไว้ในประวัติการส่งมอบของนก</p></div></section>}
