@@ -10,6 +10,12 @@ const customer = (id: string, d: Record<string, unknown>) => ({ customerId: id, 
 const priceSnapshot = (d: Record<string, unknown>) => typeof d.agreedPrice === "number" && d.currency === "THB" ? { agreedPrice: d.agreedPrice, currency: "THB" } : {};
 const sale = (id: string, d: Record<string, unknown>) => ({ saleId: id, birdId: d.birdId, customerId: d.customerId, reservationId: d.reservationId ?? null, ...priceSnapshot(d), status: d.status, createdOn: d.createdOn, completedOn: d.completedOn ?? null });
 const timestampValue = (value: unknown) => value && typeof (value as { toMillis?: unknown }).toMillis === "function" ? (value as { toMillis: () => number }).toMillis() : new Date(String(value ?? 0)).getTime();
+const optionalTimestampValue = (value: unknown) => {
+  if (value && typeof (value as { toMillis?: unknown }).toMillis === "function") return (value as { toMillis: () => number }).toMillis();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string" || typeof value === "number") { const parsed = new Date(value).getTime(); if (Number.isFinite(parsed)) return parsed; }
+  return Number.POSITIVE_INFINITY;
+};
 const timelineDate = (value: unknown) => value && typeof (value as { toDate?: unknown }).toDate === "function"
   ? (value as { toDate: () => Date }).toDate().toISOString().slice(0, 10)
   : typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null;
@@ -68,13 +74,31 @@ export const listBreedingCycles = (db: Firestore, input: Record<string, unknown>
 export const listEggs = (db: Firestore, input: Record<string, unknown>) => list(db, "eggs", input, (eggId, d) => ({ eggId, cycleId: d.cycleId, sequenceNo: d.sequenceNo, laidOn: d.laidOn ?? null, expectedHatchOn: d.expectedHatchOn ?? null, status: d.status }));
 export const listCustomers = (db: Firestore, input: Record<string, unknown>) => list(db, "customers", input, customer);
 export const getCustomerDetails = async (db: Firestore, input: Record<string, unknown>) => { const customerId = requireId(input.customerId, "customerId"); const c = await db.collection("customers").doc(customerId).get(); if (!c.exists) fail("not-found", "Customer not found."); const [reservations, sales] = await Promise.all([db.collection("reservations").where("customerId", "==", customerId).limit(25).get(), db.collection("sales").where("customerId", "==", customerId).limit(25).get()]); return { ...customer(customerId, c.data()!), reservations: reservations.docs.map(x => ({ reservationId: x.id, birdId: x.data().birdId, status: x.data().status, reservedOn: x.data().reservedOn })), sales: sales.docs.map(x => sale(x.id, x.data())) }; };
-export const listReservations = (db: Firestore, input: Record<string, unknown>) => list(db, "reservations", input, (reservationId, d) => ({ reservationId, birdId: d.birdId, customerId: d.customerId, reservedOn: d.reservedOn, expiresOn: d.expiresOn ?? null, ...priceSnapshot(d), status: d.status }));
+export const listReservations = async (db: Firestore, input: Record<string, unknown>) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const reservations = await db.collection("reservations").limit(limitOf(input.limit)).get();
+  return Promise.all(reservations.docs.map(async (reservation) => {
+    const initial = reservation.data();
+    if (initial.status !== "active" || typeof initial.expiresOn !== "string" || initial.expiresOn >= today) return { reservationId: reservation.id, birdId: initial.birdId, customerId: initial.customerId, reservedOn: initial.reservedOn, expiresOn: initial.expiresOn ?? null, ...priceSnapshot(initial), status: initial.status };
+    const current = await db.runTransaction(async (tx) => {
+      const [fresh, linkedSales] = await Promise.all([tx.get(reservation.ref), tx.get(db.collection("sales").where("reservationId", "==", reservation.id))]);
+      const data = fresh.data()!;
+      if (data.status === "active" && typeof data.expiresOn === "string" && data.expiresOn < today && !linkedSales.docs.some((sale) => sale.data().status !== "cancelled")) {
+        tx.update(reservation.ref, { status: "expired", updatedAt: new Date() });
+        return { ...data, status: "expired" };
+      }
+      return data;
+    });
+    return { reservationId: reservation.id, birdId: current.birdId, customerId: current.customerId, reservedOn: current.reservedOn, expiresOn: current.expiresOn ?? null, ...priceSnapshot(current), status: current.status };
+  }));
+};
 export const listSales = (db: Firestore, input: Record<string, unknown>) => list(db, "sales", input, sale);
 export const listBirdPriceHistory = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId");
   const records = await db.collection("priceHistory").where("birdId", "==", birdId).limit(50).get();
-  return records.docs.map(doc => ({ priceHistoryId: doc.id, amount: doc.data().amount, currency: doc.data().currency, effectiveOn: doc.data().effectiveOn, kind: doc.data().kind, validUntil: doc.data().validUntil ?? null, notes: doc.data().notes ?? null }))
-    .sort((a, b) => String(b.effectiveOn).localeCompare(String(a.effectiveOn)) || String(b.priceHistoryId).localeCompare(String(a.priceHistoryId)));
+  return records.docs.map(doc => ({ priceHistoryId: doc.id, amount: doc.data().amount, currency: doc.data().currency, effectiveOn: doc.data().effectiveOn, kind: doc.data().kind, validUntil: doc.data().validUntil ?? null, notes: doc.data().notes ?? null, sourceType: doc.data().sourceType ?? null, saleId: doc.data().saleId ?? null, createdAt: doc.data().createdAt }))
+    .sort((a, b) => String(a.effectiveOn).localeCompare(String(b.effectiveOn)) || optionalTimestampValue(a.createdAt) - optionalTimestampValue(b.createdAt) || String(a.priceHistoryId).localeCompare(String(b.priceHistoryId)))
+    .map(({ createdAt: _createdAt, ...record }) => record);
 };
 export const listSaleTimeline = async (db: Firestore, input: Record<string, unknown>) => {
   const saleId = requireId(input.saleId, "saleId");
@@ -104,7 +128,7 @@ export const getGiveawayDetails = async (db: Firestore, input: Record<string, un
   const handover = handovers.docs[0];
   return { giveawayId, birdId, recipientName: data.recipientName, givenOn: data.givenOn, status: data.status, notes: data.notes ?? null, bird: birdDto, customer: customerSnapshot?.exists ? { customerId: customerSnapshot.id, displayName: customerSnapshot.data()!.displayName ?? null, status: customerSnapshot.data()!.status ?? "active" } : null, handover: handover ? { handoverId: handover.id, handoverOn: handover.data().handoverOn, status: handover.data().status, recipientSnapshot: handover.data().recipientSnapshot } : null };
 };
-export const listDeliveries = (db: Firestore, input: Record<string, unknown>) => list(db, "deliveries", input, (deliveryId, d) => ({ deliveryId, saleId: d.saleId, distanceKm: d.distanceKm, freeDistanceKm: d.freeDistanceKm, pricePerKm: d.pricePerKm, shippingFee: d.shippingFee, currency: d.currency, status: d.status, createdOn: d.createdOn, deliveredOn: d.deliveredOn ?? null }));
+export const listDeliveries = async (db: Firestore, input: Record<string, unknown>) => (await db.collection("deliveries").limit(limitOf(input.limit)).get()).docs.map(doc => { const d=doc.data(); return { deliveryId:doc.id,saleId:d.saleId,sequence:d.sequence??null,distanceKm:d.distanceKm??null,freeDistanceKm:d.freeDistanceKm??null,pricePerKm:d.pricePerKm??null,shippingFee:d.shippingFee??null,currency:d.currency??null,status:d.status??"scheduled",scheduledOn:d.scheduledOn??d.createdOn??null,createdOn:d.createdOn??null,note:d.note??null,createdAt:d.createdAt??null,deliveredOn:d.deliveredOn??null }; }).sort((a,b)=>(typeof a.sequence==="number"&&typeof b.sequence==="number"?a.sequence-b.sequence:(Number.isFinite(optionalTimestampValue(a.createdAt))?optionalTimestampValue(a.createdAt):0)-(Number.isFinite(optionalTimestampValue(b.createdAt))?optionalTimestampValue(b.createdAt):0))||String(a.scheduledOn??"").localeCompare(String(b.scheduledOn??""))||String(a.deliveryId).localeCompare(String(b.deliveryId)));
 export const listHandovers = (db: Firestore, input: Record<string, unknown>) => list(db, "handovers", input, (handoverId, d) => ({ handoverId, birdId: d.birdId, saleId: d.saleId ?? null, giveawayId: d.giveawayId ?? null, handoverOn: d.handoverOn, sourceType: d.sourceType, recipientSnapshot: d.recipientSnapshot, status: d.status }));
 export const listEligibleCompletedSales = async (db: Firestore, input: Record<string, unknown>) => (await db.collection("sales").where("status", "==", "completed").limit(limitOf(input.limit)).get()).docs.map(x => sale(x.id, x.data()));
 export const getDashboardSummary = async (db: Firestore) => { const count = async (collection: string, status?: string) => (await (status ? db.collection(collection).where("status", "==", status) : db.collection(collection)).count().get()).data().count; const [birds, pairs, eggs, reservations, deliveries] = await Promise.all([count("birds"), count("pairs", "active"), count("eggs", "active"), count("reservations", "active"), count("deliveries", "planned")]); return { birds, activePairs: pairs, activeEggs: eggs, activeReservations: reservations, pendingDeliveries: deliveries }; };

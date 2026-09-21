@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { BirdProfile } from "./BirdProfile";
 
@@ -8,11 +8,33 @@ describe("signature Bird Profile",()=>{
   it("makes identity, Ring ID, lineage, history, and Passport readable without exposing internal ID",()=>{
     render(<BirdProfile data={data} currentSex="male" sexHistory={[{sex:"male",method:"dna",determinedOn:"2025-08-10"}]} weightHistory={[{weightGrams:92,measuredOn:"2026-08-10"}]} forms={<div>forms</div>} passport={<div>passport controls</div>}/>);
     expect(screen.getByRole("heading",{name:"Sunny"})).toBeTruthy();expect(screen.getAllByText("BMB-2401").length).toBeGreaterThan(0);expect(screen.getByLabelText("ยังไม่มีภาพนกที่เผยแพร่")).toBeTruthy();
+    expect(screen.getByText("อยู่ในฟาร์ม")).toBeTruthy();
+    expect(screen.getByLabelText("ข้อมูลประจำตัวนก").className).toContain("bird-visual-current");
     expect(screen.getByText("Atlas")).toBeTruthy();expect(screen.getByText("Luna")).toBeTruthy();expect(screen.getByRole("heading",{name:"Bird Passport"})).toBeTruthy();expect(document.body.textContent).not.toContain("internal-bird-id");
+  });
+
+  it("visually recedes a terminal Bird while preserving its profile",()=>{
+    render(<BirdProfile data={{...data,status:"sold"}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    expect(screen.getAllByLabelText("ข้อมูลประจำตัวนก").at(-1)?.className).toContain("bird-visual-terminal");
+    expect(screen.getByText("ขายแล้ว").className).toContain("bird-visual-terminal");
+    expect(screen.getAllByRole("heading",{name:"Sunny"}).at(-1)).toBeTruthy();
   });
 
   it("uses only an explicitly published trusted photo",()=>{
     const {rerender}=render(<BirdProfile data={{...data,photos:[{publicUrl:"https://example.test/private.jpg",isPublicOnPassport:false}]}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
     expect(screen.queryByRole("img")).toBeNull();rerender(<BirdProfile data={{...data,photos:[{publicUrl:"https://example.test/published.jpg",isPublicOnPassport:true,caption:"Sunny portrait"}]}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);expect(screen.getByRole("img",{name:"ภาพของ Sunny"})).toBeTruthy();
+  });
+
+  it("shows the authoritative current cage and a truthful unassigned state",()=>{
+    const {rerender}=render(<BirdProfile data={{...data,currentCageId:"cage-id",currentCageCode:"A-01",currentCageName:"Garden Aviary"}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    const profile=screen.getAllByLabelText("ข้อมูลประจำตัวนก").at(-1)!.closest<HTMLElement>(".bird-profile")!;
+    expect(within(profile).getByText("กรงปัจจุบัน")).toBeTruthy();expect(within(profile).getByText("A-01 — Garden Aviary")).toBeTruthy();expect(profile.textContent).not.toContain("cage-id");
+    rerender(<BirdProfile data={{...data,currentCageId:null,currentCageCode:null,currentCageName:null}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    expect(within(profile).getByText("ยังไม่ได้จัดกรง")).toBeTruthy();
+  });
+
+  it("keeps legacy rescued provenance readable as external intake",()=>{
+    render(<BirdProfile data={{...data,origin:"rescued"}} currentSex="unknown" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
+    expect(screen.getByText("รับเข้าจากภายนอก")).toBeTruthy();
   });
 });
