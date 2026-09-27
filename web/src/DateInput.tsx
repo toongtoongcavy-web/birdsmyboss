@@ -33,11 +33,12 @@ export function DateInput({ value, onChange, label, ariaLabel = label, required 
     setError("");validity("");setText(normalized.display);onChange(normalized.iso);
   };
   return <label className="field"><span>{label}{required && " *"}</span><div className="date-control">
-    <input ref={input} required={required} value={text} placeholder="DD/MM/YYYY" inputMode="numeric" aria-label={ariaLabel} aria-invalid={Boolean(error)}
+    <input ref={input} className="date-text-input" required={required} value={text} placeholder="DD/MM/YYYY" inputMode="numeric" aria-label={ariaLabel} aria-invalid={Boolean(error)}
       onFocus={()=>{focused.current=true;}}
+      onClick={(event)=>event.currentTarget.focus()}
       onChange={(event) => { const display=typedDisplay(event.target.value),normalized=normalize(display),complete=display.replace(/\D/g,"").length===8,message=display?"กรุณากรอกวันที่ที่มีอยู่จริง":"";setText(normalized?.display??display);setError(!normalized&&complete?message:"");if(normalized){validity("");onChange(normalized.iso);}else{validity(message);onChange(undefined);}}}
       onBlur={(event) => {focused.current=false;commit(event.target.value);}} />
     <button type="button" aria-label={`Open calendar for ${label}`} onClick={() => {const element=picker.current;if(!element)return;if(typeof element.showPicker==="function")element.showPicker();else element.click();}}>▣</button>
-    <input ref={picker} className="native-date" type="date" tabIndex={-1} onChange={(event) => { const iso = event.target.value || undefined; setError("");validity("");onChange(iso);setText(isoToThaiDisplay(iso)); }} />
+    <input ref={picker} className="native-date" type="date" tabIndex={-1} aria-hidden="true" onChange={(event) => { const iso = event.target.value || undefined; setError("");validity("");onChange(iso);setText(isoToThaiDisplay(iso)); }} />
   </div>{error && <small className="field-error" role="alert">{error}</small>}</label>;
 }

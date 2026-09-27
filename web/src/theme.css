@@ -10,3 +10,8 @@
 :is(.bird-registry-identity,.sales-bird-identity,.final-passage-bird,.passport-control-identity,.passport-control-bird,.entity-primary).bird-visual-terminal :is(b,strong,em),.bird-visual-terminal :is(.bird-registry-identity,.sales-bird-identity,.final-passage-bird,.passport-control-identity) :is(b,strong,em){color:var(--bird-terminal-green)}
 .bird-registry-row.bird-visual-terminal{border-color:var(--bird-terminal-border);background:linear-gradient(90deg,rgba(232,237,233,.68),rgba(250,247,242,.42))}
 .bird-identity-hero.bird-visual-terminal{box-shadow:inset 5px 0 0 var(--bird-terminal-border),var(--bmb-shadow-elevated)}
+
+/* Keep the editable date surface above the programmatic native picker. */
+.date-control .date-text-input{position:relative;z-index:1;pointer-events:auto}
+.date-control button{position:relative;z-index:1}
+.date-control .native-date{position:absolute!important;z-index:-1!important;right:0!important;bottom:0!important;width:0!important;min-width:0!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;opacity:0!important;overflow:hidden!important;pointer-events:none!important}

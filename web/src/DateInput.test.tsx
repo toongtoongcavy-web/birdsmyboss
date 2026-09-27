@@ -74,6 +74,21 @@ describe("DateInput", () => {
     expect(optional.checkValidity()).toBe(true);
     expect(optionalChange).toHaveBeenLastCalledWith(undefined);
   });
+  it("focuses the visible field on click, supports a caret, and accepts immediate typing", () => {
+    const onChange=vi.fn();
+    const {container}=render(<DateInput label="วันที่คลิก" onChange={onChange}/>);
+    const input=screen.getByLabelText("วันที่คลิก") as HTMLInputElement;
+    const picker=container.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.click(input);
+    expect(document.activeElement).toBe(input);
+    expect(document.activeElement).not.toBe(picker);
+    input.setSelectionRange(0,0);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(0);
+    fireEvent.change(input,{target:{value:"01092026"}});
+    expect(input.value).toBe("01/09/2026");
+    expect(onChange).toHaveBeenLastCalledWith("2026-09-01");
+  });
   it("renders a visible calendar button that opens the picker", () => {
     const showPicker=vi.fn();
     render(<DateInput label="วันที่นัดหมาย" onChange={vi.fn()}/>);
@@ -81,6 +96,8 @@ describe("DateInput", () => {
     const picker=document.querySelector('input[type="date"]') as HTMLInputElement & {showPicker?:()=>void};
     picker.showPicker=showPicker;
     expect(button.hasAttribute("hidden")).toBe(false);
+    expect(picker.tabIndex).toBe(-1);
+    expect(picker.getAttribute("aria-hidden")).toBe("true");
     fireEvent.click(button);
     expect(showPicker).toHaveBeenCalledTimes(1);
   });
