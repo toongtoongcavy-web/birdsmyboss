@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { MvpCages } from "./MvpCages";
 
@@ -23,6 +23,11 @@ it("shows only current farm birds in cage operations and current-cage readback",
   expect(within(move).getByRole("option", { name: /ACTIVE-1/ })).toBeTruthy();
   expect(within(pair).getByRole("option", { name: /ACTIVE-1/ })).toBeTruthy();
   expect(within(current).getByText(/ACTIVE-1/)).toBeTruthy();
+  const moveDate=within(move).getByLabelText("วันที่ย้ายกรง") as HTMLInputElement;
+  fireEvent.click(moveDate);
+  fireEvent.change(moveDate,{target:{value:"27/092026"}});
+  expect(document.activeElement).toBe(moveDate);
+  expect(moveDate.value).toBe("27/09/2026");
   for (const ring of ["SOLD-1", "GIVEN-1", "DEAD-1", "LOST-1"]) {
     expect(within(move).queryByRole("option", { name: new RegExp(ring) })).toBeNull();
     expect(within(pair).queryByRole("option", { name: new RegExp(ring) })).toBeNull();
