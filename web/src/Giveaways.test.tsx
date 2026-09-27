@@ -22,7 +22,7 @@ it("renders a Giveaway registry and creates a canonical Giveaway without display
   fireEvent.change(screen.getByLabelText("นกสำหรับ Giveaway"), { target: { value: "bird-internal" } });
   fireEvent.change(screen.getByLabelText("Customer สำหรับ Giveaway"), { target: { value: "customer-internal" } });
   fireEvent.change(screen.getByLabelText("ผู้รับตามข้อตกลง"), { target: { value: "ผู้รับจริงในข้อตกลง" } });
-  fireEvent.change(screen.getByLabelText("วันที่บันทึกข้อตกลง"), { target: { value: "08232026" } });
+  fireEvent.change(screen.getByLabelText("วันที่บันทึกข้อตกลง"), { target: { value: "23082026" } });
   fireEvent.click(screen.getByRole("button", { name: "สร้างรายการให้" }));
   await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("createGiveaway", { birdId: "bird-internal", customerId: "customer-internal", recipientName: "ผู้รับจริงในข้อตกลง", givenOn: "2026-08-23" }));
 });
@@ -45,7 +45,7 @@ it("submits only a structured recipientSnapshot for a completed Giveaway Handove
   fireEvent.click(screen.getAllByRole("button", { name: /ผู้รับตามข้อตกลง/i })[0]);
   await screen.findByText("ส่งมอบจริง");
   fireEvent.change(screen.getByLabelText("ชื่อผู้รับจริง"), { target: { value: "ผู้รับ snapshot" } });
-  fireEvent.change(screen.getByLabelText("วันที่ส่งมอบ giveaway"), { target: { value: "08242026" } });
+  fireEvent.change(screen.getByLabelText("วันที่ส่งมอบ giveaway"), { target: { value: "24082026" } });
   fireEvent.click(screen.getByText("ยืนยันการส่งมอบ"));
   await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("completeHandover", { sourceType: "giveaway", giveawayId: "giveaway-internal", birdId: "bird-internal", handoverOn: "2026-08-24", recipientSnapshot: { name: "ผู้รับ snapshot" } }));
 });

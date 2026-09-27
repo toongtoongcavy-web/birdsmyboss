@@ -32,7 +32,7 @@ it("offers purchase, list, and offer in Thai for a purchased Bird and submits pu
   ]);
   const form = screen.getByRole("heading", { name: "บันทึกประวัติราคา" }).closest("form")!;
   fireEvent.change(within(form).getByLabelText("ราคาประวัติ"), { target: { value: "1250.5" } });
-  fireEvent.change(within(form).getByLabelText("วันที่มีผล"), { target: { value: "08242026" } });
+  fireEvent.change(within(form).getByLabelText("วันที่มีผล"), { target: { value: "24082026" } });
   fireEvent.submit(form);
   await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("createPriceHistory", { birdId: "purchased-bird", amount: 1250.5, currency: "THB", effectiveOn: "2026-08-24", kind: "purchase" }));
 });
