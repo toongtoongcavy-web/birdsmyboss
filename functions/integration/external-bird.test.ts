@@ -39,3 +39,22 @@ test("foundation birds accept sex history and participate in pair activation wit
   const activated = await activatePair(db, { pairId, activeOn: "2026-01-01" });
   assert.deepEqual(activated.kinship, { status: "unknown" });
 });
+
+test("BIRD-07 rejects impossible or malformed hatch dates without creating a Bird", async () => {
+  const invalidDates: unknown[] = ["2026-02-31", "2025-02-29", "2026-04-31", "2026-00-10", "2026-13-01", "2026-2-28", "2026-02", "31/02/2026"];
+  const before = await db.collection("birds").get();
+  for (const [index, hatchedOn] of invalidDates.entries()) {
+    await assert.rejects(
+      createExternalBird(db, { ringId: ring(`invalid-date-${index}`), displayName: "Invalid hatch date", origin: "external", hatchedOn }),
+      /real date in YYYY-MM-DD format/,
+    );
+  }
+  const after = await db.collection("birds").get();
+  assert.equal(after.size, before.size);
+});
+
+test("BIRD-07 accepts a valid leap-day hatch date and preserves its ISO value", async () => {
+  const created = await createExternalBird(db, { ringId: ring("valid-leap-date"), displayName: "Leap day Bird", origin: "external", hatchedOn: "2028-02-29" });
+  const stored = await db.collection("birds").doc(created.birdId).get();
+  assert.equal(stored.data()?.hatchedOn, "2028-02-29");
+});

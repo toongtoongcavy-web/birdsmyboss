@@ -13,7 +13,17 @@ export const requireId = (value: unknown, name: string): string => {
 };
 
 export const requireDate = (value: unknown, name: string): string => {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) fail("invalid-argument", `${name} must be YYYY-MM-DD.`);
+  if (typeof value !== "string") return fail("invalid-argument", `${name} must be a real date in YYYY-MM-DD format.`);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return fail("invalid-argument", `${name} must be a real date in YYYY-MM-DD format.`);
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]) {
+    fail("invalid-argument", `${name} must be a real date in YYYY-MM-DD format.`);
+  }
   return value as string;
 };
 
