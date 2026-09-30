@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
@@ -25,6 +25,16 @@ it("renders a Giveaway registry and creates a canonical Giveaway without display
   fireEvent.change(screen.getByLabelText("วันที่บันทึกข้อตกลง"), { target: { value: "23082026" } });
   fireEvent.click(screen.getByRole("button", { name: "สร้างรายการให้" }));
   await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("createGiveaway", { birdId: "bird-internal", customerId: "customer-internal", recipientName: "ผู้รับจริงในข้อตกลง", givenOn: "2026-08-23" }));
+});
+
+it("GIVE-02 excludes every terminal Bird from the selector while keeping an active Bird eligible", () => {
+  const statusBirds = ["sold", "given_away", "deceased", "lost"].map(status => ({ birdId: `bird-${status}`, displayName: `นก ${status}`, ringId: `RING-${status}`, status }));
+  render(<Giveaways giveaways={[]} birds={[...birds, ...statusBirds]} customers={customers} onRefresh={vi.fn().mockResolvedValue(undefined)}/>);
+  const selector = screen.getByLabelText("นกสำหรับ Giveaway");
+  expect(within(selector).getByRole("option", { name: /GC-001/ })).toBeTruthy();
+  for (const status of ["sold", "given_away", "deceased", "lost"]) {
+    expect(within(selector).queryByRole("option", { name: new RegExp(`RING-${status}`) })).toBeNull();
+  }
 });
 
 it("shows contextual lifecycle actions and keeps Customer distinct from Handover recipientSnapshot", async () => {

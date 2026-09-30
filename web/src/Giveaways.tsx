@@ -30,7 +30,7 @@ export function Giveaways({ giveaways, birds, customers, onRefresh }: { giveaway
   const [givenOn, setGivenOn] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const availableBirds = useMemo(() => birds.filter(bird => !["sold", "given_away"].includes(String(bird.status))), [birds]);
+  const availableBirds = useMemo(() => birds.filter(bird => !["sold", "given_away", "deceased", "lost"].includes(String(bird.status))), [birds]);
   const open = async (giveaway: Row) => { setBusy(true); setMessage(""); try { setSelected(await invoke("getGiveawayDetails", { giveawayId: giveaway.giveawayId }) as Row); } catch (error) { setMessage(thaiError(error)); } finally { setBusy(false); } };
   const create = async (event: FormEvent) => { event.preventDefault(); if (!birdId || !recipientName.trim() || !givenOn) { setMessage("กรุณากรอกนก ผู้รับตามข้อตกลง และวันที่ให้ครบ"); return; } setBusy(true); setMessage(""); try { await invoke("createGiveaway", { birdId, recipientName: recipientName.trim(), givenOn, ...(customerId ? { customerId } : {}) }); setBirdId(""); setCustomerId(""); setRecipientName(""); setGivenOn(""); setMessage("สร้างรายการให้สำเร็จ"); await onRefresh(); } catch (error) { setMessage(thaiError(error)); } finally { setBusy(false); } };
   if (selected) return <GiveawayDetail data={selected} onBack={() => setSelected(null)} onRefresh={async () => { await onRefresh(); setSelected(await invoke("getGiveawayDetails", { giveawayId: selected.giveawayId }) as Row); }}/>;
