@@ -69,6 +69,17 @@ test("commercial: reservation payment/refunds retain records and never create re
   assert.equal((await db.collection("payments").doc(paymentId).get()).exists, true); assert.equal((await db.collection("saleTimeline").get()).docs.filter((d) => d.data().saleId === undefined).length, 0);
 });
 
+test("PAY-03 backend rejects missing payment method without creating a payment", async () => {
+  const { customerId } = await customer(); const birdId = await bird();
+  const { reservationId } = await createReservation(db, { birdId, customerId, reservedOn: "2026-09-20" });
+  for (const paymentMethod of [undefined, "", "   "]) {
+    await assert.rejects(recordPayment(db, { reservationId, amount: 250, currency: "THB", receivedOn: "2026-09-20", paymentMethod }), /paymentMethod is required/);
+  }
+  assert.equal((await db.collection("payments").where("reservationId", "==", reservationId).get()).size, 0);
+  const accepted = await recordPayment(db, { reservationId, amount: 250, currency: "THB", receivedOn: "2026-09-20", paymentMethod: "cash" });
+  assert.equal((await db.collection("payments").doc(accepted.paymentId).get()).data()?.paymentMethod, "cash");
+});
+
 test("commercial: reservation-to-sale preserves records, creates timeline, and completion is unique", async () => {
   const { customerId } = await customer(); const birdId = await bird(); const { reservationId } = await createReservation(db, { birdId, customerId, reservedOn: "2026-01-01", agreedPrice: 100, currency: "THB" }); const { paymentId } = await recordPayment(db, { reservationId, amount: 100, currency: "THB", receivedOn: "2026-01-01", paymentMethod: "transfer" });
   const { saleId } = await createSale(db, { birdId, customerId, reservationId, createdOn: "2026-01-02" }); const sale = await db.collection("sales").doc(saleId).get(); assert.equal(sale.data()?.reservationId, reservationId); assert.equal(sale.data()?.status, "confirmed");
