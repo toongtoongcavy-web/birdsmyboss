@@ -13,11 +13,22 @@ describe("signature Bird Profile",()=>{
     expect(screen.getByText("Atlas")).toBeTruthy();expect(screen.getByText("Luna")).toBeTruthy();expect(screen.getByRole("heading",{name:"Bird Passport"})).toBeTruthy();expect(document.body.textContent).not.toContain("internal-bird-id");
   });
 
-  it("visually recedes a terminal Bird while preserving its profile",()=>{
-    render(<BirdProfile data={{...data,status:"sold"}} currentSex="male" sexHistory={[]} weightHistory={[]} forms={null} passport={null}/>);
-    expect(screen.getAllByLabelText("ข้อมูลประจำตัวนก").at(-1)?.className).toContain("bird-visual-terminal");
-    expect(screen.getByText("ขายแล้ว").className).toContain("bird-visual-terminal");
-    expect(screen.getAllByRole("heading",{name:"Sunny"}).at(-1)).toBeTruthy();
+  it.each([
+    ["TERM-01", "sold", "ขายแล้ว"],
+    ["TERM-02", "given_away", "Given Away"],
+    ["TERM-03", "deceased", "เสียชีวิต"],
+    ["TERM-04", "lost", "Lost"],
+  ])("BIRD-11 %s visually recedes a %s Bird while preserving identity and history",(_uatId,status,statusLabel)=>{
+    render(<BirdProfile data={{...data,status}} currentSex="male" sexHistory={[{sex:"male",method:"dna",determinedOn:"2025-08-10"}]} weightHistory={[{weightGrams:92,measuredOn:"2026-08-10"}]} forms={null} passport={null}/>);
+    const profile=screen.getAllByLabelText("ข้อมูลประจำตัวนก").at(-1)!;
+    expect(profile.className).toContain("bird-visual-terminal");
+    expect(profile.className).not.toContain("bird-visual-current");
+    expect(within(profile).getByText(statusLabel).className).toContain("bird-visual-terminal");
+    const birdProfile=profile.closest<HTMLElement>(".bird-profile")!;
+    expect(within(birdProfile).getByRole("heading",{name:"Sunny"})).toBeTruthy();
+    expect(within(birdProfile).getAllByText("BMB-2401").length).toBeGreaterThan(0);
+    expect(within(birdProfile).getByText("ตัวผู้ · 10/08/2025")).toBeTruthy();
+    expect(within(birdProfile).getByText("92 กรัม · 10/08/2026")).toBeTruthy();
   });
 
   it("uses only an explicitly published trusted photo",()=>{
