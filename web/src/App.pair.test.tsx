@@ -57,3 +57,19 @@ it("prevents the same canonical Bird from appearing in the other selector", asyn
   const form = await open(); choose(form, "พ่อนก", "M-01", /SMOKE FATHER 01/); fireEvent.change(within(form).getByRole("textbox", { name: "ค้นหาแม่นก" }), { target: { value: "M-01" } });
   expect(within(form).queryByRole("listbox", { name: "ผลการค้นหาแม่นก" })).toBeNull(); expect(within(form).getByText("ไม่พบนกที่ตรงกับการค้นหา")).toBeTruthy();
 });
+
+it.each([
+  ["TERM-01", "sold"],
+  ["TERM-02", "given_away"],
+  ["TERM-03", "deceased"],
+  ["TERM-04", "lost"],
+])("%s excludes %s Birds from Pair selectors while active controls remain eligible", async (_uatId, status) => {
+  const terminalMale = { ...birds[0], birdId: `terminal-male-${status}`, ringId: `TERMINAL-M-${status}`, displayName: `Terminal Male ${status}`, status };
+  const terminalFemale = { ...birds[2], birdId: `terminal-female-${status}`, ringId: `TERMINAL-F-${status}`, displayName: `Terminal Female ${status}`, status };
+  mocks.invoke.mockImplementation(async (name: string) => name === "listBirds" ? [...birds, terminalMale, terminalFemale] : invoke(name));
+  const form = await open();
+  expect(results(form, "พ่อนก").getByRole("option", { name: /SMOKE FATHER 01/ })).toBeTruthy();
+  expect(results(form, "แม่นก").getByRole("option", { name: /SMOKE MOTHER 01/ })).toBeTruthy();
+  expect(results(form, "พ่อนก").queryByRole("option", { name: new RegExp(`Terminal Male ${status}`) })).toBeNull();
+  expect(results(form, "แม่นก").queryByRole("option", { name: new RegExp(`Terminal Female ${status}`) })).toBeNull();
+});

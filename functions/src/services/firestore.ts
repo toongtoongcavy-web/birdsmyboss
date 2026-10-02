@@ -1,4 +1,5 @@
 import { FieldValue, Firestore, Transaction } from "firebase-admin/firestore";
+import { isTerminalBirdStatus } from "../domain/bird.js";
 import { fail } from "../domain/errors.js";
 import { classifyKinship, KinshipResult } from "../domain/kinship.js";
 import { currentMembersAt, PairMember, validatePairMembers } from "../domain/pair.js";
@@ -61,6 +62,9 @@ const validateActivation = async (tx: Transaction, db: Firestore, pairId: string
   const sexes = new Map<string, string>();
   for (const member of members) sexes.set(member.birdId, await readCurrentSex(tx, db, member.birdId) ?? "unknown");
   const { maleId, femaleId } = validatePairMembers(members, sexes);
+  const pairBirds = await Promise.all([maleId, femaleId].map((birdId) => tx.get(db.collection(collections.birds).doc(birdId))));
+  if (pairBirds.some((bird) => !bird.exists)) fail("not-found", "Pair bird not found.");
+  if (pairBirds.some((bird) => isTerminalBirdStatus(bird.data()?.status))) fail("failed-precondition", "Terminal bird cannot participate in a Pair.");
   const competing = await Promise.all([maleId, femaleId].map((birdId) => tx.get(db.collection(collections.pairMembers).where("birdId", "==", birdId))));
   for (const member of competing.flatMap((snapshot) => snapshot.docs.map((doc) => doc.data() as PairMember))) {
     if (member.pairId === pairId || !member.pairId || !currentMembersAt([member], activeOn).length) continue;

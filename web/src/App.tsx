@@ -9,7 +9,7 @@ import { Customers } from "./Customers";
 import { DeliveryHandover } from "./DeliveryHandover";
 import { Giveaways } from "./Giveaways";
 import { displayBreedingCycleStatus, displayOrigin, displayValue } from "./presentation";
-import { BirdStatusBadge, EmptyState, PageHeader, SectionCard, StatusBadge, birdVisualClass } from "./ui";
+import { BirdStatusBadge, EmptyState, PageHeader, SectionCard, StatusBadge, birdVisualClass, isTerminalBirdStatus } from "./ui";
 import { BirdProfile } from "./BirdProfile";
 import { BirdAssets } from "./BirdAssets";
 import { PriceHistory } from "./PriceHistory";
@@ -35,7 +35,7 @@ const parentResultLimit = 8;
 function ParentSelector({ role, birds, selected, otherId, onSelect }: { role: "male" | "female"; birds: Row[]; selected: Row | null; otherId?: string; onSelect: (bird: Row | null) => void }) {
   const [query, setQuery] = useState("");
   const title = role === "male" ? "พ่อนก" : "แม่นก";
-  const eligible = birds.filter(bird => bird.currentSex === role && bird.birdId !== otherId);
+  const eligible = birds.filter(bird => bird.currentSex === role && bird.birdId !== otherId && !isTerminalBirdStatus(bird.status));
   const normalized = query.trim().toLocaleLowerCase();
   const matches = eligible.filter(bird => !normalized || String(bird.ringId ?? "").toLocaleLowerCase().includes(normalized) || String(bird.displayName ?? "").toLocaleLowerCase().includes(normalized)).slice(0, parentResultLimit);
   if (selected) return <section className="card" aria-label={`เลือก${title}แล้ว`}><strong>{title}</strong><p>{label(selected.displayName)}</p><p>Ring ID: {label(selected.ringId)}</p>{(selected.mutation||selected.origin)&&<p>{selected.mutation?`Mutation: ${label(selected.mutation)}`:""}{selected.mutation&&selected.origin?" · ":""}{selected.origin?`Origin: ${displayOrigin(selected.origin)}`:""}</p>}<button type="button" onClick={() => onSelect(null)}>เปลี่ยน</button></section>;
