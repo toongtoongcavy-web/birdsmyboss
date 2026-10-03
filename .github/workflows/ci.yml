@@ -6,7 +6,7 @@ on:
       - mvp-thai-cages
   pull_request:
     branches:
-      - mvp-thai-cages
+      - v1-release-baseline
   workflow_dispatch:
 
 concurrency:
