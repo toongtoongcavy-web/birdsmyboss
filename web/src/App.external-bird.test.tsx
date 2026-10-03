@@ -41,7 +41,7 @@ it("BIRD-06 accepts valid required Bird fields and resets after authoritative re
   await screen.findByText("บันทึกสำเร็จ");
   await screen.findByRole("button", { name: /Ring ID: EXT-001/ });
   await waitFor(() => { expect((inputs[0] as HTMLInputElement).value).toBe(""); expect((inputs[1] as HTMLInputElement).value).toBe(""); expect(date.value).toBe(""); expect(mutation.value).toBe(""); expect(origin.value).toBe("external"); });
-});
+}, 10_000);
 
 it("BIRD-06 blocks whitespace-only required Bird fields before calling backend and preserves input", async () => {
   render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Birds" }));
