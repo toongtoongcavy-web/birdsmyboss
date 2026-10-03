@@ -11,7 +11,7 @@ const reservations=[{reservationId:"reservation-secret-1",birdId:"bird-secret-1"
 const payments=[{paymentId:"payment-secret-1",reservationId:"reservation-secret-1",amount:1000,currency:"THB",receivedOn:"2026-08-14",paymentMethod:"transfer",status:"received"}];
 const refunds=[{refundId:"refund-secret-1",paymentId:"payment-secret-1",amount:100,outcome:"partial_refund",refundedOn:"2026-08-15",reason:"adjustment"}];
 const sales=[{saleId:"sale-secret-1",birdId:"bird-secret-2",customerId:"customer-secret-1",status:"draft",createdOn:"2026-08-14"}];
-const props={birds,customers,reservations,payments,refunds,sales,onRefresh:vi.fn()};
+const props={birds,customers,reservations,payments,refunds,sales,giveaways:[],onRefresh:vi.fn()};
 
 afterEach(()=>{cleanup();vi.clearAllMocks();});
 
@@ -24,6 +24,10 @@ it("excludes an actively reserved Bird from both commercial selectors",()=>{rend
 it.each(["draft","confirmed","completed"])("excludes a Bird with a %s Sale from both commercial selectors",status=>{const committed=[{...sales[0],birdId:"bird-secret-1",status}];render(<Commercial {...props} reservations={[]} sales={committed}/>);for(const formName of ["สร้างการจอง","สร้างการขายโดยตรง"]){const form=screen.getByRole("heading",{name:formName}).closest("form")!;expect(within(form).queryByRole("option",{name:/TH-001/})).toBeNull();}});
 
 it("allows a Bird with only a cancelled Sale back into both selectors",()=>{const cancelled=[{...sales[0],birdId:"bird-secret-1",status:"cancelled"}];render(<Commercial {...props} reservations={[]} sales={cancelled}/>);for(const formName of ["สร้างการจอง","สร้างการขายโดยตรง"]){const form=screen.getByRole("heading",{name:formName}).closest("form")!;expect(within(form).getByRole("option",{name:/TH-001/})).toBeTruthy();}});
+
+it.each(["planned","completed"])("excludes a Bird with a %s Giveaway from Reservation and Direct Sale selectors",status=>{const giveaways=[{giveawayId:"giveaway-secret-1",birdId:"bird-secret-1",recipientName:"ผู้รับทดสอบ",givenOn:"2026-08-14",status}];render(<Commercial {...props} reservations={[]} sales={[]} giveaways={giveaways}/>);for(const formName of ["สร้างการจอง","สร้างการขายโดยตรง"]){const form=screen.getByRole("heading",{name:formName}).closest("form")!;expect(within(form).queryByRole("option",{name:/TH-001/})).toBeNull();expect(within(form).getByRole("option",{name:/TH-002/})).toBeTruthy();}});
+
+it("allows a Bird with only a cancelled Giveaway back into both commercial selectors",()=>{const giveaways=[{giveawayId:"giveaway-secret-1",birdId:"bird-secret-1",recipientName:"ผู้รับทดสอบ",givenOn:"2026-08-14",status:"cancelled"}];render(<Commercial {...props} reservations={[]} sales={[]} giveaways={giveaways}/>);for(const formName of ["สร้างการจอง","สร้างการขายโดยตรง"]){const form=screen.getByRole("heading",{name:formName}).closest("form")!;expect(within(form).getByRole("option",{name:/TH-001/})).toBeTruthy();}});
 
 it("presents human contexts and conceals canonical IDs",()=>{render(<Commercial {...props}/>);expect(screen.getAllByText(/Sunny/).length).toBeGreaterThan(0);expect(screen.getAllByText(/สมชาย/).length).toBeGreaterThan(0);expect(screen.getAllByText(/14\/08\/2026/).length).toBeGreaterThan(0);for(const id of ["bird-secret-1","customer-secret-1","reservation-secret-1","payment-secret-1","sale-secret-1"])expect(screen.queryByText(id)).toBeNull();});
 
