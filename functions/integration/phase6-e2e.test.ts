@@ -5,7 +5,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 const projectId = "birdsmyboss-v1-dev";
-const functionsBase = `http://127.0.0.1:5001/${projectId}/us-central1`;
+const functionsBase = `http://127.0.0.1:5001/${projectId}/asia-southeast1`;
 const authBase = "http://127.0.0.1:9099";
 const firestoreBase = "http://127.0.0.1:8080";
 const db = new Firestore({ projectId });
@@ -76,7 +76,7 @@ test("Phase 6 complete authenticated V1 lifecycle", async () => {
   const birdId = String(created.birdId); assert.equal(created.ringId, "E2E-RING-001");
   const birdDoc = (await db.collection("birds").doc(birdId).get()).data()!;
   assert.equal(birdDoc.eggId, eggId); assert.equal("fatherId" in birdDoc, false); assert.equal("motherId" in birdDoc, false);
-  await rejectsCall("createBirdFromEgg", { eggId, ringId: "E2E-RING-002", origin: "farm_hatched", displayName: "Second" }, "ALREADY_EXISTS");
+  await rejectsCall("createBirdFromEgg", { eggId, ringId: "E2E-RING-002", origin: "farm_hatched", displayName: "Second" }, "FAILED_PRECONDITION");
   const secondEgg = await call<Json>("createEgg", { cycleId: breedingCycleId, sequenceNo: 2, laidOn: "2026-01-05" });
   await rejectsCall("createBirdFromEgg", { eggId: secondEgg.eggId, ringId: "e2e-ring-001", origin: "farm_hatched", displayName: "Duplicate ring" }, "ALREADY_EXISTS");
 
@@ -92,8 +92,8 @@ test("Phase 6 complete authenticated V1 lifecycle", async () => {
   assert.equal(hasId(await call<Json[]>("listBirds", { limit: 50 }), "birdId", birdId), true);
 
   const { customerId } = await call<Json>("createCustomer", { displayName: "E2E Customer", phone: "0899999999", email: "customer@example.test", address: "Private customer address" });
-  const { reservationId } = await call<Json>("createReservation", { birdId, customerId, reservedOn: "2026-02-02", expiresOn: "2026-02-10" });
-  await rejectsCall("createReservation", { birdId, customerId, reservedOn: "2026-02-03" }, "FAILED_PRECONDITION");
+  const { reservationId } = await call<Json>("createReservation", { birdId, customerId, agreedPrice: 1000, currency: "THB", reservedOn: "2099-02-02", expiresOn: "2099-02-10" });
+  await rejectsCall("createReservation", { birdId, customerId, reservedOn: "2099-02-03" }, "FAILED_PRECONDITION");
   assert.notEqual((await db.collection("birds").doc(birdId).get()).data()?.status, "sold");
   const { paymentId } = await call<Json>("recordPayment", { reservationId, amount: 1000, currency: "THB", receivedOn: "2026-02-02", paymentMethod: "transfer" });
   const paymentBefore = (await db.collection("payments").doc(String(paymentId)).get()).data()!;
@@ -105,16 +105,16 @@ test("Phase 6 complete authenticated V1 lifecycle", async () => {
 
   const { saleId } = await call<Json>("createSale", { birdId, customerId, reservationId, createdOn: "2026-02-05" });
   await rejectsCall("completeSale", { saleId, completedOn: "2026-02-06" }, "FAILED_PRECONDITION");
-  await call("confirmSale", { saleId });
+  await call("recordPayment", { saleId, amount: 250, currency: "THB", receivedOn: "2026-02-05", paymentMethod: "transfer" });
   await call("completeSale", { saleId, completedOn: "2026-02-06" });
   assert.equal((await db.collection("reservations").doc(String(reservationId)).get()).data()?.status, "completed");
   assert.notEqual((await db.collection("birds").doc(birdId).get()).data()?.status, "sold");
   await rejectsCall("createSale", { birdId, customerId, createdOn: "2026-02-07" }, "FAILED_PRECONDITION");
   const timeline = await db.collection("saleTimeline").where("saleId", "==", saleId).get();
-  assert.deepEqual(timeline.docs.map(x => x.data().eventType).sort(), ["sale_completed", "sale_created"]);
+  assert.deepEqual(timeline.docs.map(x => x.data().eventType).sort(), ["payment_recorded", "sale_completed", "sale_created"]);
   assert.equal((await db.collection("saleTimeline").get()).docs.some(x => !x.data().saleId), false);
 
-  const { deliveryId } = await call<Json>("createDelivery", { saleId, distanceKm: 20, freeDistanceKm: 5, pricePerKm: 10, currency: "THB", createdOn: "2026-02-07" });
+  const { deliveryId } = await call<Json>("createDelivery", { saleId, scheduledOn: "2026-02-07", distanceKm: 20, freeDistanceKm: 5, pricePerKm: 10, currency: "THB" });
   const delivery = (await db.collection("deliveries").doc(String(deliveryId)).get()).data()!;
   assert.deepEqual([delivery.distanceKm, delivery.freeDistanceKm, delivery.pricePerKm, delivery.shippingFee], [20, 5, 10, 150]);
   const snapshot = { name: "E2E Recipient", phone: "0812345678", address: "E2E Test Address" };
@@ -157,7 +157,7 @@ test("Phase 6 complete authenticated V1 lifecycle", async () => {
   const pairDetail = await call<Json>("getPairDetails", { pairId }); assert.equal((pairDetail.members as Json[]).length, 2);
   const customerDetail = await call<Json>("getCustomerDetails", { customerId }); assert.equal((customerDetail.sales as Json[]).some(x => x.saleId === saleId), true);
   const summary = await call<Json>("getDashboardSummary"); assert.equal(summary.birds, 3); assert.equal(summary.activePairs, 1);
-  for (const value of ["2026-01-01", birdDoc.hatchedOn, paymentBefore.receivedOn, delivery.createdOn, (await db.collection("handovers").doc(String(handoverId)).get()).data()?.handoverOn]) assertDate(value);
+  for (const value of ["2026-01-01", birdDoc.hatchedOn, paymentBefore.receivedOn, delivery.scheduledOn, (await db.collection("handovers").doc(String(handoverId)).get()).data()?.handoverOn]) assertDate(value);
 
   const unauthenticated = await callRaw("getDashboardSummary", {}, false); assert.equal(unauthenticated.ok, false);
   const direct = await fetch(`${firestoreBase}/v1/projects/${projectId}/databases/(default)/documents/birds/${birdId}`, { headers: { authorization: `Bearer ${token}` } });

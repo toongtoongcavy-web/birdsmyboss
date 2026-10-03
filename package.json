@@ -15,6 +15,7 @@
     "test:emulator": "firebase emulators:exec --project birdsmyboss-v1-dev --only firestore \"npm --prefix functions run test:integration\"",
     "test:callable-smoke": "npm --prefix functions run build && firebase emulators:exec --project birdsmyboss-v1-dev --only auth,firestore,functions \"npm --prefix functions run test:callable-smoke\"",
     "test:phase6": "npm --prefix functions run build && firebase emulators:exec --project birdsmyboss-v1-dev --only auth,firestore,functions \"npm --prefix functions run test:phase6\"",
+    "test:backend:all": "npm run test:emulator:all && npm run test:callable-smoke && npm run test:phase6",
     "test:e2e": "npm --prefix functions run build && node scripts/run-playwright-e2e.mjs",
     "test:emulator:all": "firebase emulators:exec --project birdsmyboss-v1-dev --only auth,firestore,storage \"npm --prefix functions run test:integration:all\"",
     "emulators": "firebase emulators:start --project birdsmyboss-v1-dev",
