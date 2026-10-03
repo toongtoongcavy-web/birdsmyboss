@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { EmptyState, PageHeader, SectionCard, StatCard, StatusBadge } from "./ui";
+import { BirdStatusBadge, EmptyState, PageHeader, SectionCard, StatCard, StatusBadge, birdVisualClass } from "./ui";
 
 describe("product UI primitives", () => {
   it("renders a consistent page hierarchy and reusable cards", () => {
@@ -13,11 +13,22 @@ describe("product UI primitives", () => {
 
   it("maps canonical statuses to semantic badges without changing their labels", () => {
     const { rerender } = render(<StatusBadge status="active"/>);
-    expect(screen.getByText("Active").className).toContain("status-success");
+    expect(screen.getByText("อยู่ในฟาร์ม").className).toContain("status-success");
     rerender(<StatusBadge status="draft"/>);
-    expect(screen.getByText("Draft").className).toContain("status-warning");
+    expect(screen.getByText("แบบร่าง").className).toContain("status-warning");
     rerender(<StatusBadge status="cancelled"/>);
-    expect(screen.getByText("Cancelled").className).toContain("status-danger");
+    expect(screen.getByText("ยกเลิก").className).toContain("status-danger");
+  });
+
+  it("scopes current and terminal visual treatments to Bird status", () => {
+    expect(birdVisualClass("active")).toBe("bird-visual-current");
+    for (const status of ["sold", "given_away", "deceased", "lost"]) expect(birdVisualClass(status)).toBe("bird-visual-terminal");
+    const { rerender } = render(<BirdStatusBadge status="active"/>);
+    expect(screen.getByText("อยู่ในฟาร์ม").className).toContain("bird-visual-current");
+    rerender(<BirdStatusBadge status="sold"/>);
+    expect(screen.getByText("ขายแล้ว").className).toContain("bird-visual-terminal");
+    rerender(<StatusBadge status="active" label="ลูกค้าใช้งานอยู่"/>);
+    expect(screen.getByText("ลูกค้าใช้งานอยู่").className).not.toContain("bird-visual-");
   });
 
   it("provides a readable empty state", () => {

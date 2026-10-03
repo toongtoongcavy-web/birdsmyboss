@@ -1,10 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Firestore } from "firebase-admin/firestore";
-import { getBirdDetails, getCustomerDetails, getPairDetails, listBirds, listDeliveries, listEligibleCompletedSales, listHandovers, listPairs, listPayments, listReservations } from "../src/services/reads.js";
+import { Firestore, Timestamp } from "firebase-admin/firestore";
+import { getBirdDetails, getCustomerDetails, getPairDetails, listBirdPriceHistory, listBirds, listDeliveries, listEligibleCompletedSales, listHandovers, listPairs, listPayments, listReservations } from "../src/services/reads.js";
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
 const prefix = `!reads-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+test("Price History is chronological with createdAt and ID tie-breakers", async () => {
+  const birdId = `${prefix}-price-bird`, collection = db.collection("priceHistory");
+  const rows = [
+    ["20", "2026-09-20", Timestamp.fromDate(new Date("2026-09-20T01:00:00Z"))],
+    ["18-late", "2026-09-18", Timestamp.fromDate(new Date("2026-09-18T02:00:00Z"))],
+    ["18-early", "2026-09-18", Timestamp.fromDate(new Date("2026-09-18T01:00:00Z"))],
+    ["18-equal-b", "2026-09-18", Timestamp.fromDate(new Date("2026-09-18T03:00:00Z"))],
+    ["18-equal-a", "2026-09-18", Timestamp.fromDate(new Date("2026-09-18T03:00:00Z"))],
+    ["18-missing-b", "2026-09-18", undefined],
+    ["18-missing-a", "2026-09-18", undefined],
+    ["17", "2026-09-17", Timestamp.fromDate(new Date("2026-09-17T01:00:00Z"))],
+  ] as const;
+  await Promise.all(rows.map(([suffix, effectiveOn, createdAt]) => collection.doc(`${prefix}-${suffix}`).set({ birdId, amount: 1, currency: "THB", kind: "list", effectiveOn, ...(createdAt ? { createdAt } : {}) })));
+  const history = await listBirdPriceHistory(db, { birdId });
+  assert.deepEqual(history.map(row => row.priceHistoryId), ["17", "18-early", "18-late", "18-equal-a", "18-equal-b", "18-missing-a", "18-missing-b", "20"].map(suffix => `${prefix}-${suffix}`));
+});
+
 test("read DTOs are bounded, filtered, and omit internal fields", async () => {
   const birdId = `${prefix}-bird`, femaleId = `${prefix}-female`, hatchedBirdId = `${prefix}-hatched`, pairId = `${prefix}-pair`, cageId = `${prefix}-cage`, customerId = `${prefix}-customer`, reservationId = `${prefix}-reservation`, saleId = `${prefix}-sale`;
   await db.collection("birds").doc(birdId).set({ ringId: "READ-001", displayName: "Read bird", origin: "external", status: "active", publicToken: "operator-trusted-token", internalNotes: "do not leak" });

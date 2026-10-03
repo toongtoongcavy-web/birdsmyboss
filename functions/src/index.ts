@@ -11,6 +11,7 @@ import { cancelGiveaway as cancelGiveawayService, completeGiveaway as completeGi
 import { completeHandover as completeHandoverService, createDelivery as createDeliveryService, rotatePassportToken as rotatePassportTokenService, resolvePassport } from "./services/phase4.js";
 import { getBirdDetails as getBirdDetailsService, getCustomerDetails as getCustomerDetailsService, getDashboardSummary as getDashboardSummaryService, getGiveawayDetails as getGiveawayDetailsService, getPairDetails as getPairDetailsService, listBirdPriceHistory as listBirdPriceHistoryService, listBirds as listBirdsService, listBreedingCycles as listBreedingCyclesService, listCages as listCagesService, listCustomers as listCustomersService, listDeliveries as listDeliveriesService, listEggs as listEggsService, listEligibleCompletedSales as listEligibleCompletedSalesService, listGiveaways as listGiveawaysService, listHandovers as listHandoversService, listPairs as listPairsService, listPayments as listPaymentsService, listRefunds as listRefundsService, listReservations as listReservationsService, listSaleTimeline as listSaleTimelineService, listSales as listSalesService } from "./services/reads.js";
 import { addBirdDocument as addBirdDocumentService, addBirdPhoto as addBirdPhotoService, archiveBirdDocument as archiveBirdDocumentService, archiveBirdPhoto as archiveBirdPhotoService, beginBirdAssetIntake as beginBirdAssetIntakeService, createCage as createCageService, createEgg as createEggService, createPair as createPairService, finalizeBirdAssetIntake as finalizeBirdAssetIntakeService, recordSexHistory as recordSexHistoryService, recordWeightHistory as recordWeightHistoryService, setPassportPublication as setPassportPublicationService, setPassportStatus as setPassportStatusService, supersedeBirdDocument as supersedeBirdDocumentService } from "./services/phase5c.js";
+import { assignBirdToCageMvp as assignBirdToCageMvpService, createActivePairInCageMvp as createActivePairInCageMvpService, createExternalBirdInCageMvp as createExternalBirdInCageMvpService, createMvpCage as createMvpCageService, listMvpBirds as listMvpBirdsService, listMvpCages as listMvpCagesService, moveActivePairToCageMvp as moveActivePairToCageMvpService } from "./services/mvp-cages.js";
 import { isSupportedPublicPhotoContentType, resolveEligiblePublicPhoto } from "./services/public-media.js";
 import { attributedFirestore, withOperatorAttribution } from "./services/audit.js";
 
@@ -69,6 +70,15 @@ export const archiveBirdDocument = operatorOnly<Record<string, unknown>>((data) 
 export const supersedeBirdDocument = operatorOnly<Record<string, unknown>>((data) => supersedeBirdDocumentService(db, data));
 export const setPassportStatus = operatorOnly<Record<string, unknown>>((data) => setPassportStatusService(db, data));
 export const setPassportPublication = operatorOnly<Record<string, unknown>>((data) => setPassportPublicationService(db, data));
+
+export const createMvpCage = operatorOnly<Record<string, unknown>>((data) => createMvpCageService(db, data));
+export const listMvpCages = operatorOnly<Record<string, unknown>>(() => listMvpCagesService(db));
+export const listMvpBirds = operatorOnly<Record<string, unknown>>(() => listMvpBirdsService(db));
+export const assignBirdToCageMvp = operatorOnly<Record<string, unknown>>((data) => assignBirdToCageMvpService(db, data));
+export const createActivePairInCageMvp = operatorOnly<Record<string, unknown>>((data) => createActivePairInCageMvpService(db, data));
+export const moveActivePairToCageMvp = operatorOnly<Record<string, unknown>>((data) => moveActivePairToCageMvpService(db, data));
+export const createExternalBirdInCageMvp = operatorOnly<Record<string, unknown>>((data) => createExternalBirdInCageMvpService(db, data));
+
 export const getDashboardSummary = operatorOnly<Record<string, unknown>>(() => getDashboardSummaryService(db));
 export const listBirds = operatorOnly<Record<string, unknown>>((data) => listBirdsService(db, data));
 export const listBirdPriceHistory = operatorOnly<Record<string, unknown>>((data) => listBirdPriceHistoryService(db, data));

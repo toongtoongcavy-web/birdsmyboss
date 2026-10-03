@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
@@ -22,9 +22,19 @@ it("renders a Giveaway registry and creates a canonical Giveaway without display
   fireEvent.change(screen.getByLabelText("นกสำหรับ Giveaway"), { target: { value: "bird-internal" } });
   fireEvent.change(screen.getByLabelText("Customer สำหรับ Giveaway"), { target: { value: "customer-internal" } });
   fireEvent.change(screen.getByLabelText("ผู้รับตามข้อตกลง"), { target: { value: "ผู้รับจริงในข้อตกลง" } });
-  fireEvent.change(screen.getByLabelText("วันที่บันทึกข้อตกลง"), { target: { value: "08232026" } });
+  fireEvent.change(screen.getByLabelText("วันที่บันทึกข้อตกลง"), { target: { value: "23082026" } });
   fireEvent.click(screen.getByRole("button", { name: "สร้างรายการให้" }));
   await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("createGiveaway", { birdId: "bird-internal", customerId: "customer-internal", recipientName: "ผู้รับจริงในข้อตกลง", givenOn: "2026-08-23" }));
+});
+
+it("GIVE-02 excludes every terminal Bird from the selector while keeping an active Bird eligible", () => {
+  const statusBirds = ["sold", "given_away", "deceased", "lost"].map(status => ({ birdId: `bird-${status}`, displayName: `นก ${status}`, ringId: `RING-${status}`, status }));
+  render(<Giveaways giveaways={[]} birds={[...birds, ...statusBirds]} customers={customers} onRefresh={vi.fn().mockResolvedValue(undefined)}/>);
+  const selector = screen.getByLabelText("นกสำหรับ Giveaway");
+  expect(within(selector).getByRole("option", { name: /GC-001/ })).toBeTruthy();
+  for (const status of ["sold", "given_away", "deceased", "lost"]) {
+    expect(within(selector).queryByRole("option", { name: new RegExp(`RING-${status}`) })).toBeNull();
+  }
 });
 
 it("shows contextual lifecycle actions and keeps Customer distinct from Handover recipientSnapshot", async () => {
@@ -45,7 +55,7 @@ it("submits only a structured recipientSnapshot for a completed Giveaway Handove
   fireEvent.click(screen.getAllByRole("button", { name: /ผู้รับตามข้อตกลง/i })[0]);
   await screen.findByText("ส่งมอบจริง");
   fireEvent.change(screen.getByLabelText("ชื่อผู้รับจริง"), { target: { value: "ผู้รับ snapshot" } });
-  fireEvent.change(screen.getByLabelText("วันที่ส่งมอบ giveaway"), { target: { value: "08242026" } });
+  fireEvent.change(screen.getByLabelText("วันที่ส่งมอบ giveaway"), { target: { value: "24082026" } });
   fireEvent.click(screen.getByText("ยืนยันการส่งมอบ"));
   await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("completeHandover", { sourceType: "giveaway", giveawayId: "giveaway-internal", birdId: "bird-internal", handoverOn: "2026-08-24", recipientSnapshot: { name: "ผู้รับ snapshot" } }));
 });
