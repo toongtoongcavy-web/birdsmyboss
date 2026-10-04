@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Firestore } from "firebase-admin/firestore";
 import { cancelGiveaway, completeGiveaway, createGiveaway } from "../src/services/giveaway.js";
-import { completeSale, createCustomer, createSale, confirmSale, recordPayment } from "../src/services/commercial.js";
+import { cancelReservation, completeSale, createCustomer, createReservation, createSale, confirmSale, recordPayment } from "../src/services/commercial.js";
 import { completeHandover } from "../src/services/phase4.js";
 import { getBirdDetails, getGiveawayDetails, listGiveaways } from "../src/services/reads.js";
 
@@ -87,6 +87,18 @@ test("Sale and Giveaway commitments are mutually exclusive", async () => {
   await assert.rejects(createGiveaway(db, { birdId: saleBird, recipientName: "Recipient", givenOn: "2026-08-23" }));
   await assert.rejects(createGiveaway(db, { birdId: await seedBird("sold"), recipientName: "Recipient", givenOn: "2026-08-23" }));
   await assert.rejects(createSale(db, { birdId: await seedBird("given_away"), customerId, createdOn: "2026-08-23" }));
+});
+
+test("active Reservation blocks Giveaway creation and cancellation restores eligibility", async () => {
+  const birdId = await seedBird();
+  const customerId = await seedCustomer();
+  const reservation = await createReservation(db, { birdId, customerId, reservedOn: "2026-08-23" }) as { reservationId: string };
+  await assert.rejects(createGiveaway(db, { birdId, recipientName: "Recipient", givenOn: "2026-08-23" }), /active reservation/);
+  assert.equal((await db.collection("giveaways").where("birdId", "==", birdId).get()).size, 0);
+  assert.equal((await db.collection("birds").doc(birdId).get()).data()?.status, "active");
+  await cancelReservation(db, { reservationId: reservation.reservationId });
+  const created = await createGiveaway(db, { birdId, recipientName: "Recipient", givenOn: "2026-08-23" });
+  assert.equal((await db.collection("giveaways").doc(created.giveawayId).get()).data()?.birdId, birdId);
 });
 
 test("Giveaway Handover requires its completed matching source and changes Bird only once", async () => {

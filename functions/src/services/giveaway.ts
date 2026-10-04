@@ -27,6 +27,11 @@ const assertNoConflictingGiveaway = async (db: Firestore, tx: FirebaseFirestore.
   if (giveaways.docs.some((giveaway) => giveaway.id !== exceptGiveawayId)) fail("failed-precondition", "Bird already has a conflicting giveaway.");
 };
 
+const assertNoActiveReservation = async (db: Firestore, tx: FirebaseFirestore.Transaction, birdId: string) => {
+  const reservations = await tx.get(db.collection("reservations").where("birdId", "==", birdId).where("status", "==", "active"));
+  if (!reservations.empty) fail("failed-precondition", "Bird already has an active reservation.");
+};
+
 export const createGiveaway = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId");
   const givenOn = requireDate(input.givenOn, "givenOn");
@@ -37,7 +42,7 @@ export const createGiveaway = async (db: Firestore, input: Record<string, unknow
     if (!bird.exists) fail("not-found", "Bird not found.");
     if (customerId && (!customer?.exists || customer.data()?.status !== "active")) fail("failed-precondition", "Customer must be active for a Giveaway reference.");
     assertAvailableBird(bird.data());
-    await Promise.all([assertNoConflictingSale(db, tx, birdId), assertNoConflictingGiveaway(db, tx, birdId)]);
+    await Promise.all([assertNoActiveReservation(db, tx, birdId), assertNoConflictingSale(db, tx, birdId), assertNoConflictingGiveaway(db, tx, birdId)]);
     const giveawayId = id();
     tx.create(ref(db, "giveaways", giveawayId), {
       birdId, recipientName: name, givenOn, ...(customerId ? { customerId } : {}),

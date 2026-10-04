@@ -16,7 +16,8 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it("renders a Giveaway registry and creates a canonical Giveaway without displaying internal IDs", async () => {
   mocks.invoke.mockResolvedValue({ giveawayId: "new-giveaway" });
   const refresh = vi.fn().mockResolvedValue(undefined);
-  render(<Giveaways giveaways={[giveaway]} birds={birds} customers={customers} onRefresh={refresh}/>);
+  const historicalGiveaway = { ...giveaway, birdId: "historical-bird", bird: { ...birds[0], birdId: "historical-bird", ringId: "GC-HISTORY" } };
+  render(<Giveaways giveaways={[historicalGiveaway]} birds={birds} customers={customers} onRefresh={refresh}/>);
   expect(screen.getByText("ผู้รับตามข้อตกลง")).toBeTruthy();
   expect(screen.queryByText("giveaway-internal")).toBeNull();
   fireEvent.change(screen.getByLabelText("นกสำหรับ Giveaway"), { target: { value: "bird-internal" } });
@@ -35,6 +36,26 @@ it("GIVE-02 excludes every terminal Bird from the selector while keeping an acti
   for (const status of ["sold", "given_away", "deceased", "lost"]) {
     expect(within(selector).queryByRole("option", { name: new RegExp(`RING-${status}`) })).toBeNull();
   }
+});
+
+it("excludes commercially committed Birds from Giveaway and restores cancelled commitments", () => {
+  const committedBirds = [
+    { birdId: "free", displayName: "Free", ringId: "FREE", status: "active" },
+    { birdId: "reserved", displayName: "Reserved", ringId: "RESERVED", status: "active" },
+    ...["draft", "confirmed", "completed", "cancelled"].map(status => ({ birdId: `sale-${status}`, displayName: status, ringId: `SALE-${status}`, status: "active" })),
+    ...["planned", "completed", "cancelled"].map(status => ({ birdId: `giveaway-${status}`, displayName: status, ringId: `GIVE-${status}`, status: "active" })),
+  ];
+  render(<Giveaways
+    giveaways={["planned", "completed", "cancelled"].map(status => ({ giveawayId: `g-${status}`, birdId: `giveaway-${status}`, status }))}
+    birds={committedBirds}
+    customers={customers}
+    reservations={[{ reservationId: "r-active", birdId: "reserved", status: "active" }]}
+    sales={["draft", "confirmed", "completed", "cancelled"].map(status => ({ saleId: `s-${status}`, birdId: `sale-${status}`, status }))}
+    onRefresh={vi.fn().mockResolvedValue(undefined)}
+  />);
+  const selector = screen.getByLabelText("นกสำหรับ Giveaway");
+  for (const ringId of ["FREE", "SALE-cancelled", "GIVE-cancelled"]) expect(within(selector).getByRole("option", { name: new RegExp(ringId) })).toBeTruthy();
+  for (const ringId of ["RESERVED", "SALE-draft", "SALE-confirmed", "SALE-completed", "GIVE-planned", "GIVE-completed"]) expect(within(selector).queryByRole("option", { name: new RegExp(ringId) })).toBeNull();
 });
 
 it("shows contextual lifecycle actions and keeps Customer distinct from Handover recipientSnapshot", async () => {
