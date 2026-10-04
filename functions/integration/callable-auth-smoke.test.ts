@@ -4,7 +4,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
 const projectId = "birdsmyboss-v1-dev";
-const callableUrl = `http://127.0.0.1:5001/${projectId}/us-central1/getDashboardSummary`;
+const callableUrl = `http://127.0.0.1:5001/${projectId}/asia-southeast1/getDashboardSummary`;
 const authUrl = `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=development-only`;
 const refreshUrl = "http://127.0.0.1:9099/securetoken.googleapis.com/v1/token?key=development-only";
 const adminAuth = getAuth(initializeApp({ projectId }));
@@ -66,6 +66,6 @@ test("callable accepts an Auth Emulator operator", async () => {
 });
 
 test("public Passport remains callable without authentication", async () => {
-  const response = await fetch(`http://127.0.0.1:5001/${projectId}/us-central1/getBirdPassport`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { publicToken: "not-published" } }) });
+  const response = await fetch(`http://127.0.0.1:5001/${projectId}/asia-southeast1/getBirdPassport`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: { publicToken: "not-published" } }) });
   assert.equal(response.ok, true); assert.deepEqual(await response.json(), { result: null });
 });

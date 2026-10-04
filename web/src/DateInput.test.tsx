@@ -1,25 +1,142 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DateInput } from "./DateInput";
 
 describe("DateInput", () => {
+  afterEach(cleanup);
   it("normalizes continuous typing and returns an ISO business date", () => {
     const onChange = vi.fn();
     render(<DateInput label="วันฟัก" onChange={onChange} />);
     const input = screen.getByLabelText("วันฟัก");
     fireEvent.change(input, { target: { value: "01122026" } });
     expect((input as HTMLInputElement).value).toBe("01/12/2026");
-    expect(onChange).toHaveBeenLastCalledWith("2026-01-12");
+    expect(onChange).toHaveBeenLastCalledWith("2026-12-01");
+  });
+  it("inserts separators while typing and normalizes a single-digit day and month on commit", () => {
+    const onChange = vi.fn();
+    render(<DateInput label="วันที่" onChange={onChange} />);
+    const input = screen.getByLabelText("วันที่") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "0109" } });
+    expect(input.value).toBe("01/09");
+    fireEvent.change(input, { target: { value: "01092026" } });
+    expect(input.value).toBe("01/09/2026");
+    expect(onChange).toHaveBeenLastCalledWith("2026-09-01");
+    fireEvent.change(input, { target: { value: "1/9/2026" } });
+    fireEvent.blur(input);
+    expect(input.value).toBe("01/09/2026");
+    expect(onChange).toHaveBeenLastCalledWith("2026-09-01");
+  });
+  it.each([
+    ["27092026","27/09/2026"],
+    ["27/092026","27/09/2026"],
+    ["2709/2026","27/09/2026"],
+    ["27/09/2026","27/09/2026"],
+    ["01012026","01/01/2026"],
+    ["01/012026","01/01/2026"],
+  ])("formats mixed slash entry %s as %s", (typed,display) => {
+    const onChange=vi.fn();
+    render(<DateInput label="วันที่ผสม" onChange={onChange}/>);
+    const input=screen.getByLabelText("วันที่ผสม") as HTMLInputElement;
+    fireEvent.change(input,{target:{value:typed}});
+    expect(input.value).toBe(display);
+    expect(onChange).toHaveBeenLastCalledWith(display==="27/09/2026"?"2026-09-27":"2026-01-01");
+  });
+  it("keeps formatting when the user types one slash and continues the year without a second slash", () => {
+    render(<DateInput label="วันที่ต่อเนื่อง" onChange={vi.fn()}/>);
+    const input=screen.getByLabelText("วันที่ต่อเนื่อง") as HTMLInputElement;
+    fireEvent.click(input);
+    for(const character of ["2","7","/","0","9","2","0","2","6"]){
+      const next=`${input.value}${character}`;
+      fireEvent.change(input,{target:{value:next,selectionStart:next.length}});
+    }
+    expect(input.value).toBe("27/09/2026");
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(input.value.length);
+  });
+  it("preserves partial edits and the caret instead of restoring deleted digits", () => {
+    render(<DateInput label="วันที่แก้ไข" value="2026-09-27" onChange={vi.fn()}/>);
+    const input=screen.getByLabelText("วันที่แก้ไข") as HTMLInputElement;
+    fireEvent.click(input);
+    fireEvent.change(input,{target:{value:"27/0/2026",selectionStart:4}});
+    expect(input.value).toBe("27/0/2026");
+    expect(input.selectionStart).toBe(4);
+    fireEvent.change(input,{target:{value:"27/10/2026",selectionStart:5}});
+    expect(input.value).toBe("27/10/2026");
+    expect(input.selectionStart).toBe(5);
   });
   it("rejects impossible dates and accepts picker selection", () => {
     const onChange = vi.fn();
     const { container } = render(<DateInput label="วันที่จอง" onChange={onChange} />);
     const input = screen.getByLabelText("วันที่จอง");
-    fireEvent.change(input, { target: { value: "02312026" } });
+    fireEvent.change(input, { target: { value: "31022026" } });
     expect(screen.getByRole("alert").textContent).toBe("กรุณากรอกวันที่ที่มีอยู่จริง");
-    expect(onChange).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenLastCalledWith(undefined);
     fireEvent.change(container.querySelector('input[type="date"]')!, { target: { value: "2028-02-29" } });
-    expect((input as HTMLInputElement).value).toBe("02/29/2028");
+    expect((input as HTMLInputElement).value).toBe("29/02/2028");
     expect(onChange).toHaveBeenLastCalledWith("2028-02-29");
+  });
+  it.each(["31022026","32012026","29022025"])("rejects invalid real date %s", value => {
+    const onChange = vi.fn();
+    render(<DateInput label="วันที่" onChange={onChange} />);
+    const input=screen.getByLabelText("วันที่");
+    fireEvent.change(input,{target:{value}});
+    fireEvent.blur(input);
+    expect(screen.getByRole("alert").textContent).toBe("กรุณากรอกวันที่ที่มีอยู่จริง");
+    expect(onChange).toHaveBeenLastCalledWith(undefined);
+    expect((input as HTMLInputElement).checkValidity()).toBe(false);
+  });
+  it("accepts a leap-year date and rejects partial input on commit", () => {
+    const onChange = vi.fn();
+    render(<DateInput label="วันที่" onChange={onChange} />);
+    const input=screen.getByLabelText("วันที่") as HTMLInputElement;
+    fireEvent.change(input,{target:{value:"29022028"}});
+    expect(input.value).toBe("29/02/2028");
+    expect(onChange).toHaveBeenLastCalledWith("2028-02-29");
+    fireEvent.change(input,{target:{value:"2902"}});
+    fireEvent.blur(input);
+    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(onChange).toHaveBeenLastCalledWith(undefined);
+  });
+  it("enforces required fields, allows optional empty fields, and keeps keyboard entry enabled", () => {
+    const requiredChange=vi.fn(),optionalChange=vi.fn();
+    const {rerender}=render(<DateInput label="วันที่บังคับ" required onChange={requiredChange}/>);
+    const required=screen.getByLabelText("วันที่บังคับ") as HTMLInputElement;
+    expect(required.required).toBe(true);
+    expect(required.readOnly).toBe(false);
+    expect(required.disabled).toBe(false);
+    expect(required.checkValidity()).toBe(false);
+    rerender(<DateInput label="วันที่ไม่บังคับ" onChange={optionalChange}/>);
+    const optional=screen.getByLabelText("วันที่ไม่บังคับ") as HTMLInputElement;
+    fireEvent.change(optional,{target:{value:""}});
+    fireEvent.blur(optional);
+    expect(optional.checkValidity()).toBe(true);
+    expect(optionalChange).toHaveBeenLastCalledWith(undefined);
+  });
+  it("focuses the visible field on click, supports a caret, and accepts immediate typing", () => {
+    const onChange=vi.fn();
+    const {container}=render(<DateInput label="วันที่คลิก" onChange={onChange}/>);
+    const input=screen.getByLabelText("วันที่คลิก") as HTMLInputElement;
+    const picker=container.querySelector('input[type="date"]') as HTMLInputElement;
+    fireEvent.click(input);
+    expect(document.activeElement).toBe(input);
+    expect(document.activeElement).not.toBe(picker);
+    input.setSelectionRange(0,0);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(0);
+    fireEvent.change(input,{target:{value:"01092026"}});
+    expect(input.value).toBe("01/09/2026");
+    expect(onChange).toHaveBeenLastCalledWith("2026-09-01");
+  });
+  it("renders a visible calendar button that opens the picker", () => {
+    const showPicker=vi.fn();
+    render(<DateInput label="วันที่นัดหมาย" onChange={vi.fn()}/>);
+    const button=screen.getByRole("button",{name:"Open calendar for วันที่นัดหมาย"});
+    const picker=document.querySelector('input[type="date"]') as HTMLInputElement & {showPicker?:()=>void};
+    picker.showPicker=showPicker;
+    expect(button.hasAttribute("hidden")).toBe(false);
+    expect(picker.tabIndex).toBe(-1);
+    expect(picker.getAttribute("aria-hidden")).toBe("true");
+    fireEvent.click(button);
+    expect(showPicker).toHaveBeenCalledTimes(1);
   });
 });

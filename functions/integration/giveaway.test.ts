@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Firestore } from "firebase-admin/firestore";
 import { cancelGiveaway, completeGiveaway, createGiveaway } from "../src/services/giveaway.js";
-import { completeSale, createCustomer, createSale, confirmSale } from "../src/services/commercial.js";
+import { completeSale, createCustomer, createSale, confirmSale, recordPayment } from "../src/services/commercial.js";
 import { completeHandover } from "../src/services/phase4.js";
-import { getGiveawayDetails, listGiveaways } from "../src/services/reads.js";
+import { getBirdDetails, getGiveawayDetails, listGiveaways } from "../src/services/reads.js";
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
 let sequence = 0;
@@ -58,15 +58,31 @@ test("Giveaway trusted list and detail reads provide canonical transfer context"
   assert.equal(detail.handover, null);
 });
 
+test("GIVE-02 rejects every terminal Bird without creating a Giveaway and keeps history readable", async () => {
+  for (const status of ["sold", "given_away", "deceased", "lost"]) {
+    const birdId = await seedBird(status);
+    await assert.rejects(createGiveaway(db, { birdId, recipientName: "Recipient", givenOn: "2026-08-23" }), /no longer available/);
+    assert.equal((await db.collection("giveaways").where("birdId", "==", birdId).get()).size, 0);
+    assert.equal((await db.collection("birds").doc(birdId).get()).data()?.status, status);
+    assert.equal((await getBirdDetails(db, { birdId })).status, status);
+  }
+
+  const activeBirdId = await seedBird("active");
+  const created = await createGiveaway(db, { birdId: activeBirdId, recipientName: "Eligible recipient", givenOn: "2026-08-23" });
+  assert.equal((await db.collection("giveaways").doc(created.giveawayId).get()).data()?.birdId, activeBirdId);
+  assert.equal((await db.collection("birds").doc(activeBirdId).get()).data()?.status, "active");
+});
+
 test("Sale and Giveaway commitments are mutually exclusive", async () => {
   const birdId = await seedBird();
   const customerId = await seedCustomer();
   await createGiveaway(db, { birdId, recipientName: "Recipient", givenOn: "2026-08-23" });
   await assert.rejects(createSale(db, { birdId, customerId, createdOn: "2026-08-23" }));
   const saleBird = await seedBird();
-  const sale = await createSale(db, { birdId: saleBird, customerId, createdOn: "2026-08-23" }) as { saleId: string };
+  const sale = await createSale(db, { birdId: saleBird, customerId, createdOn: "2026-08-23", agreedPrice: 100, currency: "THB" }) as { saleId: string };
   await assert.rejects(createGiveaway(db, { birdId: saleBird, recipientName: "Recipient", givenOn: "2026-08-23" }));
   await confirmSale(db, { saleId: sale.saleId });
+  await recordPayment(db, { saleId: sale.saleId, amount: 100, currency: "THB", receivedOn: "2026-08-23", paymentMethod: "cash" });
   await completeSale(db, { saleId: sale.saleId, completedOn: "2026-08-23" });
   await assert.rejects(createGiveaway(db, { birdId: saleBird, recipientName: "Recipient", givenOn: "2026-08-23" }));
   await assert.rejects(createGiveaway(db, { birdId: await seedBird("sold"), recipientName: "Recipient", givenOn: "2026-08-23" }));

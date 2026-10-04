@@ -1,4 +1,5 @@
 import { FieldValue, Firestore, Transaction } from "firebase-admin/firestore";
+import { isTerminalBirdStatus } from "../domain/bird.js";
 import { fail } from "../domain/errors.js";
 import { classifyKinship, KinshipResult } from "../domain/kinship.js";
 import { currentMembersAt, PairMember, validatePairMembers } from "../domain/pair.js";
@@ -61,6 +62,9 @@ const validateActivation = async (tx: Transaction, db: Firestore, pairId: string
   const sexes = new Map<string, string>();
   for (const member of members) sexes.set(member.birdId, await readCurrentSex(tx, db, member.birdId) ?? "unknown");
   const { maleId, femaleId } = validatePairMembers(members, sexes);
+  const pairBirds = await Promise.all([maleId, femaleId].map((birdId) => tx.get(db.collection(collections.birds).doc(birdId))));
+  if (pairBirds.some((bird) => !bird.exists)) fail("not-found", "Pair bird not found.");
+  if (pairBirds.some((bird) => isTerminalBirdStatus(bird.data()?.status))) fail("failed-precondition", "Terminal bird cannot participate in a Pair.");
   const competing = await Promise.all([maleId, femaleId].map((birdId) => tx.get(db.collection(collections.pairMembers).where("birdId", "==", birdId))));
   for (const member of competing.flatMap((snapshot) => snapshot.docs.map((doc) => doc.data() as PairMember))) {
     if (member.pairId === pairId || !member.pairId || !currentMembersAt([member], activeOn).length) continue;
@@ -223,7 +227,7 @@ export const createBirdFromEgg = async (db: Firestore, input: Record<string, unk
   return db.runTransaction(async (tx) => { const eggRef = db.collection(collections.eggs).doc(eggId); const egg = await tx.get(eggRef); if (!egg.exists) fail("not-found", "Egg not found."); if (!["laid", "fertile"].includes(String(egg.data()?.status))) fail("failed-precondition", "Egg must be laid or fertile before hatching."); await assertRingAvailable(tx, db, ringId); const existingBird = await tx.get(db.collection(collections.birds).where("eggId", "==", eggId)); if (!existingBird.empty) fail("already-exists", "This egg already has a bird."); const birdId = id(); tx.create(db.collection(collections.birds).doc(birdId), { ringId, origin: "farm_hatched", eggId, displayName, status: "active", passportStatus: "draft", ...(typeof input.mutation === "string" ? { mutation: input.mutation } : {}), ...(typeof input.hatchedOn === "string" ? { hatchedOn: requireDate(input.hatchedOn, "hatchedOn") } : {}), createdAt: now(), updatedAt: now() }); tx.update(eggRef, { status: "hatched", updatedAt: now() }); return { birdId, ringId }; });
 };
 
-const externalOrigins = new Set(["external", "purchased", "rescued", "unknown"]);
+const externalOrigins = new Set(["purchased", "external", "unknown"]);
 
 export const createExternalBird = async (db: Firestore, input: Record<string, unknown>): Promise<{ birdId: string; ringId: string }> => {
   assertNoCanonicalParentageInput(input);
@@ -231,7 +235,7 @@ export const createExternalBird = async (db: Firestore, input: Record<string, un
   const ringId = normalizeRingId(input.ringId);
   if (typeof input.displayName !== "string" || !input.displayName.trim()) fail("invalid-argument", "displayName is required.");
   const displayName = (input.displayName as string).trim();
-  if (typeof input.origin !== "string" || !externalOrigins.has(input.origin)) fail("invalid-argument", "origin must be external, purchased, rescued, or unknown.");
+  if (typeof input.origin !== "string" || !externalOrigins.has(input.origin)) fail("invalid-argument", "origin must be purchased, external, or unknown.");
   const origin = input.origin;
   const mutation = typeof input.mutation === "string" && input.mutation.trim() ? input.mutation.trim() : undefined;
   const hatchedOn = input.hatchedOn === undefined || input.hatchedOn === "" ? undefined : requireDate(input.hatchedOn, "hatchedOn");

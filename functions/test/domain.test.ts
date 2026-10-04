@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyKinship } from "../src/domain/kinship.js";
 import { currentMembersAt, validatePairMembers } from "../src/domain/pair.js";
-import { assertNoCanonicalParentageInput, intervalsOverlap, normalizeRingId } from "../src/domain/validation.js";
+import { assertNoCanonicalParentageInput, intervalsOverlap, normalizeRingId, requireDate } from "../src/domain/validation.js";
 
 test("ring normalization makes GC-001 and gc-001 identical but preserves separators", () => {
   assert.equal(normalizeRingId(" GC-001 "), "GC-001");
@@ -32,4 +32,16 @@ test("canonical parentage fields cannot be accepted for bird writes", () => {
   assert.throws(() => assertNoCanonicalParentageInput({ fatherId: "legacy" }));
   assert.throws(() => assertNoCanonicalParentageInput({ motherId: "legacy" }));
   assert.doesNotThrow(() => assertNoCanonicalParentageInput({ eggId: "egg" }));
+});
+
+test("shared date validation accepts real ISO calendar dates without transforming them", () => {
+  for (const value of ["2026-02-28", "2028-02-29", "2026-09-27", "2000-02-29"]) {
+    assert.equal(requireDate(value, "businessDate"), value);
+  }
+});
+
+test("shared date validation rejects impossible and malformed ISO dates", () => {
+  for (const value of ["2026-02-31", "2025-02-29", "2026-04-31", "2026-00-10", "2026-13-01", "2026-01-00", "0000-01-01", "2026-2-28", "28/02/2026", "2026-02", "not-a-date", "", undefined]) {
+    assert.throws(() => requireDate(value, "businessDate"), /real date in YYYY-MM-DD format/);
+  }
 });

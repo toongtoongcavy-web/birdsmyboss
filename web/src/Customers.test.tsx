@@ -7,7 +7,7 @@ vi.mock("./functions", () => ({ invoke: (...args: unknown[]) => invoke(...args),
 
 const customers = [
   { customerId: "customer-secret-1", displayName: "คุณอรุณ วัฒนชัย", phone: "081-234-5678", email: "arun@example.test", status: "active" },
-  { customerId: "customer-secret-2", displayName: "คุณศิริพร แสงทอง", phone: "089-765-4321", email: "siriporn@example.test", status: "archived" },
+  { customerId: "customer-secret-2", displayName: "คุณศิริพร แสงทอง", phone: "089-765-4321", email: "siriporn@example.test", status: "inactive" },
 ];
 const birds = [{ birdId: "bird-secret-1", displayName: "ข้าวหอม", ringId: "BMB-2608-014", status: "sold" }];
 
@@ -17,7 +17,7 @@ it("uses truthful Customer identity, search semantics, status, and concealed IDs
   const { container } = render(<Customers customers={customers} birds={birds} createForm={<form>existing create workflow</form>}/>);
   expect(screen.getByText("THE RELATIONSHIP LEDGER")).toBeTruthy();
   expect(screen.getByRole("textbox", { name: "ค้นหารายชื่อลูกค้า" }).getAttribute("placeholder")).toBe("ชื่อ โทรศัพท์ หรืออีเมล");
-  expect(screen.getByText("Active")).toBeTruthy(); expect(screen.getByText("Archived")).toBeTruthy();
+  expect(screen.getByText("ใช้งานอยู่")).toBeTruthy(); expect(screen.getByText("ไม่ใช้งาน")).toBeTruthy();
   expect(document.body.textContent).not.toMatch(/VIP|lifetime|total spent|score|customer-secret/i);
   expect(container.querySelector(".orange-ring")).toBeNull();
   fireEvent.change(screen.getByRole("textbox", { name: "ค้นหารายชื่อลูกค้า" }), { target: { value: "089" } });

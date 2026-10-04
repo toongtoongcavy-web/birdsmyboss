@@ -12,11 +12,13 @@ it("keeps external Bird creation separate and moves Egg creation out of the gene
   expect(screen.queryByRole("heading", { name: "สร้างนกจากไข่" })).toBeNull();
   expect(screen.queryByText(/Egg ID/)).toBeNull();
   const origin = within(external).getByRole("combobox");
-  expect(within(origin).getAllByRole("option").map(x => [x.textContent, x.getAttribute("value")])).toEqual([["เลือก", ""], ["External", "external"], ["Purchased", "purchased"], ["Rescued", "rescued"], ["Unknown", "unknown"]]);
-  expect(within(origin).queryByRole("option", { name: "farm_hatched" })).toBeNull();
+  expect(within(origin).getAllByRole("option").map(x => [x.textContent, x.getAttribute("value")])).toEqual([["เลือก", ""], ["ซื้อเข้าฟาร์ม", "purchased"], ["รับเข้าจากภายนอก", "external"], ["ไม่ทราบแหล่งที่มา", "unknown"]]);
+  expect(within(origin).queryByRole("option", { name: "ฟักในฟาร์ม" })).toBeNull();
+  expect(within(origin).queryByRole("option", { name: /rescued/i })).toBeNull();
+  expect(within(external).getAllByText("วันฟัก/วันเกิด")).toHaveLength(1);
 });
 
-it("keeps the external form reset after the created Bird appears during refresh", async () => {
+it("BIRD-06 accepts valid required Bird fields and resets after authoritative refresh", async () => {
   let created = false;
   mocks.invoke.mockImplementation(async (name: string) => {
     if (name === "createExternalBird") { created = true; return { birdId: "external-1", ringId: "EXT-001" }; }
@@ -39,6 +41,39 @@ it("keeps the external form reset after the created Bird appears during refresh"
   await screen.findByText("บันทึกสำเร็จ");
   await screen.findByRole("button", { name: /Ring ID: EXT-001/ });
   await waitFor(() => { expect((inputs[0] as HTMLInputElement).value).toBe(""); expect((inputs[1] as HTMLInputElement).value).toBe(""); expect(date.value).toBe(""); expect(mutation.value).toBe(""); expect(origin.value).toBe("external"); });
+}, 10_000);
+
+it("BIRD-06 blocks whitespace-only required Bird fields before calling backend and preserves input", async () => {
+  render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Birds" }));
+  const form = screen.getByRole("heading", { name: "เพิ่มนกจากภายนอก" }).closest("form")!;
+  const inputs = within(form).getAllByRole("textbox") as HTMLInputElement[];
+  const ringId = inputs[0];
+  const displayName = inputs[1];
+
+  fireEvent.change(ringId, { target: { value: "   " } });
+  fireEvent.change(displayName, { target: { value: "Foundation" } });
+  fireEvent.click(within(form).getByRole("button", { name: "บันทึก" }));
+  expect(mocks.invoke.mock.calls.filter(([operation]) => operation === "createExternalBird")).toHaveLength(0);
+  expect(ringId.value).toBe("   ");
+  expect(displayName.value).toBe("Foundation");
+
+  fireEvent.change(ringId, { target: { value: "EXT-RETRY" } });
+  fireEvent.change(displayName, { target: { value: "   " } });
+  fireEvent.click(within(form).getByRole("button", { name: "บันทึก" }));
+  expect(mocks.invoke.mock.calls.filter(([operation]) => operation === "createExternalBird")).toHaveLength(0);
+  expect(ringId.value).toBe("EXT-RETRY");
+  expect(displayName.value).toBe("   ");
+  expect(within(form).getByText("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน")).toBeTruthy();
+});
+
+it("generic Form blocks whitespace-only required text outside Bird intake", async () => {
+  render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Customers" }));
+  const form = screen.getByRole("heading", { name: "เพิ่มลูกค้า" }).closest("form")!;
+  const displayName = within(form).getByRole("textbox", { name: /ชื่อผู้ติดต่อ/ }) as HTMLInputElement;
+  fireEvent.change(displayName, { target: { value: "   " } });
+  fireEvent.click(within(form).getByRole("button", { name: "บันทึก" }));
+  expect(mocks.invoke.mock.calls.filter(([operation]) => operation === "createCustomer")).toHaveLength(0);
+  expect(displayName.value).toBe("   ");
 });
 
 it("preserves external Bird values on failure without exposing a generic Egg ID form", async () => {
@@ -49,8 +84,8 @@ it("preserves external Bird values on failure without exposing a generic Egg ID 
   const mutation = within(external).getByText("Mutation/สี").querySelector("input") as HTMLInputElement;
   fireEvent.change(extInputs[0], { target: { value: "EXT-FAIL" } }); fireEvent.change(extInputs[1], { target: { value: "Retry me" } }); fireEvent.change(mutation, { target: { value: "Green" } });
   const extDate = within(external).getByLabelText("วันฟัก/วันเกิด") as HTMLInputElement; fireEvent.change(extDate, { target: { value: "02022026" } });
-  fireEvent.change(within(external).getByRole("combobox"), { target: { value: "rescued" } });
+  fireEvent.change(within(external).getByRole("combobox"), { target: { value: "purchased" } });
   fireEvent.click(within(external).getByRole("button", { name: "บันทึก" })); await screen.findByText("error");
-  expect(extInputs[0].value).toBe("EXT-FAIL"); expect(extInputs[1].value).toBe("Retry me"); expect(mutation.value).toBe("Green"); expect(extDate.value).toBe("02/02/2026"); expect((within(external).getByRole("combobox") as HTMLSelectElement).value).toBe("rescued");
+  expect(extInputs[0].value).toBe("EXT-FAIL"); expect(extInputs[1].value).toBe("Retry me"); expect(mutation.value).toBe("Green"); expect(extDate.value).toBe("02/02/2026"); expect((within(external).getByRole("combobox") as HTMLSelectElement).value).toBe("purchased");
   expect(screen.queryByText(/Egg ID/)).toBeNull();
 });

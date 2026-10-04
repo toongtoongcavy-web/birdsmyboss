@@ -14,7 +14,7 @@ const recipientName = (value: unknown) => {
 };
 
 const assertAvailableBird = (data: Record<string, unknown> | undefined) => {
-  if (["sold", "given_away"].includes(String(data?.status))) fail("failed-precondition", "Bird is no longer available for a transfer.");
+  if (["sold", "given_away", "deceased", "lost"].includes(String(data?.status))) fail("failed-precondition", "Bird is no longer available for a transfer.");
 };
 
 const assertNoConflictingSale = async (db: Firestore, tx: FirebaseFirestore.Transaction, birdId: string) => {

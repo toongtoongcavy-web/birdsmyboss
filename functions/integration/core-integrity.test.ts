@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Firestore } from "firebase-admin/firestore";
 import { activatePair, assignPairToCage, createBirdFromEgg } from "../src/services/firestore.js";
+import { createPair } from "../src/services/phase5c.js";
+import { getPairDetails } from "../src/services/reads.js";
 
 const projectId = "birdsmyboss-v1-dev";
 const db = new Firestore({ projectId });
 const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const key = (name: string) => `${name}-${suffix}`;
 const stamp = { createdAt: new Date(), updatedAt: new Date() };
+const terminalStatuses = ["sold", "given_away", "deceased", "lost"] as const;
 
 const createEgg = async (eggId: string) => {
   const cycleId = key(`cycle-${eggId}`);
@@ -64,4 +67,45 @@ test("emulator: valid pair activates, parent-offspring and siblings reject", asy
 
   const sibling = key("sibling"); const siblingEgg = key("sibling-egg"); await db.collection("eggs").doc(siblingEgg).set({ cycleId, sequenceNo: 2, laidOn: "2026-01-03", status: "hatched", ...stamp }); await db.collection("birds").doc(sibling).set({ ringId: key("sibling-ring"), origin: "farm_hatched", eggId: siblingEgg, displayName: sibling, status: "active", ...stamp }); await db.collection("sexHistory").doc(key("sibling-sex")).set({ birdId: sibling, sex: "male", determinedOn: "2026-01-01", method: "dna", ...stamp });
   const siblingPair = key("sibling-pair"); await seedPair(siblingPair, sibling, child); await rejects(activatePair(db, { pairId: siblingPair, activeOn: "2026-02-01" }));
+});
+
+test("TERM-01..04 terminal Pairing matrix rejects createPair for either member without mutation", async () => {
+  for (const status of terminalStatuses) for (const terminalRole of ["male", "female"] as const) {
+    const maleId = key(`create-${status}-${terminalRole}-male`);
+    const femaleId = key(`create-${status}-${terminalRole}-female`);
+    await db.collection("birds").doc(maleId).set({ ringId: key(`${maleId}-ring`), origin: "external", displayName: maleId, status: terminalRole === "male" ? status : "active", ...stamp });
+    await db.collection("birds").doc(femaleId).set({ ringId: key(`${femaleId}-ring`), origin: "external", displayName: femaleId, status: terminalRole === "female" ? status : "active", ...stamp });
+    const pairCountBefore = (await db.collection("pairs").get()).size;
+    await assert.rejects(createPair(db, { maleBirdId: maleId, femaleBirdId: femaleId, startedOn: "2026-03-01" }), /Terminal bird/);
+    assert.equal((await db.collection("pairs").get()).size, pairCountBefore);
+    assert.equal((await db.collection("pairMembers").where("birdId", "==", maleId).get()).size, 0);
+    assert.equal((await db.collection("pairMembers").where("birdId", "==", femaleId).get()).size, 0);
+    assert.equal((await db.collection("birds").doc(maleId).get()).data()?.status, terminalRole === "male" ? status : "active");
+    assert.equal((await db.collection("birds").doc(femaleId).get()).data()?.status, terminalRole === "female" ? status : "active");
+  }
+});
+
+test("TERM-01..04 activation-time Pairing matrix rechecks current Bird status and preserves draft history", async () => {
+  for (const [index, status] of terminalStatuses.entries()) {
+    const terminalRole = index % 2 === 0 ? "male" : "female";
+    const maleId = key(`activate-${status}-male`);
+    const femaleId = key(`activate-${status}-female`);
+    for (const [birdId, sex] of [[maleId, "male"], [femaleId, "female"]] as const) {
+      await db.collection("birds").doc(birdId).set({ ringId: key(`${birdId}-ring`), origin: "external", displayName: birdId, status: "active", ...stamp });
+      await db.collection("sexHistory").doc(key(`${birdId}-terminal-sex`)).set({ birdId, sex, determinedOn: "2026-03-01", method: "dna", ...stamp });
+    }
+    const { pairId } = await createPair(db, { maleBirdId: maleId, femaleBirdId: femaleId, startedOn: "2026-03-01" });
+    const terminalBirdId = terminalRole === "male" ? maleId : femaleId;
+    await db.collection("birds").doc(terminalBirdId).update({ status });
+
+    await assert.rejects(activatePair(db, { pairId, activeOn: "2026-03-02" }), /Terminal bird/);
+
+    assert.equal((await db.collection("pairs").doc(pairId).get()).data()?.status, "draft");
+    assert.equal((await db.collection("pairMembers").where("pairId", "==", pairId).get()).size, 2);
+    assert.equal((await db.collection("cageAssignments").where("pairId", "==", pairId).get()).size, 0);
+    assert.equal((await db.collection("birds").doc(terminalBirdId).get()).data()?.status, status);
+    const history = await getPairDetails(db, { pairId });
+    assert.equal(history.status, "draft");
+    assert.equal(history.members.length, 2);
+  }
 });
