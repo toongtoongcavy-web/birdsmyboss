@@ -37,7 +37,8 @@ describe("calm Dashboard", () => {
 
   it("shows a calm success state and conceals zero-value attention rows", () => {
     render(<Dashboard data={{ listBirds: [], listMvpCages: [] }} summary={{ activePairs: 0, activeReservations: 0, pendingDeliveries: 0 }} navigate={() => {}} />);
-    expect(screen.getByText("วันนี้ไม่มีงานเร่งด่วน")).toBeTruthy();
+    expect(screen.getByText("วันนี้ทุกอย่างเรียบร้อยดี")).toBeTruthy();
+    expect(screen.getByText("ไม่มีงานเร่งด่วนที่ต้องจัดการ")).toBeTruthy();
     expect(screen.queryByText("การจองที่ใช้งาน")).toBeNull();
     expect(screen.queryByText("การขายที่ยังไม่เสร็จ")).toBeNull();
   });
