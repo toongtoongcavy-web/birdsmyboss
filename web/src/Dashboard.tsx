@@ -1,27 +1,62 @@
-import { BmbMetric, OperationalSignal, OrangeRing, SummaryGroup } from "./bmb-design-system";
+import { useState } from "react";
 import "./Dashboard.css";
 
-type Row=Record<string,any>;
-type DashboardPage="Birds"|"Breeding"|"Sales"|"Customers";
+type Row = Record<string, any>;
+type DashboardPage = "Birds" | "Breeding" | "Sales";
 
-export function Dashboard({data,summary,navigate}:{data:Record<string,Row[]>;summary:Row|null;navigate:(page:DashboardPage)=>void}){
-  const birds=data.listBirds??[],pairs=data.listPairs??[],cycles=data.listBreedingCycles??[],reservations=data.listReservations??[],sales=data.listSales??[],deliveries=data.listDeliveries??[];
-  const total=summary?.birds??birds.length,active=birds.filter(item=>item.status==="active").length,sold=birds.filter(item=>item.status==="sold").length;
-  const activePairs=summary?.activePairs??pairs.filter(item=>item.status==="active").length,activeCycles=cycles.filter(item=>item.status==="active").length;
-  const activeReservations=summary?.activeReservations??reservations.filter(item=>item.status==="active").length,pendingDeliveries=summary?.pendingDeliveries??deliveries.filter(item=>item.status==="planned").length;
-  const publishedPassports=birds.filter(item=>item.passportStatus==="published").length;
-  return <div className="dashboard-signature">
-    <header className="dashboard-heading"><div><span className="eyebrow">Birds My Boss</span><h1>ภาพรวมฟาร์ม</h1><p>สถานะสำคัญและงานประจำวันของฟาร์มในมุมมองเดียว</p></div><span className="dashboard-heading-mark" aria-hidden="true"/></header>
-    <section className="farm-pulse" aria-labelledby="farm-pulse-title">
-      <div className="farm-pulse-intro"><small>FARM PULSE</small><h2 id="farm-pulse-title">ฟาร์มของฉันวันนี้</h2><p>ภาพรวมประชากรนกและสัญญาณการดำเนินงานจากข้อมูลปัจจุบัน</p><BmbMetric label="นกทั้งหมด" value={total} kind="primary" identity/></div>
-      <div className="flock-state" aria-label="สถานะประชากรนก"><BmbMetric label="นกที่ใช้งาน" value={active}/><BmbMetric label="นกที่ขายแล้ว" value={sold}/></div>
-      <div className="pulse-geometry" aria-hidden="true"><span/><span/></div>
+const terminalBirdStatuses = new Set(["sold", "given_away", "deceased", "lost"]);
+
+function CalmMetric({ label, value, icon, helper, accent = false }: { label: string; value: number; icon: string; helper: string; accent?: boolean }) {
+  return <article className={`calm-metric${accent ? " calm-metric--accent" : ""}`}><span className="calm-metric-icon" aria-hidden="true">{icon}</span><div><span>{label}</span><small>{helper}</small></div><strong>{value}</strong></article>;
+}
+
+export function Dashboard({ data, summary, navigate }: { data: Record<string, Row[]>; summary: Row | null; navigate: (page: DashboardPage) => void }) {
+  const [showAll, setShowAll] = useState(false);
+  const birds = data.listBirds ?? [];
+  const cages = data.listMvpCages ?? data.listCages ?? [];
+  const pairs = data.listPairs ?? [];
+  const cycles = data.listBreedingCycles ?? [];
+  const reservations = data.listReservations ?? [];
+  const sales = data.listSales ?? [];
+  const deliveries = data.listDeliveries ?? [];
+  const currentBirds = birds.filter(bird => !terminalBirdStatuses.has(String(bird.status))).length;
+  const activePairs = summary?.activePairs ?? pairs.filter(pair => pair.status === "active").length;
+  const emptyCages = cages.filter(cage => cage.status === "active" && Number(cage.occupancyCount ?? 0) === 0).length;
+  const activeReservations = summary?.activeReservations ?? reservations.filter(reservation => reservation.status === "active").length;
+  const unfinishedSales = sales.filter(sale => ["draft", "confirmed"].includes(String(sale.status))).length;
+  const pendingDeliveries = summary?.pendingDeliveries ?? deliveries.filter(delivery => ["planned", "scheduled", "rescheduled", "pickup_at_farm"].includes(String(delivery.status))).length;
+  const activeCycles = cycles.filter(cycle => cycle.status === "active").length;
+  const today = new Date().toISOString().slice(0, 10);
+  const urgentReservations = reservations.filter(item => item.status === "active" && typeof item.expiresOn === "string" && item.expiresOn <= today).length;
+  const urgentDeliveries = deliveries.filter(item => ["planned", "scheduled", "rescheduled", "pickup_at_farm"].includes(String(item.status)) && item.scheduledOn === today).length;
+  const attention = [
+    { level: "urgent", label: "การจองครบกำหนดวันนี้ / เลยกำหนด", value: urgentReservations },
+    { level: "urgent", label: "กำหนดส่งมอบวันนี้", value: urgentDeliveries },
+    { level: "ongoing", label: "การขายที่ยังไม่เสร็จ", value: unfinishedSales },
+    { level: "ongoing", label: "การส่งมอบที่รอดำเนินการ", value: pendingDeliveries },
+    { level: "ongoing", label: "รอบเพาะที่ใช้งาน", value: activeCycles },
+    { level: "ongoing", label: "การจองที่ใช้งาน", value: activeReservations },
+  ].filter(item => item.value > 0);
+  const visibleAttention = showAll ? attention : attention.slice(0, 4);
+  const followUpTotal = unfinishedSales + pendingDeliveries + activeCycles + activeReservations;
+  const urgent = visibleAttention.filter(item => item.level === "urgent");
+  const ongoing = visibleAttention.filter(item => item.level === "ongoing");
+
+  return <div className="calm-dashboard">
+    <header className="calm-dashboard-header"><div><span className="eyebrow">BIRDS MY BOSS</span><h1>ภาพรวมฟาร์ม</h1><p>วันนี้ฟาร์มเป็นอย่างไรบ้าง</p></div><span className="calm-leaf" aria-hidden="true">⌁</span></header>
+    <section className="calm-metrics" aria-label="สรุปฟาร์ม">
+      <CalmMetric label="นกในฟาร์ม" value={currentBirds} icon="◌" helper="ประชากรปัจจุบัน" />
+      <CalmMetric label="คู่เพาะใช้งาน" value={activePairs} icon="∞" helper="คู่ที่กำลังดำเนินงาน" />
+      <CalmMetric label="กรงว่าง" value={emptyCages} icon="□" helper="กรงพร้อมใช้งาน" />
+      <CalmMetric label="งานที่ต้องติดตาม" value={followUpTotal} icon="✓" helper="รายการที่ยังดำเนินการ" accent={followUpTotal > 0} />
     </section>
-    <section className="dashboard-signals" aria-labelledby="signals-title"><header><small>สถานะการดำเนินงาน</small><h2 id="signals-title">สิ่งที่กำลังเกิดขึ้นในฟาร์ม</h2><p>ตัวเลขสรุปจาก workflow ที่มีอยู่ โดยไม่สร้างการแจ้งเตือนเพิ่มเติม</p></header><div className="signal-groups">
-      <SummaryGroup eyebrow="Breeding" title="การเพาะพันธุ์"><OperationalSignal label="คู่เพาะที่ใช้งาน" value={activePairs}/><OperationalSignal label="รอบเพาะที่ดำเนินอยู่" value={activeCycles} tone="milestone"/></SummaryGroup>
-      <SummaryGroup eyebrow="Business" title="การดำเนินงาน"><OperationalSignal label="การจองที่ใช้งาน" value={activeReservations}/><OperationalSignal label="การขาย" value={sales.length} tone="neutral"/><OperationalSignal label="การจัดส่งที่รอดำเนินการ" value={pendingDeliveries} tone="milestone"/></SummaryGroup>
-      <SummaryGroup eyebrow="Trust & identity" title="ความน่าเชื่อถือ"><OperationalSignal label="Passport ที่เผยแพร่" value={publishedPassports} tone="trust"/></SummaryGroup>
-    </div></section>
-    <section className="dashboard-actions" aria-labelledby="quick-actions-title"><div><small>งานประจำวัน</small><h2 id="quick-actions-title">เริ่มงานอย่างรวดเร็ว</h2><p>ไปยัง workflow ที่มีอยู่แล้วในระบบ</p></div><div className="dashboard-action-list"><button onClick={()=>navigate("Birds")}><OrangeRing variant="inline"/>เพิ่มนก</button><button onClick={()=>navigate("Breeding")}>สร้างคู่</button><button onClick={()=>navigate("Breeding")}>เพิ่มไข่</button><button onClick={()=>navigate("Sales")}>สร้างการจอง</button><button onClick={()=>navigate("Customers")}>เพิ่มลูกค้า</button></div></section>
+    <section className="today-card" aria-labelledby="today-title"><header><div><small>วันนี้</small><h2 id="today-title">สิ่งที่ต้องดูวันนี้</h2></div><span aria-hidden="true">○</span></header>
+      {attention.length ? <div className="today-list">
+        {urgent.length > 0 && <div className="attention-group attention-group--urgent"><h3>ต้องทำวันนี้ / เร่งด่วน</h3>{urgent.map(item => <div className="today-row" key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div>}
+        {ongoing.length > 0 && <div className="attention-group"><h3>กำลังดำเนินการ</h3>{ongoing.map(item => <div className="today-row" key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div>}
+        {attention.length > 4 && <button className="show-all-attention" type="button" onClick={() => setShowAll(value => !value)}>{showAll ? "แสดงน้อยลง" : "ดูทั้งหมด"}</button>}
+      </div> : <div className="calm-success"><span aria-hidden="true">🌿</span><p>วันนี้ไม่มีงานเร่งด่วน</p></div>}
+    </section>
+    <section className="calm-actions" aria-labelledby="calm-actions-title"><h2 id="calm-actions-title">เริ่มงาน</h2><div><button onClick={() => navigate("Birds")}>เพิ่มนก</button><button onClick={() => navigate("Breeding")}>สร้างคู่</button><button onClick={() => navigate("Breeding")}>เพิ่มไข่</button><button onClick={() => navigate("Sales")}>สร้างการจอง</button></div></section>
   </div>;
 }
