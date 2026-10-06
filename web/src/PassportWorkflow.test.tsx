@@ -32,7 +32,7 @@ it("shows human Passport context and canonical completed handover date",async()=
   mocks.invoke.mockResolvedValue(detail);
   render(<PassportWorkflow birds={birds} handovers={[{handoverId:"hidden",birdId:"uuid-secret-1",status:"completed",handoverOn:"2026-08-14"}]} onRefresh={mocks.refresh}/>);
   fireEvent.click(screen.getByText("SMOKE Name CHICK 01"));
-  expect(await screen.findByText("ตัวอย่างพาสปอร์ต")).toBeTruthy();
+  expect(await screen.findByText("พาสปอร์ตของนก")).toBeTruthy();
   expect(screen.getByText("วันส่งมอบ: 14/08/2026")).toBeTruthy();
   expect(screen.getByText(/DAD-1/)).toBeTruthy();
   expect(screen.queryByText(/uuid-secret|hidden|Public Token|Bird ID/)).toBeNull();
@@ -43,8 +43,8 @@ it("uses selected canonical ID and authoritatively refetches after status change
   mocks.invoke.mockImplementation(async(name:string)=>name==="getBirdDetails"?detail:{});
   render(<PassportWorkflow birds={birds} handovers={[]} onRefresh={mocks.refresh}/>);
   fireEvent.click(screen.getByText("SMOKE Name CHICK 01"));
-  await screen.findByText("ตัวอย่างพาสปอร์ต");
-  fireEvent.click(screen.getByRole("button",{name:"เผยแพร่ Passport"}));
+  await screen.findByText("พาสปอร์ตของนก");
+  fireEvent.click(screen.getByRole("button",{name:"เผยแพร่พาสปอร์ต"}));
   await waitFor(()=>expect(mocks.invoke).toHaveBeenCalledWith("setPassportStatus",{birdId:"uuid-secret-1",passportStatus:"published"}));
   await waitFor(()=>expect(mocks.refresh).toHaveBeenCalled());
   expect(mocks.invoke.mock.calls.filter(call=>call[0]==="getBirdDetails")).toHaveLength(2);
@@ -54,10 +54,11 @@ it("preserves trusted detail and context when mutation fails",async()=>{
   mocks.invoke.mockImplementation(async(name:string)=>{if(name==="setPassportStatus")throw new Error("no");return detail});
   render(<PassportWorkflow birds={birds} handovers={[]} onRefresh={mocks.refresh}/>);
   fireEvent.click(screen.getByText("SMOKE Name CHICK 01"));
-  await screen.findByText("ตัวอย่างพาสปอร์ต");
-  fireEvent.click(screen.getByRole("button",{name:"เผยแพร่ Passport"}));
+  await screen.findByText("พาสปอร์ตของนก");
+  fireEvent.click(screen.getByRole("button",{name:"เผยแพร่พาสปอร์ต"}));
   expect((await screen.findByRole("alert")).textContent).toBe("ผิดพลาด");
-  expect(screen.getByText("สถานะการเผยแพร่")).toBeTruthy();
+  expect(screen.getByRole("heading",{name:"สถานะพาสปอร์ต"})).toBeTruthy();
+  expect(screen.getByText("ยังไม่เผยแพร่")).toBeTruthy();
   expect(screen.getAllByText("แบบร่าง").length).toBeGreaterThanOrEqual(2);
   expect(screen.getByText("SMOKE Name CHICK 01")).toBeTruthy();
   expect(mocks.refresh).not.toHaveBeenCalled();

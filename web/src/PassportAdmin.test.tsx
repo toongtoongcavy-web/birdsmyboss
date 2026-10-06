@@ -28,11 +28,12 @@ it("admin status, token confirmation, and asset publication use trusted calls", 
     />,
   );
 
-  expect(screen.getByText("สถานะการเผยแพร่")).toBeTruthy();
-  expect(screen.getByText("แบบร่าง")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "สถานะพาสปอร์ต" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "QR พาสปอร์ต" })).toBeTruthy();
+  expect(screen.getByText("ยังไม่เผยแพร่")).toBeTruthy();
   expect(screen.queryByText("secret")).toBeNull();
 
-  fireEvent.click(screen.getByRole("button", { name: "เผยแพร่ Passport" }));
+  fireEvent.click(screen.getByRole("button", { name: "เผยแพร่พาสปอร์ต" }));
   await waitFor(() => {
     expect(mocks.invoke).toHaveBeenCalledWith("setPassportStatus", {
       birdId: "b1",

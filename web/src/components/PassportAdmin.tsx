@@ -4,7 +4,7 @@ import { invoke, thaiError } from "../functions";
 
 type Asset = { photoId?: string; documentId?: string; caption?: string; documentType?: string; status?: string; isPublicOnPassport?: boolean; storagePath?: string; checksum?: string };
 type Status = "draft" | "published" | "disabled";
-const statusLabel: Record<Status, string> = { draft: "แบบร่าง", published: "เผยแพร่แล้ว", disabled: "ปิดการเผยแพร่" };
+const statusLabel: Record<Status, string> = { draft: "ยังไม่เผยแพร่", published: "เผยแพร่แล้ว", disabled: "ปิดการเผยแพร่" };
 
 function AssetList({ type, assets, birdId, busy, call }: { type: "PHOTO" | "DOCUMENT"; assets: Asset[]; birdId: string; busy: boolean; call: (name: string, value: unknown) => void }) {
   const title = type === "PHOTO" ? "รูปภาพ" : "เอกสาร";
@@ -17,10 +17,11 @@ export function PassportAdmin({ birdId, passportStatus = "draft", publicToken, p
   const [confirm, setConfirm] = useState(false);
   const status = (Object.hasOwn(statusLabel, passportStatus) ? passportStatus : "draft") as Status;
   const call = async (name: string, payload: unknown) => { if (busy) return; setBusy(true); try { await invoke(name, payload); await onChanged(); setMessage("บันทึกสำเร็จ"); } catch (error) { setMessage(thaiError(error)); } finally { setBusy(false); } };
-  return <section className="publication-boundary"><header><div><small>PUBLICATION CONTROL</small><h4>การเผยแพร่พาสปอร์ต</h4></div><p>เลือกเฉพาะข้อมูลที่ต้องการแสดงในพาสปอร์ตสาธารณะ</p></header>
-    <div className={`publication-status-row publication-status-row--${status}`}><span aria-hidden="true">●</span><div><small>สถานะการเผยแพร่</small><strong>{statusLabel[status]}</strong></div></div>
-    <PassportPublicAccess passportStatus={status} publicToken={publicToken}/>
-    <div className="publication-actions">{(["draft", "published", "disabled"] as Status[]).filter(value => value !== status).map(value => <button type="button" disabled={busy} key={value} onClick={() => void call("setPassportStatus", { birdId, passportStatus: value })}>{value === "draft" ? "เปลี่ยนเป็นแบบร่าง" : value === "published" ? "เผยแพร่ Passport" : "ปิดการเผยแพร่"}</button>)}<button type="button" disabled={busy} onClick={() => setConfirm(true)}>หมุน Token ใหม่</button></div>
+  return <section className="publication-boundary"><header><div><small>PASSPORT MANAGEMENT</small><h4>จัดการพาสปอร์ต</h4></div><p>เลือกข้อมูลที่จะเผยแพร่และจัดการลิงก์พาสปอร์ตสาธารณะ</p></header>
+    <div className="publication-workspace"><section className="publication-management-card"><header><span className="passport-access-icon" aria-hidden="true">●</span><div><small>สถานะพาสปอร์ต</small><h5>สถานะพาสปอร์ต</h5></div></header><div className={`publication-status-row publication-status-row--${status}`}><span aria-hidden="true">●</span><strong>{statusLabel[status]}</strong></div><p>{status === "published" ? "พาสปอร์ตพร้อมเปิดดูและแบ่งปันผ่านลิงก์สาธารณะ" : "ข้อมูลยังไม่แสดงในพาสปอร์ตสาธารณะ"}</p>
+      <div className="publication-primary-actions">{status !== "published" && <button className="passport-publish-action" type="button" disabled={busy} onClick={() => void call("setPassportStatus", { birdId, passportStatus: "published" })}>เผยแพร่พาสปอร์ต</button>}{status !== "draft" && <button type="button" disabled={busy} onClick={() => void call("setPassportStatus", { birdId, passportStatus: "draft" })}>เปลี่ยนเป็นแบบร่าง</button>}</div>
+      <section className="passport-sensitive-actions"><small>การตั้งค่าที่ต้องระวัง</small><div>{status !== "disabled" && <button type="button" disabled={busy} onClick={() => void call("setPassportStatus", { birdId, passportStatus: "disabled" })}>ปิดการเผยแพร่</button>}<button type="button" disabled={busy} onClick={() => setConfirm(true)}>หมุน Token ใหม่</button></div></section>
+    </section><PassportPublicAccess passportStatus={status} publicToken={publicToken}/></div>
     {confirm && <section className="passport-rotation-confirm" role="dialog"><small>ROTATE PUBLIC LINK</small><p>Token เดิมและลิงก์ Passport ที่ใช้อยู่จะเปิดไม่ได้หลังยืนยัน</p><div className="publication-actions"><button type="button" onClick={() => { setConfirm(false); void call("rotatePassportToken", { birdId }); }}>ยืนยันหมุน Token</button><button type="button" onClick={() => setConfirm(false)}>ยกเลิก</button></div></section>}
     <div className="publication-assets"><AssetList type="PHOTO" assets={photos} birdId={birdId} busy={busy} call={call}/><AssetList type="DOCUMENT" assets={documents} birdId={birdId} busy={busy} call={call}/></div>
     {message && <p role="alert">{message}</p>}
