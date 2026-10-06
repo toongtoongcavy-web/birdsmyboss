@@ -16,7 +16,9 @@ it("presents selective public evidence and provenance without private commercial
   });
   render(<PublicPassport publicToken="public-token"/>);
   await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("getBirdPassport", { publicToken: "public-token" }));
-  expect(await screen.findByText("THE LIVING RECORD")).toBeTruthy();
+  expect(await screen.findByText("BIRDS MY BOSS")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "ครอบครัวของฉัน" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "เรื่องราวของฉัน" })).toBeTruthy();
   expect(screen.getByText("SIRE-8")).toBeTruthy();
   expect(screen.getByText("DAM-8")).toBeTruthy();
   expect(screen.getByAltText("ภาพเผยแพร่")).toBeTruthy();

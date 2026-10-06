@@ -155,6 +155,6 @@ export function App({ initialPage = "Dashboard" }: { initialPage?: Page }) {
     {page === "Sales" && <><PageHeader title="การขาย" subtitle="Reservation, Payment, Refund และ Sale ใน workflow เดียว"/><Commercial birds={data.listBirds??[]} customers={data.listCustomers??[]} reservations={data.listReservations??[]} payments={data.listPayments??[]} refunds={data.listRefunds??[]} sales={data.listSales??[]} giveaways={data.listGiveaways??[]} deliveries={data.listDeliveries??[]} handovers={data.listHandovers??[]} onRefresh={refresh}/></>}
     {page === "Giveaways" && <Giveaways giveaways={data.listGiveaways??[]} birds={data.listBirds??[]} customers={data.listCustomers??[]} reservations={data.listReservations??[]} sales={data.listSales??[]} onRefresh={refresh}/>}
     {page === "Delivery & Handover" && <><PageHeader title="จัดส่งและส่งมอบ" subtitle="ติดตามค่าจัดส่งและส่งมอบนกจากข้อมูลการขาย"/><DeliveryHandover eligibleSales={data.listEligibleCompletedSales??[]} birds={data.listBirds??[]} customers={data.listCustomers??[]} payments={data.listPayments??[]} deliveries={data.listDeliveries??[]} handovers={data.listHandovers??[]} onRefresh={refresh}/></>}
-    {page === "Passport" && <><PageHeader title="Passport Admin" subtitle="เผยแพร่ข้อมูลนกอย่างปลอดภัยด้วยลิงก์และ QR"/><PassportWorkflow birds={data.listBirds??[]} handovers={data.listHandovers??[]} onRefresh={refresh}/></>}
+    {page === "Passport" && <PassportWorkflow birds={data.listBirds??[]} handovers={data.listHandovers??[]} onRefresh={refresh}/>}
   </main></div>;
 }

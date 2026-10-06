@@ -28,8 +28,7 @@ it("admin status, token confirmation, and asset publication use trusted calls", 
     />,
   );
 
-  expect(screen.getByText("PUBLICATION STATUS")).toBeTruthy();
-  expect(screen.getByText("draft")).toBeTruthy();
+  expect(screen.getByText("สถานะการเผยแพร่")).toBeTruthy();
   expect(screen.getByText("แบบร่าง")).toBeTruthy();
   expect(screen.queryByText("secret")).toBeNull();
 
