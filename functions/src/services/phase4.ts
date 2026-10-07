@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { FieldValue, Firestore } from "firebase-admin/firestore";
 import { fail } from "../domain/errors.js";
+import { resolveCurrentSex, sexHistoryEntry } from "../domain/sex-history.js";
 import { requireDate, requireId } from "../domain/validation.js";
 import { createOpaquePhotoHandle, opaquePhotoUrl } from "./public-media.js";
 const id=()=>crypto.randomUUID(), now=()=>FieldValue.serverTimestamp(), ref=(db:Firestore,c:string,id:string)=>db.collection(c).doc(id);
@@ -36,7 +37,7 @@ export const resolvePassport=async(db:Firestore,token:unknown,mediaKey=process.e
     db.collection("handovers").where("birdId","==",birdId).where("status","==","completed").get(),
     db.collection("sexHistory").where("birdId","==",birdId).get()
   ]);
-  const sex=sexHistory.docs.map(x=>x.data()).filter(x=>x.sex!=="unknown").sort((a,b)=>String(b.determinedOn??"").localeCompare(String(a.determinedOn??"")))[0]?.sex??"unknown";
+  const sex=resolveCurrentSex(sexHistory.docs.map(sexHistoryEntry));
   const publicPhotos=typeof mediaKey==="string"&&mediaKey?photos.docs.filter(x=>x.data().managedStorage===true).map(x=>({publicUrl:opaquePhotoUrl(createOpaquePhotoHandle(mediaKey,birdId,x.id,String(data.publicToken))),caption:x.data().caption??null,sortOrder:x.data().sortOrder??null})):[];
   return{ringId:data.ringId,mutation:data.mutation??null,hatchedOn:data.hatchedOn??null,sex,origin:data.origin,passportStatus:data.passportStatus,parentage,photos:publicPhotos,documents:documents.docs.map(x=>({documentType:x.data().documentType,issuedOn:x.data().issuedOn, ...(x.data().documentNumber?{documentNumber:x.data().documentNumber}:{})})),handoverOn:handovers.docs[0]?.data().handoverOn??null};
 };

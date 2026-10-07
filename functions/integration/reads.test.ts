@@ -5,6 +5,36 @@ import { getBirdDetails, getCustomerDetails, getPairDetails, listBirdPriceHistor
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
 const prefix = `!reads-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+test("Current Sex ordering is deterministic and keeps complete append-only history", async () => {
+  const seed = async (suffix: string) => {
+    const birdId = `${prefix}-sex-${suffix}`;
+    await db.collection("birds").doc(birdId).set({ ringId: birdId, displayName: suffix, origin: "external", status: "active" });
+    return birdId;
+  };
+  const byDate = await seed("date");
+  await db.collection("sexHistory").doc(`${prefix}-date-old`).set({ birdId: byDate, sex: "female", determinedOn: "2026-01-01" });
+  await db.collection("sexHistory").doc(`${prefix}-date-new`).set({ birdId: byDate, sex: "male", determinedOn: "2026-02-01" });
+  const sameDay = await seed("same-day");
+  await db.collection("sexHistory").doc(`${prefix}-same-early`).set({ birdId: sameDay, sex: "male", determinedOn: "2026-03-01", createdAt: Timestamp.fromDate(new Date("2026-03-01T09:20:00Z")) });
+  await db.collection("sexHistory").doc(`${prefix}-same-late`).set({ birdId: sameDay, sex: "female", determinedOn: "2026-03-01", createdAt: Timestamp.fromDate(new Date("2026-03-01T09:25:00Z")) });
+  const legacy = await seed("legacy");
+  await db.collection("sexHistory").doc(`${prefix}-legacy-a`).set({ birdId: legacy, sex: "male", determinedOn: "2026-04-01" });
+  await db.collection("sexHistory").doc(`${prefix}-legacy-b`).set({ birdId: legacy, sex: "female", determinedOn: "2026-04-01" });
+  const unknown = await seed("unknown");
+  await db.collection("sexHistory").doc(`${prefix}-unknown-known`).set({ birdId: unknown, sex: "female", determinedOn: "2026-04-01" });
+  await db.collection("sexHistory").doc(`${prefix}-unknown-new`).set({ birdId: unknown, sex: "unknown", determinedOn: "2026-05-01" });
+
+  const birds = await listBirds(db, { limit: 50 });
+  const sexOf = (birdId: string) => (birds.find(row => (row as Record<string, unknown>).birdId === birdId) as Record<string, unknown> | undefined)?.currentSex;
+  assert.equal(sexOf(byDate), "male");
+  assert.equal(sexOf(sameDay), "female");
+  assert.equal(sexOf(legacy), "female");
+  assert.equal(sexOf(unknown), "female");
+  const detail = await getBirdDetails(db, { birdId: sameDay });
+  assert.equal(detail.currentSex, "female");
+  assert.deepEqual(detail.sexHistory.map(row => row.sex), ["female", "male"]);
+});
+
 test("Price History is chronological with createdAt and ID tie-breakers", async () => {
   const birdId = `${prefix}-price-bird`, collection = db.collection("priceHistory");
   const rows = [

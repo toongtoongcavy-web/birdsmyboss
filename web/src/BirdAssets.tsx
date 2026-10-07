@@ -21,14 +21,21 @@ function AssetIntake({ birdId, assetType, documents, onSaved }: { birdId: string
     event.preventDefault();
     if (!file || (!photo && (!documentType.trim() || !issuedOn))) { setMessage("กรุณาเลือกไฟล์และกรอกข้อมูลให้ครบ"); return; }
     setBusy(true);
+    let stage: "prepare" | "upload" | "finalize" | "followup" = "prepare";
     try {
       const id = intakeId();
       const intake = await invoke("beginBirdAssetIntake", { birdId, assetType, intakeId: id, contentType: file.type, size: file.size, ...(photo ? { caption: caption.trim() } : { documentType: documentType.trim(), issuedOn }) }) as { storagePath: string };
+      stage = "upload";
       await uploadBytes(ref(storage, intake.storagePath), file, { contentType: file.type });
+      stage = "finalize";
       const finalized = await invoke("finalizeBirdAssetIntake", { intakeId: id }) as { photoId?: string; documentId?: string };
+      stage = "followup";
       if (replaceId && finalized.documentId) await invoke("supersedeBirdDocument", { birdId, oldDocumentId: replaceId, replacementDocumentId: finalized.documentId });
       setMessage("บันทึกไฟล์สำเร็จ"); setFile(null); setCaption(""); setDocumentType(""); setIssuedOn(""); setReplaceId(""); await onSaved();
-    } catch (error) { setMessage(thaiError(error)); } finally { setBusy(false); }
+    } catch (error) {
+      const context = stage === "prepare" ? "เตรียมการอัปโหลดไม่สำเร็จ" : stage === "upload" ? "อัปโหลดไฟล์ไม่สำเร็จ" : stage === "finalize" ? "ยืนยันไฟล์ไม่สำเร็จ" : "บันทึกข้อมูลไฟล์ไม่สำเร็จ";
+      setMessage(`${context}: ${thaiError(error)}`);
+    } finally { setBusy(false); }
   };
   return <form className="card" onSubmit={submit}><h5>{photo ? "เพิ่มรูปภาพ" : "เพิ่มเอกสาร"}</h5><label className="field">ไฟล์ *<input required type="file" accept={photo ? "image/jpeg,image/png,image/webp" : "application/pdf,image/jpeg,image/png"} onChange={event => setFile(event.target.files?.[0] ?? null)} /></label>{photo ? <label className="field">คำบรรยาย<input value={caption} onChange={event => setCaption(event.target.value)} /></label> : <><label className="field">ประเภทเอกสาร *<input required value={documentType} onChange={event => setDocumentType(event.target.value)} /></label><DateInput label="วันที่ออกเอกสาร" required value={issuedOn} onChange={value=>setIssuedOn(value??"")}/>{documents.filter(document => document.status === "active").length > 0 && <label className="field">แทนที่เอกสารเดิม<select value={replaceId} onChange={event => setReplaceId(event.target.value)}><option value="">ไม่แทนที่</option>{documents.filter(document => document.status === "active").map(document => <option key={document.documentId} value={document.documentId}>{document.documentType ?? "เอกสาร"}</option>)}</select></label>}</>}<button disabled={busy}>{busy ? "กำลังอัปโหลด…" : photo ? "เพิ่มรูปภาพ" : "เพิ่มเอกสาร"}</button>{message && <p role="status">{message}</p>}</form>;
 }

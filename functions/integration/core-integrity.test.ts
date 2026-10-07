@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Firestore } from "firebase-admin/firestore";
-import { activatePair, assignPairToCage, createBirdFromEgg } from "../src/services/firestore.js";
+import { activatePair, assignPairToCage, createBirdFromEgg, createBreedingCycle } from "../src/services/firestore.js";
 import { createPair } from "../src/services/phase5c.js";
 import { getPairDetails } from "../src/services/reads.js";
 
@@ -67,6 +67,20 @@ test("emulator: valid pair activates, parent-offspring and siblings reject", asy
 
   const sibling = key("sibling"); const siblingEgg = key("sibling-egg"); await db.collection("eggs").doc(siblingEgg).set({ cycleId, sequenceNo: 2, laidOn: "2026-01-03", status: "hatched", ...stamp }); await db.collection("birds").doc(sibling).set({ ringId: key("sibling-ring"), origin: "farm_hatched", eggId: siblingEgg, displayName: sibling, status: "active", ...stamp }); await db.collection("sexHistory").doc(key("sibling-sex")).set({ birdId: sibling, sex: "male", determinedOn: "2026-01-01", method: "dna", ...stamp });
   const siblingPair = key("sibling-pair"); await seedPair(siblingPair, sibling, child); await rejects(activatePair(db, { pairId: siblingPair, activeOn: "2026-02-01" }));
+});
+
+test("same-day corrected Current Sex drives Pair activation and Breeding eligibility", async () => {
+  const maleId = key("corrected-male"), femaleId = key("corrected-female"), pairId = key("corrected-pair");
+  await db.collection("birds").doc(maleId).set({ ringId: key("corrected-ring-m"), origin: "external", displayName: maleId, status: "active", ...stamp });
+  await db.collection("birds").doc(femaleId).set({ ringId: key("corrected-ring-f"), origin: "external", displayName: femaleId, status: "active", ...stamp });
+  await db.collection("sexHistory").doc(key("corrected-male-early")).set({ birdId: maleId, sex: "female", determinedOn: "2026-06-01", method: "visual", createdAt: new Date("2026-06-01T09:20:00Z") });
+  await db.collection("sexHistory").doc(key("corrected-male-late")).set({ birdId: maleId, sex: "male", determinedOn: "2026-06-01", method: "dna", createdAt: new Date("2026-06-01T09:25:00Z") });
+  await db.collection("sexHistory").doc(key("corrected-female-sex")).set({ birdId: femaleId, sex: "female", determinedOn: "2026-06-01", method: "dna", createdAt: new Date("2026-06-01T09:25:00Z") });
+  await db.collection("pairs").doc(pairId).set({ status: "draft", startedOn: "2026-06-01", ...stamp });
+  await db.collection("pairMembers").doc(key("corrected-member-m")).set({ pairId, birdId: maleId, role: "male", effectiveFrom: "2026-06-01", ...stamp });
+  await db.collection("pairMembers").doc(key("corrected-member-f")).set({ pairId, birdId: femaleId, role: "female", effectiveFrom: "2026-06-01", ...stamp });
+  await assert.doesNotReject(activatePair(db, { pairId, activeOn: "2026-06-02" }));
+  await assert.doesNotReject(createBreedingCycle(db, { pairId, startedOn: "2026-06-03" }));
 });
 
 test("TERM-01..04 terminal Pairing matrix rejects createPair for either member without mutation", async () => {

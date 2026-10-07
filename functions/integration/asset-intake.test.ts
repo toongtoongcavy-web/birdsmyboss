@@ -5,6 +5,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { archiveBirdDocument, archiveBirdPhoto, beginBirdAssetIntake, finalizeBirdAssetIntake, setPassportPublication, supersedeBirdDocument } from "../src/services/phase5c.js";
 import { resolvePassport } from "../src/services/phase4.js";
+import { getBirdDetails } from "../src/services/reads.js";
 
 process.env.BMB_PUBLIC_MEDIA_KEY = Buffer.alloc(32, 7).toString("base64url");
 
@@ -51,6 +52,10 @@ test("asset lifecycle archives Photos and Documents and supersedes only with a s
   const firstIntake = await prepare(birdId, "DOCUMENT", "application/pdf", bytes, { documentType: "dna", issuedOn: "2026-01-01" });
   const replacementIntake = await prepare(birdId, "DOCUMENT", "application/pdf", bytes, { documentType: "dna", issuedOn: "2026-02-01" });
   const first = await finalizeBirdAssetIntake(db, { intakeId: firstIntake.intakeId }); const replacement = await finalizeBirdAssetIntake(db, { intakeId: replacementIntake.intakeId });
+  const detail = await getBirdDetails(db, { birdId });
+  assert.ok(detail.photos.some(item => item.photoId === photo.photoId));
+  assert.ok(detail.documents.some(item => item.documentId === first.documentId));
+  assert.ok(detail.documents.some(item => item.documentId === replacement.documentId));
   const firstDocumentId = String(first.documentId), replacementDocumentId = String(replacement.documentId);
   await supersedeBirdDocument(db, { birdId, oldDocumentId: firstDocumentId, replacementDocumentId });
   const old = (await db.collection("documents").doc(firstDocumentId).get()).data()!;

@@ -3,6 +3,7 @@ import { isTerminalBirdStatus } from "../domain/bird.js";
 import { fail } from "../domain/errors.js";
 import { classifyKinship, KinshipResult } from "../domain/kinship.js";
 import { currentMembersAt, PairMember, validatePairMembers } from "../domain/pair.js";
+import { compareSexHistoryDesc, resolveCurrentSex, sexHistoryEntry, SexHistoryEntry } from "../domain/sex-history.js";
 import { intervalsOverlap, normalizeRingId, requireDate, requireId } from "../domain/validation.js";
 
 const now = () => FieldValue.serverTimestamp();
@@ -30,8 +31,7 @@ const capacityValue = (value: unknown) => {
 
 const readCurrentSex = async (tx: Transaction, db: Firestore, birdId: string): Promise<string> => {
   const snapshot = await tx.get(db.collection("sexHistory").where("birdId", "==", birdId));
-  const entries = snapshot.docs.map(doc => doc.data()).sort((a, b) => String(b.determinedOn ?? "").localeCompare(String(a.determinedOn ?? "")));
-  return String(entries[0]?.sex ?? "unknown");
+  return resolveCurrentSex(snapshot.docs.map(sexHistoryEntry));
 };
 
 const membersForPairAt = async (tx: Transaction, db: Firestore, pairId: string, on: string): Promise<PairMember[]> => {
@@ -168,10 +168,10 @@ export const listMvpBirds = async (db: Firestore) => {
     const previous = currentByBird.get(String(data.birdId));
     if (!previous || String(previous.data().startsOn ?? "") < String(data.startsOn ?? "")) currentByBird.set(String(data.birdId), assignment);
   }
-  const sexByBird = new Map<string, any>();
+  const sexByBird = new Map<string, SexHistoryEntry>();
   for (const entry of sexHistory.docs) {
-    const data = entry.data(); const previous = sexByBird.get(String(data.birdId));
-    if (!previous || String(previous.determinedOn ?? "") < String(data.determinedOn ?? "")) sexByBird.set(String(data.birdId), data);
+    const data = sexHistoryEntry(entry); const birdId = String(data.birdId); const previous = sexByBird.get(birdId);
+    if (data.sex !== "unknown" && (!previous || compareSexHistoryDesc(data, previous) < 0)) sexByBird.set(birdId, data);
   }
   return birds.docs.map(doc => {
     const bird = doc.data(); const assignment = isTerminalBirdStatus(bird.status) ? undefined : currentByBird.get(doc.id)?.data(); const cage = assignment ? cageMap.get(String(assignment.cageId)) : undefined;

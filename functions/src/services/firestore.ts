@@ -3,6 +3,7 @@ import { isTerminalBirdStatus } from "../domain/bird.js";
 import { fail } from "../domain/errors.js";
 import { classifyKinship, KinshipResult } from "../domain/kinship.js";
 import { currentMembersAt, PairMember, validatePairMembers } from "../domain/pair.js";
+import { resolveCurrentSex, sexHistoryEntry } from "../domain/sex-history.js";
 import { assertNoCanonicalParentageInput, intervalsOverlap, normalizeRingId, requireDate, requireId } from "../domain/validation.js";
 
 const collections = { birds: "birds", pairs: "pairs", pairMembers: "pairMembers", sexHistory: "sexHistory", cageAssignments: "cageAssignments", breedingCycles: "breedingCycles", eggs: "eggs" } as const;
@@ -11,9 +12,8 @@ const id = () => crypto.randomUUID();
 
 const readCurrentSex = async (tx: Transaction, db: Firestore, birdId: string): Promise<string | undefined> => {
   const snapshot = await tx.get(db.collection(collections.sexHistory).where("birdId", "==", birdId));
-  const entries = snapshot.docs.map((doc) => doc.data()).filter((entry) => entry.sex !== "unknown")
-    .sort((a, b) => String(b.determinedOn ?? "").localeCompare(String(a.determinedOn ?? "")));
-  return entries[0]?.sex;
+  const sex = resolveCurrentSex(snapshot.docs.map(sexHistoryEntry));
+  return sex === "unknown" ? undefined : sex;
 };
 
 const membersForPairAt = async (tx: Transaction, db: Firestore, pairId: string, on: string): Promise<PairMember[]> => {

@@ -62,21 +62,32 @@ test("JOURNEY-2 active Pair produces a farm-hatched Bird with authoritative line
   await cageForm.getByLabel("ประเภทกรง *").selectOption("breeding");
   await cageForm.getByLabel("สถานะกรง *").selectOption("active");
   await cageForm.getByLabel("ความจุ (จำนวนตัว)").fill("2");
-  await cageForm.getByRole("button", { name: "บันทึก", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "รายการกรง", exact: true }).locator("xpath=ancestor::section[1]")).toContainText(`${cageCode} — ${cageName}`);
+  await cageForm.getByRole("button", { name: "สร้างกรง", exact: true }).click();
+  const cageRegistry = page.getByRole("heading", { name: "รายการกรง", exact: true }).locator("xpath=ancestor::section[1]");
+  const cageRow = cageRegistry.getByRole("row").filter({ hasText: cageCode });
+  await expect(cageRow).toContainText(cageName);
 
   await createParent(page, { ringId: fatherRing, name: fatherName, sex: "male", sexLabel: "ตัวผู้" });
   await createParent(page, { ringId: motherRing, name: motherName, sex: "female", sexLabel: "ตัวเมีย" });
 
   await page.getByRole("button", { name: "ข้อมูลกรง", exact: true }).click();
-  const pairWorkspace = page.getByRole("heading", { name: "คู่ผสมพันธุ์ + กรงคู่ผสมพันธุ์", exact: true }).locator("xpath=ancestor::section[1]");
+  const pairWorkspace = page.getByRole("heading", { name: "จับคู่ผสมพันธุ์ + กรงคู่ผสมพันธุ์", exact: true }).locator("xpath=ancestor::section[1]");
   const pairForm = pairWorkspace.locator("form");
-  await pairForm.getByLabel("พ่อ / ตัวผู้ *").selectOption({ label: `${fatherRing} — ${fatherName} · ยังไม่ได้จัดกรง` });
-  await pairForm.getByLabel("แม่ / ตัวเมีย *").selectOption({ label: `${motherRing} — ${motherName} · ยังไม่ได้จัดกรง` });
-  await pairForm.getByLabel("กรงคู่ผสมพันธุ์ *").selectOption({ label: `${cageCode} — ${cageName} · 0 ตัว` });
+  const fatherSelect = pairForm.getByLabel("พ่อ / ตัวผู้ *");
+  const motherSelect = pairForm.getByLabel("แม่ / ตัวเมีย *");
+  const cageSelect = pairForm.getByLabel("กรงคู่ผสมพันธุ์ *");
+  for (const select of [fatherSelect, motherSelect, cageSelect]) {
+    await expect(select.locator("option")).toHaveCount(2);
+    await select.focus();
+    await select.press("ArrowDown");
+    await select.press("Enter");
+  }
+  await expect(fatherSelect.locator("option:checked")).toContainText(fatherRing);
+  await expect(motherSelect.locator("option:checked")).toContainText(motherRing);
+  await expect(cageSelect.locator("option:checked")).toContainText(cageCode);
   await pairForm.getByLabel("ชื่อคู่").fill(pairName);
   await pairForm.getByRole("textbox", { name: "วันที่เริ่มจับคู่", exact: true }).fill(pairDate);
-  await pairForm.getByRole("button", { name: "ยืนยันสร้างคู่", exact: true }).click();
+  await pairForm.getByRole("button", { name: "บันทึกการจับคู่", exact: true }).click();
   await expect(pairForm.getByRole("status")).toHaveText("สร้างคู่และจัดเข้ากรงเรียบร้อย");
 
   await page.getByRole("button", { name: "การเพาะพันธุ์", exact: true }).click();

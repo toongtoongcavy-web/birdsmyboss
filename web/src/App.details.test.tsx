@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
 vi.mock("./functions", () => ({ invoke: mocks.invoke, thaiError: () => "เกิดข้อผิดพลาด" }));
 import { App } from "./App";
 
-const birdDetail = (sexHistory: Array<Record<string, unknown>> = [], weightHistory: Array<Record<string, unknown>> = []) => ({ birdId: "b1", ringId: "GC-001", displayName: "Bird", status: "active", parentage: { male: { ringId: "M-1" }, female: { ringId: "F-1" } }, sexHistory, weightHistory, photos: [], documents: [] });
+const birdDetail = (sexHistory: Array<Record<string, unknown>> = [], weightHistory: Array<Record<string, unknown>> = [], currentSex = "unknown") => ({ birdId: "b1", ringId: "GC-001", displayName: "Bird", status: "active", currentSex, parentage: { male: { ringId: "M-1" }, female: { ringId: "F-1" } }, sexHistory, weightHistory, photos: [], documents: [] });
 const defaultInvoke = async (name: string) => {
   if (name === "listBirds") return [{ birdId: "b1", ringId: "GC-001", displayName: "Bird" }];
   if (name === "listMvpBirds") return [{ birdId: "b1", currentCageId: "cage-uuid", currentCageCode: "CAGE-01", currentCageName: "Main Cage" }];
@@ -26,6 +26,15 @@ const fill = (form: HTMLElement, method: string) => { const selects=within(form)
 it("opens Bird Detail without exposing its internal ID in the registry", async () => { render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Birds" })); const row=await screen.findByRole("button", { name: /Ring ID: GC-001/ }); expect(row.textContent).not.toContain("b1"); fireEvent.click(row); expect(await screen.findByText("พ่อแม่: M-1 / F-1")).toBeTruthy(); });
 
 it("shows the authoritative current cage from listMvpBirds on Bird Profile", async () => { const form=await openBird(); const profile=form.closest<HTMLElement>(".bird-profile")!; expect(within(profile).getByText("กรงปัจจุบัน")).toBeTruthy(); expect(within(profile).getByText("CAGE-01 — Main Cage")).toBeTruthy(); expect(profile.textContent).not.toContain("cage-uuid"); });
+
+it("uses authoritative Current Sex and keeps conflicting same-day history readable", async () => {
+  mocks.invoke.mockImplementation(async (name:string) => name === "getBirdDetails" ? birdDetail([{sex:"female",method:"dna",determinedOn:"2026-09-01"},{sex:"male",method:"visual",determinedOn:"2026-09-01"}], [], "female") : defaultInvoke(name));
+  const form=await openBird(); const profile=form.closest<HTMLElement>(".bird-profile")!;
+  const identity=profile.querySelector(".identity-meta-grid") as HTMLElement;
+  expect(within(identity).getByText("ตัวเมีย")).toBeTruthy();
+  const history=within(profile).getByRole("heading",{name:"ประวัติเพศ: 2"}).closest("section")!;
+  expect(history.textContent).toContain("ตัวเมีย"); expect(history.textContent).toContain("ตัวผู้");
+});
 
 it("shows only canonical method labels and values", async () => {
   const form=await openBird(); const [sex, method]=within(form).getAllByRole("combobox");
