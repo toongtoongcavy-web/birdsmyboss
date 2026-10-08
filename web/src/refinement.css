@@ -286,3 +286,94 @@ main:has(.bird-profile){min-width:0}
   .bird-profile .passport-controls,
   .bird-profile .profile-record-actions { padding: 13px; }
 }
+
+/* Cozy farm-theme alignment for the detailed Bird record. */
+main:has(.bird-profile) > .page-header {
+  position: relative;
+  min-height: 86px;
+  margin-bottom: 16px;
+  padding: 12px 86px 12px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(79,138,131,.1);
+  border-radius: 20px;
+  background: linear-gradient(125deg, rgba(255,255,255,.92), rgba(239,248,244,.82) 68%, rgba(255,244,237,.75));
+  box-shadow: 0 7px 22px rgba(55,107,102,.045);
+}
+main:has(.bird-profile) > .page-header::after {
+  content: "";
+  position: absolute;
+  right: 25px;
+  bottom: 18px;
+  width: 46px;
+  height: 22px;
+  border-bottom: 2px solid var(--bmb-mint);
+  border-radius: 50%;
+  transform: rotate(-15deg);
+  box-shadow: 14px -9px 0 -7px #f3cdbb, -10px 4px 0 -7px #cde5dc;
+}
+main:has(.bird-profile) > .page-header h1 { margin-block: 2px; font-size: clamp(28px, 2.7vw, 35px); }
+main:has(.bird-profile) > .page-header p { font-size: 13px; }
+.bird-profile .bird-identity-hero {
+  border-color: rgba(255,255,255,.3);
+  border-radius: 22px;
+  background: radial-gradient(circle at 8% 8%, rgba(255,236,194,.2), transparent 24%), linear-gradient(124deg, #39786e 0%, #4d9185 52%, #72ada3 100%);
+  box-shadow: 0 14px 34px rgba(32,79,71,.16), inset 0 1px rgba(255,255,255,.18);
+}
+.bird-profile .bird-identity-hero::before { border-color: rgba(244,162,97,.12); }
+.bird-profile .bird-identity-hero::after { border-color: rgba(229,244,238,.18); }
+.bird-profile .story-section,
+.bird-profile .history-ledger {
+  border-color: rgba(79,138,131,.11);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(250,247,242,.72));
+  box-shadow: 0 7px 22px rgba(55,107,102,.045);
+}
+.bird-profile .story-section:nth-child(2) { background: linear-gradient(145deg, #fff, rgba(238,248,244,.78)); }
+.bird-profile .story-section > header > span { border: 0; background: #f8e8dd; color: #a85f44; }
+.bird-profile .history-ledger > header { margin: -4px -5px 0; padding: 4px 5px 10px; }
+.bird-profile .history-ledger h3 { display: flex; align-items: center; gap: 8px; }
+.bird-profile .history-ledger h3::before { content: "◌"; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; background: #e7f4f0; color: var(--bmb-green); font-size: 13px; }
+.bird-profile .profile-history-grid .history-ledger:nth-child(2) h3::before { background: #fbf1d9; color: #98772c; }
+.bird-profile .profile-passport-compact { border-radius: 18px; background: linear-gradient(145deg, #fff, #f1f8f5); box-shadow: 0 7px 22px rgba(55,107,102,.05); }
+.bird-profile .profile-record-actions {
+  padding: 14px;
+  border-color: rgba(79,138,131,.1);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255,255,255,.9), rgba(250,247,242,.76));
+  box-shadow: 0 6px 18px rgba(55,107,102,.035);
+}
+.bird-profile .profile-record-actions > header { margin: 0 2px 10px; }
+.bird-profile .profile-record-actions > header h3 { font-size: 17px; }
+.bird-profile .profile-record-actions > header p { font-size: 12px; }
+.bird-profile .profile-operator-groups { gap: 8px; }
+.bird-profile .profile-action-group {
+  overflow: hidden;
+  border-color: rgba(79,138,131,.12);
+  border-radius: 15px;
+  background: rgba(255,255,255,.88);
+  box-shadow: 0 3px 11px rgba(55,107,102,.025);
+}
+.bird-profile .profile-action-group > summary {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 9px 44px 9px 12px;
+}
+.bird-profile .profile-action-group > summary:hover { background: linear-gradient(90deg, rgba(234,246,242,.82), rgba(255,255,255,.5)); }
+.bird-profile .profile-action-group > summary > span:nth-child(2) { display: grid; gap: 1px; min-width: 0; }
+.bird-profile .profile-action-group > summary strong { color: var(--bmb-green-dark); font-size: 14px; }
+.bird-profile .profile-action-group > summary small { overflow: hidden; color: var(--bmb-gray); font-size: 11px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.bird-profile .profile-action-icon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 10px; background: #e7f4f0; color: var(--bmb-green); font-size: 14px; }
+.bird-profile .profile-action-group:nth-child(2) .profile-action-icon { background: #fff0e8; color: #a96349; }
+.bird-profile .price-history-action .profile-action-icon { background: #fbf1d9; color: #8f7028; }
+.bird-profile .profile-action-group[open] > summary { background: #f5faf8; }
+.bird-profile .profile-action-group .card { border-radius: 14px; background: #fff; }
+
+@media (max-width: 760px) {
+  main:has(.bird-profile) > .page-header { min-height: 76px; padding: 10px 62px 10px 12px; border-radius: 16px; }
+  main:has(.bird-profile) > .page-header::after { right: 13px; transform: scale(.78) rotate(-15deg); }
+  .bird-profile .profile-action-group > summary { min-height: 60px; }
+  .bird-profile .profile-action-group > summary small { white-space: normal; }
+}

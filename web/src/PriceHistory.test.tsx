@@ -23,6 +23,10 @@ it("offers purchase, list, and offer in Thai for a purchased Bird and submits pu
   const { container } = render(<PriceHistory birdId="purchased-bird" origin="purchased" onSaved={vi.fn()}/>);
   expect(await screen.findByText("900 THB")).toBeTruthy();
   expect([...container.querySelectorAll(".history-ledger > article strong")].map(node => node.textContent)).toEqual(["900 THB", "2500.5 THB", "2000 THB", "1750 THB"]);
+  const action = screen.getByText("ข้อมูลเชิงพาณิชย์ / ราคา").closest("details") as HTMLDetailsElement;
+  expect(action.open).toBe(false);
+  expect(action.querySelector("summary")?.textContent).toContain("ประวัติราคา 4 รายการ");
+  fireEvent.click(action.querySelector("summary")!);
   expect(screen.getAllByText(/ราคาซื้อเข้า/).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/ราคาสุดท้าย/).length).toBeGreaterThan(0);
   expect(options()).toEqual([

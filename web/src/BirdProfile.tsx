@@ -38,6 +38,6 @@ export function BirdProfile({data,currentSex,sexHistory,weightHistory,forms,pass
     {priceHistory}
 
     <section className="profile-passport profile-passport-compact"><div className="passport-controls">{passport}</div></section>
-    <section className="profile-record-actions"><header><small>สำหรับผู้ปฏิบัติงาน</small><h3>เพิ่มบันทึกใหม่</h3><p>ข้อมูลจะอัปเดตจาก trusted read หลังบันทึกสำเร็จ</p></header>{forms}</section>
+    <section className="profile-record-actions"><header><div><h3>เพิ่มบันทึกใหม่</h3><p>เลือกเฉพาะข้อมูลที่ต้องการเพิ่ม</p></div></header>{forms}</section>
   </div>;
 }

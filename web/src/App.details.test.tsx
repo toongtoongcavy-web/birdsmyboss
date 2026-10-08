@@ -20,10 +20,24 @@ const defaultInvoke = async (name: string) => {
 };
 beforeEach(() => mocks.invoke.mockImplementation(defaultInvoke));
 afterEach(() => { cleanup(); mocks.invoke.mockReset(); });
-const openBird = async () => { render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Birds" })); fireEvent.click(await screen.findByRole("button", { name: /Ring ID: GC-001/ })); return (await screen.findByRole("heading", { name: "บันทึกเพศ" })).closest("form")!; };
+const openBird = async () => { render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Birds" })); fireEvent.click(await screen.findByRole("button", { name: /Ring ID: GC-001/ })); const summary=await screen.findByText("สุขภาพ / เพศ / น้ำหนัก"); fireEvent.click(summary.closest("summary")!); return (await screen.findByRole("heading", { name: "บันทึกเพศ" })).closest("form")!; };
 const fill = (form: HTMLElement, method: string) => { const selects=within(form).getAllByRole("combobox"); fireEvent.change(selects[0],{target:{value:"female"}}); fireEvent.change(selects[1],{target:{value:method}}); fireEvent.change(within(form).getByRole("textbox",{name:"วันที่"}),{target:{value:"13082026"}}); };
 
 it("opens Bird Detail without exposing its internal ID in the registry", async () => { render(<App />); fireEvent.click(await screen.findByRole("button", { name: "Birds" })); const row=await screen.findByRole("button", { name: /Ring ID: GC-001/ }); expect(row.textContent).not.toContain("b1"); fireEvent.click(row); expect(await screen.findByText("พ่อแม่: M-1 / F-1")).toBeTruthy(); });
+
+it("keeps write groups collapsed with authoritative Bird summaries while read-only history stays visible",async()=>{
+  mocks.invoke.mockImplementation(async(name:string)=>name==="getBirdDetails"?{...birdDetail([], [{weightGrams:510,measuredOn:"2026-08-01"},{weightGrams:625,measuredOn:"2026-09-15"}], "female"),photos:[{photoId:"p1",status:"active"},{photoId:"p2",status:"archived"}],documents:[{documentId:"d1",status:"active"},{documentId:"d2",status:"archived"}]}:defaultInvoke(name));
+  render(<App/>);fireEvent.click(await screen.findByRole("button",{name:"Birds"}));fireEvent.click(await screen.findByRole("button",{name:/Ring ID: GC-001/}));
+  const healthSummary=(await screen.findByText("สุขภาพ / เพศ / น้ำหนัก")).closest("summary")!;const health=healthSummary.closest("details") as HTMLDetailsElement;
+  expect(health.open).toBe(false);expect(healthSummary.textContent).toContain("เพศล่าสุด: ตัวเมีย · น้ำหนักล่าสุด: 625 กรัม");
+  const assetSummary=screen.getByText("รูปภาพและเอกสาร").closest("summary")!;const assets=assetSummary.closest("details") as HTMLDetailsElement;
+  expect(assets.open).toBe(false);expect(assetSummary.textContent).toContain("รูปภาพ 1 · เอกสาร 1");
+  expect(screen.getByRole("heading",{name:"ประวัติน้ำหนัก: 2"})).toBeTruthy();expect(screen.getByRole("heading",{name:"ประวัติราคา: 0"})).toBeTruthy();
+  expect((screen.getByText("ข้อมูลเชิงพาณิชย์ / ราคา").closest("details") as HTMLDetailsElement).open).toBe(false);
+  expect((document.querySelector(".passport-compact-details") as HTMLDetailsElement).open).toBe(false);
+  fireEvent.click(healthSummary);expect(await screen.findByRole("heading",{name:"บันทึกเพศ"})).toBeTruthy();expect(screen.getByRole("heading",{name:"บันทึกน้ำหนัก"})).toBeTruthy();
+  fireEvent.click(assetSummary);expect(await screen.findByRole("heading",{name:"เพิ่มรูปภาพ"})).toBeTruthy();expect(screen.getByRole("heading",{name:"เพิ่มเอกสาร"})).toBeTruthy();
+});
 
 it("shows the authoritative current cage from listMvpBirds on Bird Profile", async () => { const form=await openBird(); const profile=form.closest<HTMLElement>(".bird-profile")!; expect(within(profile).getByText("กรงปัจจุบัน")).toBeTruthy(); expect(within(profile).getByText("CAGE-01 — Main Cage")).toBeTruthy(); expect(profile.textContent).not.toContain("cage-uuid"); });
 
