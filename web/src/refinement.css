@@ -232,6 +232,8 @@ main:has(.bird-profile){min-width:0}
 .bird-profile .history-ledger > .empty-state > span { font-size: 20px; }
 .bird-profile .history-ledger > .empty-state > p { grid-column: 2; }
 .bird-profile .profile-passport { grid-template-columns: minmax(220px, .55fr) minmax(0, 1.45fr); align-items: start; overflow: visible; }
+.bird-profile .profile-passport-compact { display: block; border-color: var(--bmb-mint); overflow: hidden; }
+.bird-profile .profile-passport-compact .passport-controls { padding: 0; }
 .bird-profile .passport-intro { align-self: start; padding: 18px; border-radius: inherit; }
 .bird-profile .passport-mark { width: 42px; height: 56px; font-size: 19px; }
 .bird-profile .passport-intro p { margin-bottom: 0; }

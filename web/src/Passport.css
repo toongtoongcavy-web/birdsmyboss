@@ -193,6 +193,44 @@
 .publication-assets p small { color: var(--bmb-gray); letter-spacing: 0; text-transform: none; }
 .publication-assets button { min-height: 36px; padding: 6px 10px; border: 1px solid var(--bmb-border); background: #fff; color: var(--bmb-green-dark); font-size: 12px; box-shadow: none; }
 .publication-assets-empty { margin: 4px 0 0 !important; color: var(--bmb-gray); }
+
+/* Bird Profile compact Passport mode. The standalone Passport Studio keeps its full layout. */
+.passport-admin-compact { gap: 0; }
+.passport-compact-primary { display: grid; grid-template-columns: minmax(250px, 1fr) auto; align-items: center; gap: 14px; min-height: 64px; padding: 10px 14px; }
+.passport-compact-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+.passport-compact-identity > small { flex-basis: 100%; margin-bottom: -7px; color: var(--bmb-orange); font-size: 9px; font-weight: 850; letter-spacing: .12em; }
+.passport-compact-identity > strong { color: var(--bmb-green-dark); font-size: 17px; }
+.passport-compact-identity .publication-status-row { gap: 6px; padding: 5px 9px; font-size: 12px; }
+.passport-public-access--compact { display: flex; align-items: center; justify-content: flex-end; gap: 9px; min-width: 0; padding: 0; border: 0; background: transparent; box-shadow: none; text-align: left; }
+.passport-public-access--compact figure { flex: 0 0 auto; margin: 0; }
+.passport-public-access--compact img { width: 48px; height: 48px; padding: 3px; border-radius: 8px; }
+.passport-public-access--compact .passport-public-access-actions { flex-wrap: nowrap; align-items: center; }
+.passport-public-access--compact .passport-public-access-actions a,
+.passport-public-access--compact .passport-public-access-actions button { min-height: 34px; padding: 6px 9px; white-space: nowrap; }
+.passport-public-access--compact .passport-public-access-actions p { position: absolute; margin-top: 72px; }
+.passport-public-access--compact.passport-public-access--unavailable { display: flex; align-content: center; justify-content: flex-end; }
+.passport-public-access--compact .passport-qr-placeholder { width: 44px; height: 44px; border-radius: 8px; font-size: 11px; }
+.passport-public-access--compact > p { max-width: 130px; font-size: 11px; }
+.passport-compact-details { border-top: 1px solid var(--bmb-border); }
+.passport-compact-details > summary { display: flex; align-items: center; gap: 18px; min-height: 44px; padding: 8px 14px; color: var(--bmb-gray); cursor: pointer; list-style: none; }
+.passport-compact-details > summary::-webkit-details-marker { display: none; }
+.passport-compact-details > summary span { display: inline-flex; align-items: baseline; gap: 5px; font-size: 12px; }
+.passport-compact-details > summary span strong { color: var(--bmb-green-dark); font-size: 14px; }
+.passport-compact-details > summary b { position: relative; margin-left: auto; padding-right: 22px; color: var(--bmb-green-dark); font-size: 12px; }
+.passport-compact-details > summary b::after { content: "+"; position: absolute; right: 0; top: 50%; font-size: 18px; transform: translateY(-50%); }
+.passport-compact-details[open] > summary b::after { content: "−"; }
+.passport-compact-expanded { display: grid; gap: 12px; padding: 12px 14px 14px; border-top: 1px solid var(--bmb-border); background: linear-gradient(180deg, rgba(234,246,242,.42), #fff); }
+.passport-compact-expanded .publication-workspace { align-items: start; }
+
+@media (max-width: 760px) {
+  .passport-compact-primary { grid-template-columns: 1fr; padding: 12px; }
+  .passport-public-access--compact { justify-content: flex-start; }
+  .passport-public-access--compact.passport-public-access--unavailable { justify-content: flex-start; }
+  .passport-public-access--compact .passport-public-access-actions { flex-wrap: wrap; }
+  .passport-compact-details > summary { align-items: flex-start; flex-wrap: wrap; gap: 5px 14px; }
+  .passport-compact-details > summary b { flex-basis: 100%; margin-left: 0; }
+  .passport-compact-expanded { padding: 10px; }
+}
 .passport-rotation-confirm { display: grid; gap: 12px; padding: 16px; border: 1px solid rgba(233, 196, 106, .7); border-radius: 14px; background: #fffaf0; }
 .passport-rotation-confirm p { margin: 0; color: var(--bmb-gray); }
 

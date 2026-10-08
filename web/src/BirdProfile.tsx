@@ -37,7 +37,7 @@ export function BirdProfile({data,currentSex,sexHistory,weightHistory,forms,pass
 
     {priceHistory}
 
-    <section className="profile-passport"><div className="passport-intro"><span className="passport-mark">B</span><div><small>IDENTITY & PROVENANCE</small><h3>Bird Passport</h3><p>สถานะเอกสารประจำตัว: <StatusBadge status={data.passportStatus??"draft"}/></p></div></div><div className="passport-controls">{passport}</div></section>
+    <section className="profile-passport profile-passport-compact"><div className="passport-controls">{passport}</div></section>
     <section className="profile-record-actions"><header><small>สำหรับผู้ปฏิบัติงาน</small><h3>เพิ่มบันทึกใหม่</h3><p>ข้อมูลจะอัปเดตจาก trusted read หลังบันทึกสำเร็จ</p></header>{forms}</section>
   </div>;
 }
