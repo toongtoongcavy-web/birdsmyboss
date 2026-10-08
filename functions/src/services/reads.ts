@@ -2,6 +2,7 @@ import { Firestore } from "firebase-admin/firestore";
 import { fail } from "../domain/errors.js";
 import { orderedSexHistory, resolveCurrentSex, sexHistoryEntry } from "../domain/sex-history.js";
 import { requireId } from "../domain/validation.js";
+import { createOperatorPhotoHandle, operatorPhotoUrl } from "./public-media.js";
 
 const limitOf = (value: unknown) => typeof value === "number" && Number.isInteger(value) && value > 0 ? Math.min(value, 50) : 25;
 const list = async (db: Firestore, collection: string, input: Record<string, unknown>, map: (id: string, data: Record<string, unknown>) => Record<string, unknown>) =>
@@ -44,7 +45,7 @@ export const listBirds = async (db: Firestore, input: Record<string, unknown>) =
     return { ...item, currentSex: await currentSex(db, item.birdId) };
   }));
 };
-export const getBirdDetails = async (db: Firestore, input: Record<string, unknown>) => {
+export const getBirdDetails = async (db: Firestore, input: Record<string, unknown>, mediaKey = process.env.BMB_PUBLIC_MEDIA_KEY) => {
   const birdId = requireId(input.birdId, "birdId"); const snapshot = await db.collection("birds").doc(birdId).get(); if (!snapshot.exists) fail("not-found", "Bird not found.");
   const d = snapshot.data()!; const [sex, weights, photos, documents] = await Promise.all([
     db.collection("sexHistory").where("birdId", "==", birdId).get(), db.collection("weightHistory").where("birdId", "==", birdId).limit(20).get(),
@@ -53,7 +54,13 @@ export const getBirdDetails = async (db: Firestore, input: Record<string, unknow
   let parentage: { male: { birdId: string; ringId: unknown; displayName: unknown } | null; female: { birdId: string; ringId: unknown; displayName: unknown } | null } | null = null;
   if (typeof d.eggId === "string") { const egg = await db.collection("eggs").doc(d.eggId).get(); const cycleId = egg.data()?.cycleId; if (egg.exists && typeof cycleId === "string") { const cycle = await db.collection("breedingCycles").doc(cycleId).get(); const pairId = cycle.data()?.pairId; if (cycle.exists && typeof pairId === "string") { const members = await db.collection("pairMembers").where("pairId", "==", pairId).limit(2).get(); const parent = async (role: string) => { const member = members.docs.find(x => x.data().role === role); if (!member) return null; const b = await db.collection("birds").doc(member.data().birdId).get(); return b.exists ? { birdId: b.id, ringId: b.data()!.ringId, displayName: b.data()!.displayName ?? null } : null; }; parentage = { male: await parent("male"), female: await parent("female") }; } } }
   const orderedSex = orderedSexHistory(sex.docs.map(sexHistoryEntry));
-  return { ...bird(birdId, d), currentSex: resolveCurrentSex(orderedSex), publicToken: d.publicToken ?? null, parentage, sexHistory: orderedSex.map(x => ({ sex: x.sex, method: x.method, determinedOn: x.determinedOn })), weightHistory: weights.docs.map(x => ({ weightGrams: x.data().weightGrams, measuredOn: x.data().measuredOn })), photos: photos.docs.map(x => ({ photoId: x.id, caption: x.data().caption ?? null, status: x.data().status, isPublicOnPassport: x.data().isPublicOnPassport === true })), documents: documents.docs.map(x => ({ documentId: x.id, documentType: x.data().documentType, issuedOn: x.data().issuedOn ?? null, status: x.data().status, isPublicOnPassport: x.data().isPublicOnPassport === true, supersededByDocumentId: x.data().supersededByDocumentId ?? null })) };
+  const photoDocs = photos.docs.map(x => ({ id: x.id, data: x.data() }));
+  const portrait = photoDocs.filter(x => x.data.status === "active" && x.data.managedStorage === true && typeof x.data.storagePath === "string")
+    .sort((a, b) => (typeof a.data.sortOrder === "number" ? a.data.sortOrder : Number.POSITIVE_INFINITY) - (typeof b.data.sortOrder === "number" ? b.data.sortOrder : Number.POSITIVE_INFINITY) || optionalTimestampValue(a.data.createdAt) - optionalTimestampValue(b.data.createdAt) || a.id.localeCompare(b.id))[0];
+  const portraitPhoto = portrait && typeof mediaKey === "string" && mediaKey
+    ? { photoId: portrait.id, caption: portrait.data.caption ?? null, readUrl: operatorPhotoUrl(createOperatorPhotoHandle(mediaKey, birdId, portrait.id)) }
+    : null;
+  return { ...bird(birdId, d), currentSex: resolveCurrentSex(orderedSex), publicToken: d.publicToken ?? null, parentage, portraitPhoto, sexHistory: orderedSex.map(x => ({ sex: x.sex, method: x.method, determinedOn: x.determinedOn })), weightHistory: weights.docs.map(x => ({ weightGrams: x.data().weightGrams, measuredOn: x.data().measuredOn })), photos: photoDocs.map(x => ({ photoId: x.id, caption: x.data.caption ?? null, sortOrder: x.data.sortOrder ?? null, status: x.data.status, isPublicOnPassport: x.data.isPublicOnPassport === true })), documents: documents.docs.map(x => ({ documentId: x.id, documentType: x.data().documentType, issuedOn: x.data().issuedOn ?? null, status: x.data().status, isPublicOnPassport: x.data().isPublicOnPassport === true, supersededByDocumentId: x.data().supersededByDocumentId ?? null })) };
 };
 export const listCages = (db: Firestore, input: Record<string, unknown>) => list(db, "cages", input, (cageId, d) => ({ cageId, code: d.code ?? d.name ?? cageId, name: d.name ?? null, status: d.status ?? "active" }));
 export const listPairs = async (db: Firestore, input: Record<string, unknown>) => {

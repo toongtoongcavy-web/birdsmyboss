@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Firestore } from "firebase-admin/firestore";
-import { createOpaquePhotoHandle, isSupportedPublicPhotoContentType, opaquePhotoUrl, publicPhotoHandleTtlMs, resolveEligiblePublicPhoto } from "../src/services/public-media.js";
+import { createOpaquePhotoHandle, createOperatorPhotoHandle, isSupportedPublicPhotoContentType, opaquePhotoUrl, operatorPhotoUrl, publicPhotoHandleTtlMs, resolveEligibleOperatorPhoto, resolveEligiblePublicPhoto } from "../src/services/public-media.js";
 import { resolvePassport, rotatePassportToken } from "../src/services/phase4.js";
+import { getBirdDetails } from "../src/services/reads.js";
 
 const db = new Firestore({ projectId: "birdsmyboss-v1-dev" });
 const key = Buffer.alloc(32, 19).toString("base64url");
@@ -70,4 +71,46 @@ test("token rotation and cross-Bird references invalidate opaque handles", async
   await db.collection("photos").doc(photoId).update({ ownerId: otherBirdId });
   const forgedCurrent = createOpaquePhotoHandle(key, birdId, photoId, String((await db.collection("birds").doc(birdId).get()).data()?.publicToken));
   assert.equal(await resolveEligiblePublicPhoto(db, key, forgedCurrent), null);
+});
+
+test("internal Bird Profile selects a deterministic active private Photo without changing public visibility", async () => {
+  const birdId = id("internal-bird"), token = id("internal-token");
+  const preferredId = id("preferred-photo"), laterId = id("later-photo"), archivedId = id("archived-photo");
+  await db.collection("birds").doc(birdId).set({ ringId: id("ring"), displayName: "Internal portrait", origin: "external", status: "active", passportStatus: "published", publicToken: token, ...stamp });
+  await db.collection("photos").doc(preferredId).set({ ownerType: "BIRD", ownerId: birdId, storagePath: `bird-assets/${birdId}/photos/${preferredId}/asset.jpg`, status: "active", managedStorage: true, isPublicOnPassport: false, sortOrder: 1, caption: "Preferred", createdAt: new Date("2026-01-02T00:00:00Z"), updatedAt: new Date() });
+  await db.collection("photos").doc(laterId).set({ ownerType: "BIRD", ownerId: birdId, storagePath: `bird-assets/${birdId}/photos/${laterId}/asset.jpg`, status: "active", managedStorage: true, isPublicOnPassport: false, sortOrder: 2, createdAt: new Date("2026-01-01T00:00:00Z"), updatedAt: new Date() });
+  await db.collection("photos").doc(archivedId).set({ ownerType: "BIRD", ownerId: birdId, storagePath: `bird-assets/${birdId}/photos/${archivedId}/asset.jpg`, status: "archived", managedStorage: true, isPublicOnPassport: true, sortOrder: 0, createdAt: new Date("2025-01-01T00:00:00Z"), updatedAt: new Date() });
+
+  const privateDetail = await getBirdDetails(db, { birdId }, key);
+  assert.equal(privateDetail.portraitPhoto?.photoId, preferredId);
+  assert.equal(privateDetail.portraitPhoto?.caption, "Preferred");
+  assert.match(String(privateDetail.portraitPhoto?.readUrl), /^\/operator-media\/v1\/op1\./);
+  for (const privateValue of [birdId, preferredId, "bird-assets"]) assert.equal(String(privateDetail.portraitPhoto?.readUrl).includes(privateValue), false);
+  const operatorHandle = String(privateDetail.portraitPhoto?.readUrl).split("/").at(-1)!;
+  assert.ok(await resolveEligibleOperatorPhoto(db, key, operatorHandle));
+  assert.equal((await resolvePassport(db, token, key))?.photos.length, 0);
+
+  await db.collection("photos").doc(preferredId).update({ isPublicOnPassport: true });
+  assert.equal((await resolvePassport(db, token, key))?.photos.length, 1);
+  await db.collection("photos").doc(preferredId).update({ isPublicOnPassport: false });
+  assert.equal((await resolvePassport(db, token, key))?.photos.length, 0);
+  assert.equal((await getBirdDetails(db, { birdId }, key)).portraitPhoto?.photoId, preferredId);
+
+  await db.collection("photos").doc(preferredId).update({ status: "archived" });
+  assert.equal(await resolveEligibleOperatorPhoto(db, key, operatorHandle), null);
+  assert.equal((await getBirdDetails(db, { birdId }, key)).portraitPhoto?.photoId, laterId);
+});
+
+test("operator Photo handles reject missing, tampered, expired, unmanaged and cross-Bird access", async () => {
+  const { birdId, photoId } = await seed();
+  await db.collection("photos").doc(photoId).update({ isPublicOnPassport: false });
+  const handle = createOperatorPhotoHandle(key, birdId, photoId);
+  assert.equal(operatorPhotoUrl(handle).includes(birdId), false);
+  assert.ok(await resolveEligibleOperatorPhoto(db, key, handle));
+  assert.equal(await resolveEligibleOperatorPhoto(db, key, `${handle}tampered`), null);
+  assert.equal(await resolveEligibleOperatorPhoto(db, key, createOperatorPhotoHandle(key, birdId, photoId, Date.now() - publicPhotoHandleTtlMs - 1)), null);
+  await db.collection("photos").doc(photoId).update({ managedStorage: false });
+  assert.equal(await resolveEligibleOperatorPhoto(db, key, handle), null);
+  await db.collection("photos").doc(photoId).update({ managedStorage: true, ownerId: id("wrong-bird") });
+  assert.equal(await resolveEligibleOperatorPhoto(db, key, handle), null);
 });

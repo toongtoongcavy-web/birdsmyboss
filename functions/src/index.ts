@@ -12,7 +12,7 @@ import { completeHandover as completeHandoverService, createDelivery as createDe
 import { getBirdDetails as getBirdDetailsService, getCustomerDetails as getCustomerDetailsService, getDashboardSummary as getDashboardSummaryService, getGiveawayDetails as getGiveawayDetailsService, getPairDetails as getPairDetailsService, listBirdPriceHistory as listBirdPriceHistoryService, listBirds as listBirdsService, listBreedingCycles as listBreedingCyclesService, listCages as listCagesService, listCustomers as listCustomersService, listDeliveries as listDeliveriesService, listEggs as listEggsService, listEligibleCompletedSales as listEligibleCompletedSalesService, listGiveaways as listGiveawaysService, listHandovers as listHandoversService, listPairs as listPairsService, listPayments as listPaymentsService, listRefunds as listRefundsService, listReservations as listReservationsService, listSaleTimeline as listSaleTimelineService, listSales as listSalesService } from "./services/reads.js";
 import { addBirdDocument as addBirdDocumentService, addBirdPhoto as addBirdPhotoService, archiveBirdDocument as archiveBirdDocumentService, archiveBirdPhoto as archiveBirdPhotoService, beginBirdAssetIntake as beginBirdAssetIntakeService, createCage as createCageService, createEgg as createEggService, createPair as createPairService, finalizeBirdAssetIntake as finalizeBirdAssetIntakeService, recordSexHistory as recordSexHistoryService, recordWeightHistory as recordWeightHistoryService, setPassportPublication as setPassportPublicationService, setPassportStatus as setPassportStatusService, supersedeBirdDocument as supersedeBirdDocumentService } from "./services/phase5c.js";
 import { assignBirdToCageMvp as assignBirdToCageMvpService, createActivePairInCageMvp as createActivePairInCageMvpService, createExternalBirdInCageMvp as createExternalBirdInCageMvpService, createMvpCage as createMvpCageService, listMvpBirds as listMvpBirdsService, listMvpCages as listMvpCagesService, moveActivePairToCageMvp as moveActivePairToCageMvpService } from "./services/mvp-cages.js";
-import { isSupportedPublicPhotoContentType, resolveEligiblePublicPhoto } from "./services/public-media.js";
+import { isSupportedPublicPhotoContentType, resolveEligibleOperatorPhoto, resolveEligiblePublicPhoto } from "./services/public-media.js";
 import { attributedFirestore, withOperatorAttribution } from "./services/audit.js";
 
 setGlobalOptions({ region: "asia-southeast1", minInstances: 0, maxInstances: 2, concurrency: 10 });
@@ -82,7 +82,10 @@ export const createExternalBirdInCageMvp = operatorOnly<Record<string, unknown>>
 export const getDashboardSummary = operatorOnly<Record<string, unknown>>(() => getDashboardSummaryService(db));
 export const listBirds = operatorOnly<Record<string, unknown>>((data) => listBirdsService(db, data));
 export const listBirdPriceHistory = operatorOnly<Record<string, unknown>>((data) => listBirdPriceHistoryService(db, data));
-export const getBirdDetails = operatorOnly<Record<string, unknown>>((data) => getBirdDetailsService(db, data));
+export const getBirdDetails = onCall({ secrets: [publicMediaKey] }, async (request) => {
+  requireOperator(request);
+  return withOperatorAttribution(request.auth!.uid, () => getBirdDetailsService(db, request.data as Record<string, unknown>, publicMediaKey.value()));
+});
 export const listCages = operatorOnly<Record<string, unknown>>((data) => listCagesService(db, data));
 export const listPairs = operatorOnly<Record<string, unknown>>((data) => listPairsService(db, data));
 export const getPairDetails = operatorOnly<Record<string, unknown>>((data) => getPairDetailsService(db, data));
@@ -113,7 +116,9 @@ export const servePublicPhoto = onRequest({ secrets: [publicMediaKey], minInstan
     neutralNotFound(response);
     return;
   }
-  const eligible = await resolveEligiblePublicPhoto(db, publicMediaKey.value(), handle);
+  const eligible = handle.startsWith("op1.")
+    ? await resolveEligibleOperatorPhoto(db, publicMediaKey.value(), handle)
+    : await resolveEligiblePublicPhoto(db, publicMediaKey.value(), handle);
   if (!eligible) {
     neutralNotFound(response);
     return;

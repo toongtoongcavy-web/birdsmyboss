@@ -7,9 +7,9 @@ import { OrangeRing } from "./bmb-design-system";
 type Row=Record<string,any>;
 const value=(input:unknown)=>displayValue(input);
 
-function BirdPortrait({name,photos}:{name:unknown;photos:Row[]}) {
-  const photo=photos.find(item=>item.isPublicOnPassport===true&&typeof item.publicUrl==="string"&&item.publicUrl);
-  return <figure className={`bird-portrait ${photo?"has-photo":"placeholder"}`}>{photo?<img src={photo.publicUrl} alt={`ภาพของ ${value(name)}`}/>:<div aria-label="ยังไม่มีภาพนกที่เผยแพร่"><span className="portrait-ring"/><b>{String(value(name)).slice(0,1)}</b><small>ภาพประจำตัว</small></div>}{photo?.caption&&<figcaption>{value(photo.caption)}</figcaption>}</figure>;
+function BirdPortrait({name,photo}:{name:unknown;photo?:Row|null}) {
+  const readUrl=typeof photo?.readUrl==="string"&&photo.readUrl?photo.readUrl:null;
+  return <figure className={`bird-portrait ${readUrl?"has-photo":"placeholder"}`}>{readUrl?<img src={readUrl} alt={`ภาพของ ${value(name)}`}/>:<div aria-label="ยังไม่มีภาพนก"><span className="portrait-ring"/><b>{String(value(name)).slice(0,1)}</b><small>ภาพประจำตัว</small></div>}{readUrl&&photo?.caption&&<figcaption>{value(photo.caption)}</figcaption>}</figure>;
 }
 
 function IdentityMeta({label,children}:{label:string;children:ReactNode}) { return <div className="identity-meta"><small>{label}</small><strong>{children}</strong></div>; }
@@ -19,10 +19,10 @@ const currentCage = (data: Row) => data.currentCageCode
   : data.currentCageName || "ยังไม่ได้จัดกรง";
 
 export function BirdProfile({data,currentSex,sexHistory,weightHistory,forms,passport,priceHistory}:{data:Row;currentSex:unknown;sexHistory:Row[];weightHistory:Row[];forms:ReactNode;passport:ReactNode;priceHistory?:ReactNode}) {
-  const parentage=data.parentage as Row|null;const father=parentage?.male as Row|undefined,mother=parentage?.female as Row|undefined;const photos=Array.isArray(data.photos)?data.photos as Row[]:[];
+  const parentage=data.parentage as Row|null;const father=parentage?.male as Row|undefined,mother=parentage?.female as Row|undefined;
   return <div className="bird-profile">
     <section className={`bird-identity-hero ${birdVisualClass(data.status)}`} aria-label="ข้อมูลประจำตัวนก">
-      <BirdPortrait name={data.displayName} photos={photos}/>
+      <BirdPortrait name={data.displayName} photo={data.portraitPhoto as Row|null|undefined}/>
       <div className="bird-identity-copy"><span className="profile-kicker">Birds My Boss · Bird Profile</span><div className="bird-name-line"><h2>{value(data.displayName)}</h2><BirdStatusBadge status={data.status}/></div><div className="ring-identity"><OrangeRing variant="standard"/><small>RING ID</small><strong>{value(data.ringId)}</strong></div><div className="identity-meta-grid"><IdentityMeta label="Mutation">{value(data.mutation)}</IdentityMeta><IdentityMeta label="เพศ">{value(currentSex)}</IdentityMeta><IdentityMeta label="วันฟัก / วันเกิด">{isoToThaiDisplay(data.hatchedOn)||"-"}</IdentityMeta><IdentityMeta label="แหล่งที่มา">{displayOrigin(data.origin)}</IdentityMeta><IdentityMeta label="กรงปัจจุบัน">{currentCage(data)}</IdentityMeta></div></div>
       <aside className="passport-seal"><span>PASS</span><small>Passport</small><StatusBadge status={data.passportStatus??"draft"}/></aside>
     </section>

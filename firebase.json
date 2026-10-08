@@ -48,8 +48,18 @@
     ],
     "rewrites": [
       {
+        "source": "operator-media/v1/**",
+        "function": {
+          "functionId": "servePublicPhoto",
+          "region": "asia-southeast1"
+        }
+      },
+      {
         "source": "public-media/v1/**",
-        "function": "servePublicPhoto"
+        "function": {
+          "functionId": "servePublicPhoto",
+          "region": "asia-southeast1"
+        }
       },
       {
         "source": "**",
