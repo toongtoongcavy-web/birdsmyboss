@@ -185,3 +185,102 @@ main:has(.bird-profile){min-width:0}
   .identity-meta-grid { display: grid; width: calc(100% + 108px); grid-template-columns: 1fr; margin-left: -108px; padding-top: 10px; }.identity-meta:nth-child(n+3) { display: grid; }.identity-meta { min-width: 0; }.identity-meta strong { font-size: 12px; }
   .passport-seal { margin-top: 14px; }.passport-seal > span:first-child { width: 32px; height: 32px; }.passport-seal .status-badge { width: max-content; height: auto; font-size: 12px; }
 }
+
+/* Compact Bird Profile — preserve every record while using desktop width efficiently. */
+.bird-profile { gap: 16px; }
+.bird-profile .bird-identity-hero {
+  grid-template-columns: 148px minmax(0, 1fr) 94px;
+  gap: 22px;
+  min-height: 190px;
+  padding: 20px 22px;
+}
+.bird-profile .bird-portrait { width: 138px; height: 158px; }
+.bird-profile .bird-portrait.placeholder b { font-size: 44px; }
+.bird-profile .portrait-ring { width: 78px; height: 78px; border-width: 9px; }
+.bird-profile .bird-name-line { margin: 4px 0 8px; }
+.bird-profile .bird-name-line h2 { font-size: clamp(32px, 3.7vw, 46px); }
+.bird-profile .ring-identity { margin-bottom: 10px; padding-block: 6px; }
+.bird-profile .identity-meta-grid { grid-template-columns: repeat(3, minmax(100px, 1fr)); gap: 4px 6px; }
+.bird-profile .identity-meta { padding: 5px 8px; }
+.bird-profile .passport-seal { align-self: center; padding: 9px 7px; border-radius: 38px 38px 14px 14px; }
+.bird-profile .passport-seal > span:first-child { width: 38px; height: 38px; font-size: 11px; }
+.bird-profile .profile-story-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 16px; align-items: start; }
+.bird-profile .story-section { height: auto; padding: 16px; }
+.bird-profile .story-section > header,
+.bird-profile .profile-record-actions > header { margin-bottom: 12px; }
+.bird-profile .story-section > header > span { width: 29px; height: 29px; }
+.bird-profile .story-section h3,
+.bird-profile .history-ledger h3,
+.bird-profile .profile-passport h3,
+.bird-profile .profile-record-actions h3 { font-size: 18px; }
+.bird-profile .lineage-map { grid-template-columns: minmax(0, 1fr) 105px minmax(0, 1fr); gap: 10px; margin: 4px auto; }
+.bird-profile .lineage-map::before,
+.bird-profile .lineage-map::after { display: none; }
+.bird-profile .parent-node,
+.bird-profile .lineage-bird { padding: 10px; }
+.bird-profile .parent-node strong,
+.bird-profile .lineage-bird strong { font-size: 14px; }
+.bird-profile .life-timeline { display: grid; gap: 0; overflow: visible; padding: 0 0 0 8px; }
+.bird-profile .life-timeline article { min-width: 0; padding: 4px 6px 7px 22px; border-top: 0; border-left: 1px solid #c9d9d6; }
+.bird-profile .life-timeline article:last-child { border-left-color: transparent; }
+.bird-profile .life-timeline i { left: -6px; top: 7px; }
+.bird-profile .profile-history-grid { align-items: start; }
+.bird-profile .history-ledger { padding: 15px 16px; }
+.bird-profile .history-ledger header { padding-bottom: 9px; }
+.bird-profile .history-ledger > article { padding: 8px 2px; }
+.bird-profile .history-ledger > .empty-state { min-height: 64px; margin-top: 8px; padding: 10px 14px; grid-template-columns: auto 1fr; justify-content: start; justify-items: start; gap: 8px; text-align: left; }
+.bird-profile .history-ledger > .empty-state > span { font-size: 20px; }
+.bird-profile .history-ledger > .empty-state > p { grid-column: 2; }
+.bird-profile .profile-passport { grid-template-columns: minmax(220px, .55fr) minmax(0, 1.45fr); align-items: start; overflow: visible; }
+.bird-profile .passport-intro { align-self: start; padding: 18px; border-radius: inherit; }
+.bird-profile .passport-mark { width: 42px; height: 56px; font-size: 19px; }
+.bird-profile .passport-intro p { margin-bottom: 0; }
+.bird-profile .passport-controls { min-width: 0; padding: 16px; }
+.bird-profile .publication-workspace { align-items: start; grid-template-columns: minmax(0, 1fr) minmax(220px, .65fr); gap: 12px; }
+.bird-profile .publication-management-card,
+.bird-profile .passport-public-access { align-self: start; padding: 15px; }
+.bird-profile .publication-assets { gap: 10px; }
+.bird-profile .publication-assets > section { padding: 13px; }
+.bird-profile .profile-record-actions { padding: 16px; }
+.bird-profile .profile-operator-groups { display: grid; gap: 9px; }
+.bird-profile .profile-action-group { border: 1px solid var(--border); border-radius: 13px; background: rgba(255,255,255,.82); }
+.bird-profile .profile-action-group > summary { position: relative; padding: 12px 42px 12px 14px; color: var(--primary-dark); font-weight: 800; cursor: pointer; list-style: none; }
+.bird-profile .profile-action-group > summary::-webkit-details-marker { display: none; }
+.bird-profile .profile-action-group > summary::after { content: "+"; position: absolute; right: 15px; top: 50%; color: var(--primary); font-size: 20px; transform: translateY(-50%); }
+.bird-profile .profile-action-group[open] > summary { border-bottom: 1px solid var(--border); }
+.bird-profile .profile-action-group[open] > summary::after { content: "−"; }
+.bird-profile .profile-action-group > :not(summary) { margin: 12px; }
+.bird-profile .profile-action-group .card { padding: 15px; box-shadow: none; }
+.bird-profile .price-history-action { margin-top: 12px; }
+.bird-profile .price-history-action > form.card { margin: 12px 0 0; }
+.bird-profile .profile-action-group .form-grid { gap: 12px; }
+
+@media (max-width: 1050px) {
+  .bird-profile .bird-identity-hero { grid-template-columns: 126px minmax(0, 1fr); min-height: 176px; padding: 18px; }
+  .bird-profile .bird-portrait { width: 116px; height: 142px; }
+  .bird-profile .passport-seal { position: absolute; right: 16px; top: 16px; width: 84px; }
+  .bird-profile .bird-identity-copy { padding-right: 82px; }
+  .bird-profile .profile-story-grid { grid-template-columns: 1fr; }
+  .bird-profile .profile-passport { grid-template-columns: 1fr; }
+  .bird-profile .publication-workspace { grid-template-columns: 1fr 260px; }
+}
+
+@media (max-width: 760px) {
+  .bird-profile { gap: 13px; }
+  .bird-profile .bird-identity-hero { display: block; width: calc(100vw - 32px); max-width: calc(100vw - 32px); min-height: 0; padding: 16px; }
+  .bird-profile .bird-portrait { position: absolute; left: 16px; top: 55px; width: 78px; height: 105px; }
+  .bird-profile .bird-identity-copy { padding: 0 0 0 94px; }
+  .bird-profile .identity-meta-grid { width: calc(100% + 94px); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-left: -94px; padding-top: 6px; }
+  .bird-profile .passport-seal { position: static; width: auto; margin-top: 8px; padding: 6px 9px; }
+  .bird-profile .profile-story-grid,
+  .bird-profile .profile-history-grid,
+  .bird-profile .profile-passport,
+  .bird-profile .publication-workspace,
+  .bird-profile .publication-assets { grid-template-columns: 1fr; }
+  .bird-profile .lineage-map { grid-template-columns: minmax(0, 1fr) 70px minmax(0, 1fr); gap: 6px; }
+  .bird-profile .story-section,
+  .bird-profile .history-ledger,
+  .bird-profile .passport-intro,
+  .bird-profile .passport-controls,
+  .bird-profile .profile-record-actions { padding: 13px; }
+}
