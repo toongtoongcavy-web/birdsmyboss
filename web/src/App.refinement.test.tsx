@@ -27,6 +27,18 @@ describe("Phase 1 visual refinements",()=>{
     render(<App/>);fireEvent.click(await screen.findByRole("button",{name:"Breeding"}));fireEvent.click(await screen.findByRole("button",{name:/พ่อนก: Sunny/}));
     await waitFor(()=>expect(screen.getByRole("heading",{name:"คู่ — รายละเอียด"})).toBeTruthy());
     expect(screen.queryByRole("heading",{name:"กรง"})).toBeNull();
+    expect(screen.getByRole("heading",{name:"คู่เพาะ"})).toBeTruthy();
     const main=screen.getByRole("main");expect(within(main).queryByText(/Garden Aviary · Code: A-01 ·/)).toBeNull();expect(main.textContent).not.toContain("pair-internal");
+  });
+
+  it("keeps the iPad-first Pair registry searchable with visible Cage context",async()=>{
+    render(<App/>);fireEvent.click(await screen.findByRole("button",{name:"Breeding"}));
+    const summary=screen.getByLabelText("สรุปการเพาะพันธุ์");
+    for(const label of ["คู่เพาะทั้งหมด","คู่ที่ใช้งาน","กรงที่ใช้งาน","คู่ที่รอจัดกรง"])expect(within(summary).getByText(label)).toBeTruthy();
+    const pair=await screen.findByRole("button",{name:/พ่อนก: Sunny/});
+    expect(pair.textContent).toContain("A-01 · Garden Aviary");expect(pair.textContent).toContain("01/07/2026");expect(pair.textContent).toContain("อยู่ในฟาร์ม");
+    const search=screen.getByRole("textbox",{name:"ค้นหาคู่เพาะ"});fireEvent.change(search,{target:{value:"ไม่พบคู่นี้"}});
+    expect(screen.queryByRole("button",{name:/พ่อนก: Sunny/})).toBeNull();expect(screen.getByText("ไม่พบคู่เพาะที่ตรงกับการค้นหา")).toBeTruthy();
+    fireEvent.change(search,{target:{value:"A-01"}});expect(await screen.findByRole("button",{name:/พ่อนก: Sunny/})).toBeTruthy();
   });
 });

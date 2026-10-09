@@ -32,6 +32,7 @@ async function createParent(page: Page, input: { ringId: string; name: string; s
   await row.click();
   await expect(page.getByRole("heading", { name: input.name, exact: true })).toBeVisible();
 
+  await page.getByText("สุขภาพ / เพศ / น้ำหนัก", { exact: true }).locator("xpath=ancestor::summary[1]").click();
   const sexForm = formByHeading(page, "บันทึกเพศ");
   await sexForm.getByLabel("เพศ *").selectOption(input.sex);
   await sexForm.getByLabel("วิธี *").selectOption("visual");
@@ -62,7 +63,10 @@ test("JOURNEY-2 active Pair produces a farm-hatched Bird with authoritative line
   await cageForm.getByLabel("ประเภทกรง *").selectOption("breeding");
   await cageForm.getByLabel("สถานะกรง *").selectOption("active");
   await cageForm.getByLabel("ความจุ (จำนวนตัว)").fill("2");
-  await cageForm.getByRole("button", { name: "สร้างกรง", exact: true }).click();
+  const createCageButton = cageForm.getByRole("button", { name: "สร้างกรง", exact: true });
+  await createCageButton.click();
+  await expect(cageForm.getByRole("status")).toHaveText("สร้างกรงเรียบร้อย");
+  await expect(createCageButton).toBeEnabled();
   const cageRegistry = page.getByRole("heading", { name: "รายการกรง", exact: true }).locator("xpath=ancestor::section[1]");
   const cageRow = cageRegistry.getByRole("row").filter({ hasText: cageCode });
   await expect(cageRow).toContainText(cageName);
@@ -76,11 +80,10 @@ test("JOURNEY-2 active Pair produces a farm-hatched Bird with authoritative line
   const fatherSelect = pairForm.getByLabel("พ่อ / ตัวผู้ *");
   const motherSelect = pairForm.getByLabel("แม่ / ตัวเมีย *");
   const cageSelect = pairForm.getByLabel("กรงคู่ผสมพันธุ์ *");
-  for (const select of [fatherSelect, motherSelect, cageSelect]) {
-    await expect(select.locator("option")).toHaveCount(2);
-    await select.focus();
-    await select.press("ArrowDown");
-    await select.press("Enter");
+  for (const [select, text] of [[fatherSelect, fatherRing], [motherSelect, motherRing], [cageSelect, cageCode]] as const) {
+    const value = await select.locator("option").filter({ hasText: text }).getAttribute("value");
+    expect(value).toBeTruthy();
+    await select.selectOption(value!);
   }
   await expect(fatherSelect.locator("option:checked")).toContainText(fatherRing);
   await expect(motherSelect.locator("option:checked")).toContainText(motherRing);
@@ -90,9 +93,25 @@ test("JOURNEY-2 active Pair produces a farm-hatched Bird with authoritative line
   await pairForm.getByRole("button", { name: "บันทึกการจับคู่", exact: true }).click();
   await expect(pairForm.getByRole("status")).toHaveText("สร้างคู่และจัดเข้ากรงเรียบร้อย");
 
+  await page.setViewportSize({ width: 1194, height: 834 });
   await page.getByRole("button", { name: "การเพาะพันธุ์", exact: true }).click();
   const activePair = page.getByRole("button", { name: new RegExp(`พ่อนก: ${fatherName}.*${fatherRing}.*แม่นก: ${motherName}.*${motherRing}.*Status: อยู่ในฟาร์ม`) });
   await expect(activePair).toBeVisible();
+  const workspace = page.locator(".breeding-workspace");
+  const registryLayout = workspace.locator(".content-grid");
+  expect(await registryLayout.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length)).toBe(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  await expect(activePair).toContainText(cageCode);
+
+  for (const viewport of [{ width: 834, height: 1194 }, { width: 768, height: 1024 }]) {
+    await page.setViewportSize(viewport);
+    expect(await registryLayout.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length)).toBe(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+    await expect(activePair).toBeVisible();
+    await expect(activePair).toContainText(fatherRing);
+    await expect(activePair).toContainText(motherRing);
+  }
+  await page.setViewportSize({ width: 1194, height: 834 });
   await activePair.click();
   const pairHeader = page.getByRole("heading", { name: `${fatherName} × ${motherName}`, exact: true }).locator("xpath=ancestor::header[1]");
   await expect(pairHeader.getByText("อยู่ในฟาร์ม", { exact: true })).toBeVisible();
