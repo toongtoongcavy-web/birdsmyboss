@@ -52,7 +52,9 @@ it("reports the exact upload stage without exposing raw backend details", async 
 
 it("groups asset history with Thai statuses and offers archive only for active items",async()=>{
   const refresh=vi.fn(async()=>undefined);mocks.invoke.mockResolvedValue({});
-  render(<BirdAssets birdId="b1" photos={[{photoId:"p-active",caption:"หน้าตรง",status:"active",readUrl:"/operator-media/v1/photo"},{photoId:"p-archived",caption:"ภาพเดิม",status:"archived"}]} documents={[{documentId:"d-active",documentType:"DNA",issuedOn:"2026-09-01",status:"active"},{documentId:"d-old",documentType:"ใบสุขภาพเดิม",issuedOn:"2026-08-01",status:"superseded"}]} onSaved={refresh}/>);
+  const {container}=render(<BirdAssets birdId="b1" photos={[{photoId:"p-active",caption:"หน้าตรง",status:"active",readUrl:"/operator-media/v1/photo"},{photoId:"p-archived",caption:"ภาพเดิม",status:"archived"}]} documents={[{documentId:"d-active",documentType:"DNA",issuedOn:"2026-09-01",status:"active"},{documentId:"d-old",documentType:"ใบสุขภาพเดิม",issuedOn:"2026-08-01",status:"superseded"}]} onSaved={refresh}/>);
+  const workspace=container.querySelector(".bird-assets-workspace")!;const history=container.querySelector(".bird-asset-history")!;
+  expect(workspace.children).toHaveLength(3);expect(history.parentElement).toBe(workspace);
   const photoGroup=screen.getByRole("heading",{name:"รูปภาพ",level:6}).closest("section")!;const documentGroup=screen.getByRole("heading",{name:"เอกสาร",level:6}).closest("section")!;
   expect(within(photoGroup).getByAltText("ภาพย่อ หน้าตรง")).toBeTruthy();expect(within(photoGroup).getByText("ใช้งานอยู่")).toBeTruthy();expect(within(photoGroup).getByText("เก็บถาวรแล้ว")).toBeTruthy();
   expect(within(documentGroup).getByText("วันที่ออก 01/09/2026")).toBeTruthy();expect(within(documentGroup).getByText("ถูกแทนที่แล้ว")).toBeTruthy();
