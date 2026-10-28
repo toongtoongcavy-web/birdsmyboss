@@ -11,7 +11,12 @@ vi.mock("./App", () => ({ App: ({ initialPage }: { initialPage: string }) => {
 } }));
 vi.mock("./MvpCages", () => ({ MvpCages: () => { useEffect(() => { mocks.cageReads(); }, []); const [selected,setSelected]=useState(false); return <section><h1>Cages root</h1>{selected?<p>Selected Cage Form</p>:<button onClick={()=>setSelected(true)}>เลือกกรง</button>}</section>; } }));
 
-beforeEach(() => { mocks.scrollTo.mockReset(); vi.stubGlobal("scrollTo", mocks.scrollTo); });
+beforeEach(() => {
+  mocks.scrollTo.mockReset(); vi.stubGlobal("scrollTo", mocks.scrollTo);
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+});
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 const nav = () => screen.getByRole("complementary", { name: "เมนูหลัก" });
@@ -48,4 +53,37 @@ it("keeps active highlighting for every existing destination", () => {
   for (const label of ["ภาพรวม", "ข้อมูลกรง", "ข้อมูลนก", "การเพาะพันธุ์", "พาสปอร์ตนก", "ข้อมูลลูกค้า", "การขาย", "มอบให้ฟรี", "การจัดการส่งมอบ"]) {
     clickMenu(label); const button=within(nav()).getByRole("button",{name:label}); expect(button.classList.contains("active")).toBe(true); expect(button.getAttribute("aria-current")).toBe("page");
   }
+});
+
+it("opens the grouped drawer on the active route and closes after same-route reset", () => {
+  render(<MvpShell />);
+  clickMenu("ข้อมูลนก");
+  fireEvent.click(screen.getByRole("button", { name: "เปิดรายละเอียด" }));
+  const trigger = screen.getByRole("button", { name: "เปิดเมนูหลัก" });
+  fireEvent.click(trigger);
+  const drawer = screen.getByRole("dialog");
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  expect(document.body.style.overflow).toBe("hidden");
+  expect(within(drawer).getAllByRole("heading")).toHaveLength(3);
+  const active = within(drawer).getByRole("button", { name: "ข้อมูลนก" });
+  expect(active.getAttribute("aria-current")).toBe("page");
+  expect(document.activeElement).toBe(active);
+  fireEvent.click(active);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByText("Bird Profile")).toBeNull();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(document.body.style.overflow).toBe("");
+  expect(mocks.scrollTo).toHaveBeenCalled();
+});
+
+it("dismisses the drawer with its close button and native Escape cancellation", () => {
+  render(<MvpShell />);
+  const trigger = screen.getByRole("button", { name: "เปิดเมนูหลัก" });
+  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole("button", { name: "ปิดเมนูหลัก" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  fireEvent.click(trigger);
+  fireEvent(screen.getByRole("dialog"), new Event("cancel", { bubbles: false }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
 });
