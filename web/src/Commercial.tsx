@@ -46,6 +46,26 @@ function RefundForm({payment,refunds,onSaved}:{payment:Row;refunds:Row[];onSaved
   return <form className="card" onSubmit={submit}><h6>คืนเงิน</h6><p>ยอดรับ: {show(payment.amount)} {show(payment.currency)} · คืนแล้ว: {refunded} · คงเหลือ: {remaining}</p><label className="field">รูปแบบ *<select required aria-label="รูปแบบคืนเงิน" value={outcome} onChange={e=>setOutcome(e.target.value)}><option value="" disabled>เลือก</option>{["full_refund","partial_refund","no_refund"].map(value=><option key={value} value={value}>{show(value)}</option>)}</select></label>{outcome==="partial_refund"&&<label className="field">จำนวนเงินคืน *<input required type="number" step="any" aria-label="จำนวนเงินคืน" value={amount} onChange={e=>setAmount(e.target.value)}/></label>}<label className="field">เหตุผล *<input required aria-label="เหตุผลคืนเงิน" value={reason} onChange={e=>setReason(e.target.value)}/></label><DateInput label="วันที่คืนเงิน" required value={date} onChange={value=>setDate(value??"")}/><button disabled={busy}>{busy?"กำลังบันทึก…":"บันทึกการคืนเงิน"}</button>{message&&<p role="status">{message}</p>}</form>;
 }
 
+function CancelReservationForm({reservation,payments,refunds,onSaved}:{reservation:Row;payments:Row[];refunds:Row[];onSaved:Refresh}){
+  const rows=payments.filter(row=>row.reservationId===reservation.reservationId&&row.status==="received");
+  const received=rows.reduce((sum,row)=>sum+Number(row.amount||0),0),refunded=refunds.filter(row=>rows.some(payment=>payment.paymentId===row.paymentId)).reduce((sum,row)=>sum+Number(row.amount||0),0),retained=received-refunded;
+  const [outcome,setOutcome]=useState(""),[amount,setAmount]=useState(""),[reason,setReason]=useState(""),[date,setDate]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+  const submit=async(event:FormEvent)=>{
+    event.preventDefault();
+    const numeric=Number(amount);
+    if(retained>0&&(!["full_refund","partial_refund","no_refund"].includes(outcome)||!reason.trim()||!date||(outcome==="partial_refund"&&(!Number.isFinite(numeric)||numeric<=0||numeric>=retained)))){setMessage("กรุณาระบุการจัดการเงิน เหตุผล และวันที่ให้ครบถ้วน");return;}
+    setBusy(true);setMessage("");
+    try{await invoke("cancelReservation",{reservationId:reservation.reservationId,...(retained>0?{disposition:{outcome,reason:reason.trim(),refundedOn:date,...(outcome==="partial_refund"?{amount:numeric}:{})}}:{})});await onSaved();}
+    catch(error){setMessage(thaiError(error));}finally{setBusy(false);}
+  };
+  return <form className="card" onSubmit={submit}><h5>ยืนยันยกเลิกการจอง</h5><PriceSnapshot record={reservation}/><p>รับเงินทั้งหมด: {received} THB · คืนแล้ว: {refunded} THB · เงินที่ยังถืออยู่: {retained} THB</p>
+    {retained>0?<><label className="field">การจัดการเงิน *<select required aria-label="การจัดการเงิน" value={outcome} onChange={e=>setOutcome(e.target.value)}><option value="" disabled>เลือก</option><option value="full_refund">คืนเต็มจำนวน</option><option value="partial_refund">คืนบางส่วน</option><option value="no_refund">ไม่คืนเงิน</option></select></label>
+      {outcome==="partial_refund"&&<label className="field">จำนวนเงินคืน *<input required type="number" step="any" aria-label="จำนวนเงินคืนเมื่อยกเลิก" value={amount} onChange={e=>setAmount(e.target.value)}/></label>}
+      <label className="field">เหตุผล *<input required aria-label="เหตุผลยกเลิกการจอง" value={reason} onChange={e=>setReason(e.target.value)}/></label><DateInput label="วันที่มีผล / คืนเงิน" required value={date} onChange={value=>setDate(value??"")}/><p>บันทึกผลการจัดการเงินพร้อมยกเลิกการจอง กรุณาตรวจสอบก่อนยืนยัน</p></>:<p>ไม่มีเงินคงค้าง ยืนยันยกเลิกการจองนี้หรือไม่</p>}
+    <button disabled={busy}>{busy?"กำลังบันทึก…":"ยืนยันยกเลิกการจอง"}</button>{message&&<p role="status">{message}</p>}
+  </form>;
+}
+
 function Payments({ownerType,owner,payments,refunds,onSaved,context,blocked=false}:{ownerType:"reservation"|"sale";owner:Row;payments:Row[];refunds:Row[];onSaved:Refresh;context:string;blocked?:boolean}){
   const ownerId=owner[ownerType==="reservation"?"reservationId":"saleId"],rows=payments.filter(payment=>payment[ownerType==="reservation"?"reservationId":"saleId"]===ownerId||(ownerType==="sale"&&owner.reservationId&&payment.reservationId===owner.reservationId));const panelId=useId();const [action,setAction]=useState<"payment"|"refund"|null>(null);const [selectedId,setSelectedId]=useState<string|null>(null),selected=rows.find(row=>row.paymentId===selectedId);const received=rows.filter(row=>row.status==="received").reduce((sum,row)=>sum+Number(row.amount||0),0),refunded=refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).reduce((sum,row)=>sum+Number(row.amount||0),0),paid=received-refunded,hasAgreement=typeof owner.agreedPrice==="number"&&Number.isFinite(owner.agreedPrice),remaining=hasAgreement?Math.max(0,owner.agreedPrice-paid):undefined;
   return <section className="commercial-ledger">
@@ -147,7 +167,7 @@ export function Commercial({birds,customers,reservations,payments,refunds,sales,
         <Payments key={selectedReservation.reservationId} ownerType="reservation" owner={selectedReservation} payments={payments} refunds={refunds} context={reservationContext(selectedReservation)} onSaved={onRefresh} blocked={selectedReservationHasSale}/>
         {selectedReservation.status==="active"&&<aside className="sale-next-action"><h3>ดำเนินการต่อ</h3>
           {!selectedReservationHasSale&&<ActionPanel label="สร้างการขายจากการจอง"><SaleCreateForm birds={birds} customers={customers} reservation={selectedReservation} onSaved={onRefresh}/></ActionPanel>}
-          <LifecycleAction operation="cancelReservation" payload={{reservationId:selectedReservation.reservationId}} label="ยกเลิกการจอง" onSaved={onRefresh}/>
+          {!selectedReservationHasSale&&<ActionPanel label="ยกเลิกการจอง"><CancelReservationForm reservation={selectedReservation} payments={payments} refunds={refunds} onSaved={onRefresh}/></ActionPanel>}
           {selectedReservation.expiresOn&&<ActionPanel label="หมดอายุการจอง"><ExpireReservationForm reservation={selectedReservation} onSaved={onRefresh}/></ActionPanel>}
         </aside>}
       </div>

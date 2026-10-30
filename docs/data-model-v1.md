@@ -116,6 +116,10 @@ Required immutable fields: `birdId`, `customerId`, `createdOn`; when present, `a
 
 ### PAYMENT (`payments`)
 
+Paid Reservation cancellation requires a `disposition` (`outcome`, `reason`, `refundedOn`, and `amount` for partial refunds). The trusted transaction reads all received payments and their refunds, allocates the chosen refund oldest-payment-first, records canonical Refund decisions, and cancels together. Zero-net reservations need no disposition. A linked non-cancelled Sale still blocks cancellation. Optional `reservations.cancellationDisposition` stores only the decision and canonical `refundIds`, not a second monetary ledger. Existing `no_refund` records are reused when applicable; the cancellation decision retains its own reason and effective date.
+
+Payment reads sort by `receivedOn`, then `createdAt` (including nanoseconds), then document ID ascending. Refund reads use `refundedOn`, `createdAt`, then document ID. Missing legacy timestamps sort after known timestamps on the same date, with ID as the deterministic fallback. Sorting happens before the existing result limit; timestamps are not exposed in these DTOs. Existing amounts and timestamps are never rewritten.
+
 Required immutable fields: `amount` (positive number), `currency`, `receivedOn`, `paymentMethod`, `status` (`received|voided`). Exactly one of `saleId` or `reservationId` is required. Optional: `referenceNo`, `notes`, `customerId`. Deposit is identified by `reservationId` and `purpose=deposit`; it is not a reservation field.
 
 ### REFUND (`refunds`)

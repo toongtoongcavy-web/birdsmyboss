@@ -2,11 +2,15 @@ import { Firestore } from "firebase-admin/firestore";
 import { fail } from "../domain/errors.js";
 import { orderedSexHistory, resolveCurrentSex, sexHistoryEntry } from "../domain/sex-history.js";
 import { requireId } from "../domain/validation.js";
+import { compareFinancialRecords } from "../domain/financial-order.js";
 import { createOperatorPhotoHandle, operatorPhotoUrl } from "./public-media.js";
 
 const limitOf = (value: unknown) => typeof value === "number" && Number.isInteger(value) && value > 0 ? Math.min(value, 50) : 25;
 const list = async (db: Firestore, collection: string, input: Record<string, unknown>, map: (id: string, data: Record<string, unknown>) => Record<string, unknown>) =>
   (await db.collection(collection).limit(limitOf(input.limit)).get()).docs.map((doc) => map(doc.id, doc.data()));
+// Sort before limiting; orderBy(createdAt) would silently omit legacy documents.
+const financialList = async (db: Firestore, collection: string, dateField: string, input: Record<string, unknown>, map: (id: string, data: Record<string, unknown>) => Record<string, unknown>) =>
+  (await db.collection(collection).get()).docs.sort(compareFinancialRecords(dateField)).slice(0, limitOf(input.limit)).map(doc => map(doc.id, doc.data()));
 const bird = (id: string, d: Record<string, unknown>) => ({ birdId: id, ringId: d.ringId, displayName: d.displayName, mutation: d.mutation ?? null, origin: d.origin, status: d.status, hatchedOn: d.hatchedOn ?? null, eggId: d.eggId ?? null, passportStatus: d.passportStatus ?? "draft" });
 const customer = (id: string, d: Record<string, unknown>) => ({ customerId: id, displayName: d.displayName, phone: d.phone ?? null, email: d.email ?? null, status: d.status });
 const priceSnapshot = (d: Record<string, unknown>) => typeof d.agreedPrice === "number" && d.currency === "THB" ? { agreedPrice: d.agreedPrice, currency: "THB" } : {};
@@ -116,8 +120,8 @@ export const listSaleTimeline = async (db: Firestore, input: Record<string, unkn
     .sort((a, b) => timestampValue(a.occurredAt) - timestampValue(b.occurredAt) || String(a.saleTimelineId).localeCompare(String(b.saleTimelineId)))
     .map(event => ({ ...event, occurredAt: timelineDate(event.occurredAt) }));
 };
-export const listPayments = (db: Firestore, input: Record<string, unknown>) => list(db, "payments", input, (paymentId, d) => ({ paymentId, reservationId: d.reservationId ?? null, saleId: d.saleId ?? null, amount: d.amount, currency: d.currency, receivedOn: d.receivedOn, paymentMethod: d.paymentMethod, status: d.status }));
-export const listRefunds = (db: Firestore, input: Record<string, unknown>) => list(db, "refunds", input, (refundId, d) => ({ refundId, paymentId: d.paymentId, amount: d.amount, outcome: d.outcome, refundedOn: d.refundedOn, reason: d.reason }));
+export const listPayments = (db: Firestore, input: Record<string, unknown>) => financialList(db, "payments", "receivedOn", input, (paymentId, d) => ({ paymentId, reservationId: d.reservationId ?? null, saleId: d.saleId ?? null, amount: d.amount, currency: d.currency, receivedOn: d.receivedOn, paymentMethod: d.paymentMethod, status: d.status }));
+export const listRefunds = (db: Firestore, input: Record<string, unknown>) => financialList(db, "refunds", "refundedOn", input, (refundId, d) => ({ refundId, paymentId: d.paymentId, amount: d.amount, outcome: d.outcome, refundedOn: d.refundedOn, reason: d.reason }));
 export const listGiveaways = async (db: Firestore, input: Record<string, unknown>) => {
   const giveaways = await list(db, "giveaways", input, (giveawayId, d) => ({ giveawayId, birdId: d.birdId, customerId: d.customerId ?? null, recipientName: d.recipientName, givenOn: d.givenOn, status: d.status, handoverId: d.handoverId ?? null }));
   return Promise.all(giveaways.map(async (giveaway) => ({ ...giveaway, bird: await birdIdentity(db, giveaway.birdId), customer: giveaway.customerId ? await db.collection("customers").doc(String(giveaway.customerId)).get().then(snapshot => snapshot.exists ? { customerId: snapshot.id, displayName: snapshot.data()!.displayName ?? null, status: snapshot.data()!.status ?? "active" } : null) : null })));

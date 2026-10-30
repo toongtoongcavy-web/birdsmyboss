@@ -10,7 +10,7 @@ const records={
   listCustomers:[{customerId:"customer-fixture",displayName:customerName,phone:"0812345678",email:"long.customer@example.test",status:"active"}],
   listSales:[{saleId:"sale-fixture",birdId:"bird-fixture",customerId:"customer-fixture",agreedPrice:2000,currency:"THB",status:"confirmed",createdOn:"2026-10-03"}],
   listReservations:[{reservationId:"reservation-fixture",birdId:"reserved-bird",customerId:"customer-fixture",agreedPrice:1500,currency:"THB",status:"active",reservedOn:"2026-10-03",expiresOn:"2026-10-10"}],
-  listPayments:[{paymentId:"payment-fixture",saleId:"sale-fixture",amount:500,currency:"THB",paymentMethod:"transfer",status:"received",receivedOn:"2026-10-03"}],
+  listPayments:[{paymentId:"payment-fixture",saleId:"sale-fixture",amount:500,currency:"THB",paymentMethod:"transfer",status:"received",receivedOn:"2026-10-03"},{paymentId:"deposit-fixture",reservationId:"reservation-fixture",amount:300,currency:"THB",paymentMethod:"transfer",status:"received",receivedOn:"2026-10-03"}],
   listRefunds:[],listSaleTimeline:[{saleTimelineId:"event-fixture",eventType:"sale_created",occurredAt:"2026-10-03"}],
 };
 
@@ -82,6 +82,11 @@ for(const [width,height] of [[1194,834],[834,1194],[768,1024]]){
     await expect(page.getByRole('button',{name:'สร้างการขายจากการจอง',exact:true})).toHaveAttribute('aria-expanded','false');
     await noOverflow(page);await touchTargets(page);
     await page.screenshot({path:testInfo.outputPath('reservation-detail.png'),fullPage:true});
+    await page.getByRole('button',{name:'ยกเลิกการจอง',exact:true}).click();
+    await expect(page.getByText('เงินที่ยังถืออยู่: 300 THB',{exact:false})).toBeVisible();
+    await page.getByLabel('การจัดการเงิน').selectOption('partial_refund');
+    await expect(page.getByLabel('จำนวนเงินคืนเมื่อยกเลิก')).toBeVisible();
+    await noOverflow(page);await touchTargets(page);
     expect(pageErrors).toEqual([]);
   });
 }

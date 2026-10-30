@@ -1,6 +1,7 @@
 import { FieldValue, Firestore, Transaction } from "firebase-admin/firestore";
 import { fail } from "../domain/errors.js";
 import { requireDate, requireId } from "../domain/validation.js";
+import { compareFinancialRecords } from "../domain/financial-order.js";
 
 const id = () => crypto.randomUUID();
 const now = () => FieldValue.serverTimestamp();
@@ -94,6 +95,40 @@ const closeReservation = async (db: Firestore, input: Record<string, unknown>, s
     if (status === "expired" && (typeof data.expiresOn !== "string" || data.expiresOn > effectiveOn!)) fail("failed-precondition", "Reservation cannot be expired before its stored expiresOn date.");
     const linkedSales = await tx.get(db.collection("sales").where("reservationId", "==", reservationId));
     if (linkedSales.docs.some((sale) => nonCancelled(sale.data().status))) fail("failed-precondition", "Reservation already has a non-cancelled sale.");
+    if (status === "cancelled") {
+      const payments = (await tx.get(db.collection("payments").where("reservationId", "==", reservationId))).docs
+        .filter(payment => payment.data().status === "received").sort(compareFinancialRecords("receivedOn"));
+      const histories = await Promise.all(payments.map(payment => tx.get(db.collection("refunds").where("paymentId", "==", payment.id))));
+      const balances = payments.map((payment, index) => Number(payment.data().amount) - histories[index].docs.reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0));
+      const retained = balances.reduce((sum, amount) => sum + amount, 0);
+      if (retained > 0) {
+        const disposition = input.disposition as Record<string, unknown> | undefined;
+        if (!disposition || !["full_refund", "partial_refund", "no_refund"].includes(String(disposition.outcome))) fail("failed-precondition", "Retained reservation money requires an explicit cancellation disposition.");
+        const outcome = String(disposition!.outcome);
+        const reason = requireId(disposition!.reason, "reason");
+        const refundedOn = requireDate(disposition!.refundedOn, "refundedOn");
+        const refundAmount = outcome === "full_refund" ? retained : outcome === "no_refund" ? 0 : requirePositive(disposition!.amount, "amount");
+        if (outcome === "partial_refund" && refundAmount >= retained) fail("invalid-argument", "Partial refund must be less than the retained balance.");
+        if (payments.some(payment => payment.data().currency !== "THB") || balances.some(balance => !Number.isFinite(balance) || balance < 0)) fail("failed-precondition", "Reservation payment balances require review.");
+        let toRefund = refundAmount;
+        const refundIds: string[] = [];
+        // Allocate against canonical payments oldest first. All reads precede writes.
+        payments.forEach((payment, index) => {
+          const balance = balances[index];
+          if (balance <= 0) return;
+          const amount = Math.min(balance, toRefund);
+          toRefund -= amount;
+          const paymentOutcome = amount === balance ? "full_refund" : amount > 0 ? "partial_refund" : "no_refund";
+          const existing = paymentOutcome === "no_refund" ? histories[index].docs.find(doc => doc.data().outcome === "no_refund") : undefined;
+          const refundId = existing?.id ?? id();
+          refundIds.push(refundId);
+          if (!existing) tx.create(ref(db, "refunds", refundId), { paymentId: payment.id, amount, refundedOn, outcome: paymentOutcome, reason, createdAt: now(), updatedAt: now() });
+          tx.update(payment.ref, { updatedAt: now() });
+        });
+        // Audit references only: amounts remain authoritative in Payment / Refund.
+        tx.update(reservationRef, { cancellationDisposition: { outcome, reason, refundedOn, refundIds } });
+      }
+    }
     tx.update(reservationRef, { status, ...(status === "cancelled" && typeof input.cancelReason === "string" && input.cancelReason.trim() ? { cancelReason: input.cancelReason.trim() } : {}), updatedAt: now() });
     return { reservationId, status };
   });
@@ -142,6 +177,7 @@ export const refundPayment = async (db: Firestore, input: Record<string, unknown
     else if (outcome === "partial_refund") { amount = requirePositive(input.amount, "amount"); if (amount >= remaining) fail("failed-precondition", "Partial refund must be less than the remaining refundable balance."); }
     else amount = 0;
     const refundId = id(); tx.create(ref(db, "refunds", refundId), { paymentId, amount, refundedOn, outcome, reason, ...(typeof input.notes === "string" ? { notes: input.notes } : {}), createdAt: now(), updatedAt: now() });
+    tx.update(payment.ref, { updatedAt: now() });
     const saleId = payment.data()?.saleId; if (typeof saleId === "string") timeline(tx, db, saleId, "refund_decision_recorded", { refundId, paymentId, amount, outcome }); return { refundId, amount };
   });
 };
