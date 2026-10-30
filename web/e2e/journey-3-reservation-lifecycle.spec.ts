@@ -1,7 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-const reservedOn = "03/10/2026";
-const expiresOn = "10/10/2026";
+// Keep this active-reservation journey valid as the calendar advances.
+const reservedOn = new Date().toLocaleDateString("en-GB", { timeZone: "UTC" });
+const expiresOn = new Date(Date.now() + 7 * 86400000).toLocaleDateString("en-GB", { timeZone: "UTC" });
 const agreedPrice = "2000";
 const deposit = "500";
 const remainingPayment = "1500";
@@ -45,6 +46,7 @@ test("JOURNEY-3 Reservation deposit rolls into a confirmed Sale and only the rem
   await expect(page.getByRole("button", { name: new RegExp(`Display Name: ${customerName}`) })).toBeVisible();
 
   await page.getByRole("button", { name: "การขาย", exact: true }).click();
+  await page.getByRole("button", { name: "สร้างการจอง", exact: true }).click();
   const reservationForm = formByHeading(page, "สร้างการจอง");
   await chooseSearchResult(reservationForm, "นก", ringId, new RegExp(ringId));
   await chooseSearchResult(reservationForm, "ลูกค้า", customerName, new RegExp(customerName));
@@ -54,26 +56,28 @@ test("JOURNEY-3 Reservation deposit rolls into a confirmed Sale and only the rem
   await reservationForm.getByRole("button", { name: "สร้างการจอง", exact: true }).click();
 
   const activeQueue = page.getByRole("heading", { name: "การจอง", exact: true }).locator("xpath=ancestor::section[1]");
-  const reservationRow = activeQueue.getByRole("button", { name: new RegExp(`${birdName}.*${customerName}.*กำลังจอง.*03/10/2026.*10/10/2026`) });
+  const reservationRow = activeQueue.getByRole("button", { name: new RegExp(`${birdName}.*${customerName}.*กำลังจอง.*${reservedOn}.*${expiresOn}`) });
   await expect(reservationRow).toBeVisible();
   await reservationRow.click();
 
-  const reservationDetail = page.getByRole("heading", { name: "Reservation Detail", exact: true }).locator("xpath=ancestor::section[1]");
+  const reservationDetail = page.getByRole("heading", { name: "รายละเอียดการจอง", exact: true }).locator("xpath=ancestor::section[1]");
   await expect(reservationDetail).toContainText(birdName);
   await expect(reservationDetail).toContainText(customerName);
-  await expect(reservationDetail).toContainText("วันที่จอง: 03/10/2026");
-  await expect(reservationDetail).toContainText("วันหมดอายุ: 10/10/2026");
+  await expect(reservationDetail).toContainText(`วันที่จอง: ${reservedOn}`);
+  await expect(reservationDetail).toContainText(`วันหมดอายุ: ${expiresOn}`);
   await expect(reservationDetail).toContainText("สถานะ: กำลังจอง");
 
+  await page.getByRole("button", { name: "รับชำระเงิน", exact: true }).click();
   const depositForm = formByHeading(page, "รับชำระเงิน");
   await depositForm.getByLabel("จำนวนเงิน").fill(deposit);
   await depositForm.getByLabel("วิธีชำระเงิน").selectOption("transfer");
   await depositForm.getByRole("textbox", { name: "วันที่รับเงิน", exact: true }).fill(reservedOn);
   await depositForm.getByRole("button", { name: "บันทึกการชำระเงิน", exact: true }).click();
-  await expect(reservationDetail.getByRole("button", { name: /500 THB.*03\/10\/2026.*โอนเงิน \/ พร้อมเพย์.*รับเงินแล้ว/ })).toBeVisible();
+  await expect(reservationDetail.getByRole("button", { name: new RegExp(`500 THB.*${reservedOn}.*โอนเงิน / พร้อมเพย์.*รับเงินแล้ว`) })).toBeVisible();
   await expect(reservationDetail).toContainText("รับชำระสุทธิ: 500 THB");
   await expect(reservationDetail).toContainText("คงเหลือ: 1500 THB");
 
+  await page.getByRole("button", { name: "สร้างการขายจากการจอง", exact: true }).click();
   const conversionForm = formByHeading(page, "สร้างการขายจากการจอง");
   await expect(conversionForm).toContainText("ราคาที่ตกลง: 2000 THB");
   await conversionForm.getByRole("textbox", { name: "วันที่สร้างการขาย", exact: true }).fill(reservedOn);
@@ -83,37 +87,41 @@ test("JOURNEY-3 Reservation deposit rolls into a confirmed Sale and only the rem
   await expect(activeQueue.getByRole("button", { name: new RegExp(`${birdName}.*${customerName}`) })).toHaveCount(0);
   await expect(activeQueue).toContainText("ไม่มีการจองที่กำลังดำเนินการ");
 
-  const confirmedSale = page.getByRole("button", { name: new RegExp(`${customerName}.*${birdName}.*ยืนยันแล้ว.*03/10/2026`) });
+  const confirmedSale = page.getByRole("button", { name: new RegExp(`${customerName}.*${birdName}.*ยืนยันแล้ว.*${reservedOn}`) });
   await expect(confirmedSale).toBeVisible();
   await confirmedSale.click();
 
-  const saleHeading = page.getByRole("heading", { name: `${customerName} → ${birdName}`, exact: true });
+  const saleHeading = page.getByRole("heading", { name: "รายละเอียดการขาย", exact: true });
   const saleDetail = saleHeading.locator("xpath=ancestor::section[1]");
   const saleHeader = saleHeading.locator("xpath=ancestor::header[1]");
+  await expect(saleDetail).toContainText(birdName);
+  await expect(saleDetail).toContainText(customerName);
   await expect(saleHeader.getByText("ยืนยันแล้ว", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "ยืนยันการขาย", exact: true })).toHaveCount(0);
-  await expect(saleDetail).toContainText("สร้างจากการจองวันที่ 03/10/2026");
-  await expect(saleDetail).toContainText("วันหมดอายุเดิม 10/10/2026");
+  await expect(saleDetail).toContainText(`สร้างจากการจองวันที่ ${reservedOn}`);
+  await expect(saleDetail).toContainText(`วันหมดอายุเดิม ${expiresOn}`);
   await expect(saleDetail).toContainText("รับชำระสุทธิ: 500 THB");
   await expect(saleDetail).toContainText("คงเหลือ: 1500 THB");
-  await expect(saleDetail.getByRole("button", { name: /500 THB.*03\/10\/2026.*โอนเงิน \/ พร้อมเพย์.*รับเงินแล้ว/ })).toBeVisible();
+  await expect(saleDetail.getByRole("button", { name: new RegExp(`500 THB.*${reservedOn}.*โอนเงิน / พร้อมเพย์.*รับเงินแล้ว`) })).toBeVisible();
 
+  await page.getByRole("button", { name: "รับชำระเงิน", exact: true }).click();
   const remainingForm = formByHeading(page, "รับชำระเงิน");
   await remainingForm.getByLabel("จำนวนเงิน").fill(remainingPayment);
   await remainingForm.getByLabel("วิธีชำระเงิน").selectOption("cash");
   await remainingForm.getByRole("textbox", { name: "วันที่รับเงิน", exact: true }).fill(reservedOn);
   await remainingForm.getByRole("button", { name: "บันทึกการชำระเงิน", exact: true }).click();
-  await expect(saleDetail.getByRole("button", { name: /1500 THB.*03\/10\/2026.*เงินสด.*รับเงินแล้ว/ })).toBeVisible();
+  await expect(saleDetail.getByRole("button", { name: new RegExp(`1500 THB.*${reservedOn}.*เงินสด.*รับเงินแล้ว`) })).toBeVisible();
   await expect(saleDetail).toContainText("รับชำระสุทธิ: 2000 THB");
   await expect(saleDetail).toContainText("คงเหลือ: 0 THB");
   await expect(saleDetail.getByText("ชำระครบแล้ว", { exact: true })).toBeVisible();
 
+  await page.getByRole("button", { name: "ปิดการขาย", exact: true }).click();
   const completeForm = formByHeading(page, "ปิดการขาย");
   await completeForm.getByRole("textbox", { name: "วันที่ปิดการขาย", exact: true }).fill(reservedOn);
   await completeForm.getByRole("button", { name: "ปิดการขาย", exact: true }).click();
   await expect(saleHeader.getByText("ขายเสร็จสิ้น", { exact: true })).toBeVisible();
-  await expect(saleDetail).toContainText("สร้างจากการจองวันที่ 03/10/2026");
-  await expect(saleDetail).toContainText("วันหมดอายุเดิม 10/10/2026");
+  await expect(saleDetail).toContainText(`สร้างจากการจองวันที่ ${reservedOn}`);
+  await expect(saleDetail).toContainText(`วันหมดอายุเดิม ${expiresOn}`);
 
   await page.getByRole("button", { name: "ข้อมูลนก", exact: true }).click();
   await expect(page.getByRole("button", { name: new RegExp(`Ring ID: ${ringId}.*Status: อยู่ในฟาร์ม`) })).toBeVisible();
@@ -122,5 +130,7 @@ test("JOURNEY-3 Reservation deposit rolls into a confirmed Sale and only the rem
   const completedSale = page.getByRole("button", { name: new RegExp(`${customerName}.*${birdName}.*ขายเสร็จสิ้น`) });
   await expect(completedSale).toBeVisible();
   await completedSale.click();
-  await expect(page.getByRole("heading", { name: `${customerName} → ${birdName}`, exact: true }).locator("xpath=ancestor::section[1]")).toContainText("สร้างจากการจองวันที่ 03/10/2026");
+  await expect(page.locator(".sale-detail")).toContainText(birdName);
+  await expect(page.locator(".sale-detail")).toContainText(customerName);
+  await expect(page.getByRole("heading", { name: "รายละเอียดการขาย", exact: true }).locator("xpath=ancestor::section[1]")).toContainText(`สร้างจากการจองวันที่ ${reservedOn}`);
 });

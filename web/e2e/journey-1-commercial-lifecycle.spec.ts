@@ -44,6 +44,7 @@ test("JOURNEY-1 purchased Bird completes Direct Sale, full payment, and farm-pic
   await expect(page.getByRole("button", { name: new RegExp(`Display Name: ${customerName}`) })).toBeVisible();
 
   await page.getByRole("button", { name: "การขาย", exact: true }).click();
+  await page.getByRole("button", { name: "ขายโดยตรง", exact: true }).click();
   const saleForm = formByHeading(page, "สร้างการขายโดยตรง");
   await chooseSearchResult(saleForm, "นก", ringId, new RegExp(ringId));
   await chooseSearchResult(saleForm, "ลูกค้า", customerName, new RegExp(customerName));
@@ -58,6 +59,7 @@ test("JOURNEY-1 purchased Bird completes Direct Sale, full payment, and farm-pic
   await page.getByRole("button", { name: "ยืนยันการขาย", exact: true }).click();
   await expect(page.locator(".sale-detail-hero").getByText("ยืนยันแล้ว", { exact: true })).toBeVisible();
 
+  await page.getByRole("button", { name: "รับชำระเงิน", exact: true }).click();
   const paymentForm = formByHeading(page, "รับชำระเงิน");
   await paymentForm.getByLabel("จำนวนเงิน").fill(agreedPrice);
   await paymentForm.getByLabel("วิธีชำระเงิน").selectOption("transfer");
@@ -66,6 +68,7 @@ test("JOURNEY-1 purchased Bird completes Direct Sale, full payment, and farm-pic
   await expect(page.getByText("ชำระครบแล้ว", { exact: true })).toBeVisible();
   await expect(page.getByText("คงเหลือ: 0 THB", { exact: false })).toBeVisible();
 
+  await page.getByRole("button", { name: "ปิดการขาย", exact: true }).click();
   const completeForm = formByHeading(page, "ปิดการขาย");
   await completeForm.getByRole("textbox", { name: "วันที่ปิดการขาย", exact: true }).fill(today);
   await completeForm.getByRole("button", { name: "ปิดการขาย", exact: true }).click();
@@ -99,6 +102,7 @@ test("JOURNEY-1 purchased Bird completes Direct Sale, full payment, and farm-pic
   await expect(profileIdentity.getByText("ขายแล้ว", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "การขาย", exact: true }).click();
+  await page.getByRole("button", { name: "ขายโดยตรง", exact: true }).click();
   const directSaleForm = formByHeading(page, "สร้างการขายโดยตรง");
   await directSaleForm.getByLabel("ค้นหานก", { exact: true }).fill(ringId);
   await expect(directSaleForm.getByRole("option", { name: new RegExp(ringId) })).toHaveCount(0);

@@ -173,6 +173,7 @@ test("JOURNEY-2 active Pair produces a farm-hatched Bird with authoritative line
   await expect(lineage).toContainText(motherRing);
 
   await page.getByRole("button", { name: "การขาย", exact: true }).click();
+  await page.getByRole("group", { name: "เลือกสร้างรายการ" }).getByRole("button", { name: "ขายโดยตรง", exact: true }).click();
   const directSale = formByHeading(page, "สร้างการขายโดยตรง");
   await directSale.getByLabel("ค้นหานก", { exact: true }).fill(chickRing);
   await expect(directSale.getByRole("option", { name: new RegExp(`${chickName}.*${chickRing}|${chickRing}.*${chickName}`) })).toBeVisible();

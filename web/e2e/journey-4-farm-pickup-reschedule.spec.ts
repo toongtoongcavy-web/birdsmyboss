@@ -46,6 +46,7 @@ test("JOURNEY-4 completed Sale supports append-only farm-pickup appointment resc
   await expect(page.getByRole("button", { name: new RegExp(`Display Name: ${customerName}`) })).toBeVisible();
 
   await page.getByRole("button", { name: "การขาย", exact: true }).click();
+  await page.getByRole("button", { name: "ขายโดยตรง", exact: true }).click();
   const saleForm = formByHeading(page, "สร้างการขายโดยตรง");
   await chooseSearchResult(saleForm, "นก", ringId, new RegExp(ringId));
   await chooseSearchResult(saleForm, "ลูกค้า", customerName, new RegExp(customerName));
@@ -57,12 +58,14 @@ test("JOURNEY-4 completed Sale supports append-only farm-pickup appointment resc
   await draftSale.click();
   await page.getByRole("button", { name: "ยืนยันการขาย", exact: true }).click();
 
+  await page.getByRole("button", { name: "รับชำระเงิน", exact: true }).click();
   const paymentForm = formByHeading(page, "รับชำระเงิน");
   await paymentForm.getByLabel("จำนวนเงิน").fill("1800");
   await paymentForm.getByLabel("วิธีชำระเงิน").selectOption("transfer");
   await paymentForm.getByRole("textbox", { name: "วันที่รับเงิน", exact: true }).fill(saleOn);
   await paymentForm.getByRole("button", { name: "บันทึกการชำระเงิน", exact: true }).click();
   await expect(page.getByText("ชำระครบแล้ว", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "ปิดการขาย", exact: true }).click();
   const completeForm = formByHeading(page, "ปิดการขาย");
   await completeForm.getByRole("textbox", { name: "วันที่ปิดการขาย", exact: true }).fill(saleOn);
   await completeForm.getByRole("button", { name: "ปิดการขาย", exact: true }).click();

@@ -1,0 +1,114 @@
+/* Sales-only tablet workspace. Canonical records and write operations stay in Commercial. */
+.mvp-main:has(.sales-workspace){padding:0}
+.mvp-main:has(.sales-workspace) .app>main{padding:24px 28px 36px}
+.sales-workspace{display:grid;gap:18px;color:var(--bmb-ink,#263e37);min-width:0}
+.sales-workspace [hidden]{display:none!important}
+.sales-workspace :is(section,div,span,form,header,aside){min-width:0}
+.sales-workspace :is(h1,h2,h3,h4,h5,h6,p){overflow-wrap:anywhere}
+.sales-page-header small{color:#52796c;font-size:11px;letter-spacing:.12em;font-weight:800}
+.sales-page-header h1{font-size:28px;line-height:1.3;margin:4px 0}
+.sales-page-header p{margin:0;color:#65766f;font-size:14px}
+.sales-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sales-summary>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:1px solid #dce8df;border-radius:18px;background:#edf5ef}
+.sales-summary>div:nth-child(2){background:#fcf1e8;border-color:#eedbcb}
+.sales-summary>div:nth-child(3){background:#f9f3de;border-color:#ece2bb}
+.sales-summary span{font-size:13px;color:#50655c}
+.sales-summary strong{font-size:26px;color:#2c695a}
+.sales-workspace .sales-create-zone{padding:0;border:0;border-radius:0;background:none;gap:12px}
+.sales-create-modes,.sales-payment-actions{display:flex;flex-wrap:wrap;gap:10px}
+.sales-workspace :is(button,input:not(.native-date),select){min-height:44px;font-size:14px}
+.sales-workspace button{touch-action:manipulation;white-space:normal;overflow-wrap:anywhere}
+.sales-workspace button:focus-visible{outline:3px solid #b78335;outline-offset:3px}
+.sales-workspace :is(.sales-create-modes,.sales-payment-actions) button{background:#edf6f1;border:1px solid #c6dbd0;color:#275e50;padding:10px 18px;border-radius:12px}
+.sales-workspace button[aria-expanded="true"]{background:#2e7564;color:white}
+.sales-workspace :is(.sales-registry,.reservation-registry){display:grid;gap:12px;margin:0;padding:16px;border:1px solid #e6e3d8;border-radius:20px;background:#fffefb;box-shadow:0 3px 14px #273f2b06}
+.sales-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sales-section-heading h2{font-size:19px;margin:0}
+.sales-section-heading>span{font-size:13px;color:#63746b}
+.sales-workspace .sales-list{display:grid;gap:10px;border:0}
+.sales-workspace :is(.sale-registry-row,.reservation-row){display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) 20px;gap:12px;align-items:center;width:100%;min-height:86px;padding:14px;border:1px solid #e0e8df;border-radius:14px;background:#f7faf6;text-align:left;box-shadow:none;color:#294b3f}
+.sales-workspace .reservation-row{background:#fcf9ef;border-color:#ebe3cf}
+.sales-workspace :is(.sale-registry-row,.reservation-row):hover{background:#edf5ec;transform:none;box-shadow:none;border-color:#a8c6b5}
+.sales-workspace .sale-registry-row::before,.sales-workspace .sale-registry-row>.sales-bird-identity::before{display:none}
+.sales-workspace :is(.sales-bird-identity,.sales-customer-identity){grid-column:auto;grid-row:auto;display:grid}
+.sales-workspace .sales-bird-identity{grid-template-columns:30px minmax(0,1fr);gap:8px}
+.sales-workspace .sales-bird-identity .orange-ring{width:28px;height:28px;border-width:5px}
+.sales-workspace :is(.sales-bird-identity,.sales-customer-identity) :is(strong,em,span){white-space:normal;overflow:visible;overflow-wrap:anywhere;text-overflow:clip}
+.sales-workspace :is(.sales-bird-identity,.sales-customer-identity) strong{font-size:15px;line-height:1.5}
+.sales-workspace :is(.sales-bird-identity,.sales-customer-identity) small{font-size:11px;letter-spacing:0}
+.sales-workspace .sales-bird-identity em{font-size:12px;font-weight:600}
+.sales-workspace .sales-customer-identity{border-color:#d2e2d3;padding-left:10px}
+.sales-workspace .sales-customer-identity span{display:block;font-size:12px}
+.sales-workspace :is(.sale-registry-row,.reservation-row) .sales-customer-identity>span{display:none}
+.sales-workspace :is(.sale-registry-state,.reservation-state,.sale-registry-price){display:grid;grid-column:auto;grid-row:auto;gap:5px;text-align:left;justify-items:start}
+.sales-workspace :is(.sale-registry-state,.reservation-state,.sale-registry-price) :is(small,em){font-size:12px;line-height:1.5;color:#607165;font-style:normal;overflow-wrap:anywhere}
+.sales-workspace .sale-registry-price strong{font-size:14px;overflow-wrap:anywhere}
+.sales-workspace .status-badge{max-width:100%;height:auto;white-space:normal;overflow:visible;text-overflow:clip;font-size:12px;line-height:1.4}
+.sales-workspace .sale-registry-open{grid-column:auto;grid-row:auto;font-size:20px}
+.sales-workspace :is(.sale-detail,.reservation-detail){display:grid;gap:16px;scroll-margin-top:84px}
+.sales-workspace :is(.sale-detail,.reservation-detail):focus{outline:none}
+.sales-workspace .sale-detail-hero{padding:20px;border:1px solid #dde7da;border-radius:20px;background:linear-gradient(115deg,#faf4e7,#fcfffb 65%,#edf6ef);gap:12px;overflow:visible;box-shadow:0 3px 14px #273f2b06}
+.sales-workspace .sale-detail-hero h2{font-size:22px;line-height:1.5;margin:4px 0}
+.sales-workspace .sale-detail-hero>div>small{font-size:12px;letter-spacing:0}
+.sales-workspace .sale-parties{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:12px 0}
+.sales-workspace .sale-state-strip{display:flex;flex-wrap:wrap;gap:12px;font-size:13px}
+.sales-workspace .sale-state-strip>span{padding-right:14px}
+.sales-workspace .sale-state-strip small{font-size:12px}
+.sales-workspace .sale-detail-hero>.sales-truth-note{grid-column:1/-1;margin:0}
+.sales-workspace .sales-truth-note{padding:12px;border-radius:10px;background:#f6f1e4;border-left:3px solid #b6d5c3;line-height:1.7;font-size:14px;margin:0}
+.sales-workspace .sales-truth-note small{display:block;font-size:12px}
+.sales-workspace .sale-detail-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.sales-workspace :is(.commercial-ledger,.sale-next-action,.sale-history){padding:18px;background:#fffefb;border:1px solid #e4e6d9;border-radius:18px;display:grid;gap:12px}
+.sales-workspace .sale-next-action{background:#f1f6ed}
+.sales-workspace .sale-next-action h3{margin:0;font-size:18px}
+.sales-workspace .sale-next-action>.card{padding:0;margin:0;border:0;background:none;box-shadow:none}
+.sales-workspace .sale-next-action>.card h5{display:none}
+.sales-workspace .sale-next-action>.card button{width:100%}
+.sales-workspace .commercial-ledger-row{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto;gap:10px;min-height:64px;padding:10px 6px}
+.sales-workspace .commercial-ledger-row[aria-pressed="true"]{background:#edf5eb;outline:2px solid #a7c5b1;outline-offset:-2px}
+.sales-workspace .commercial-ledger-row>span:not(.ledger-sequence){font-size:13px}
+.sales-workspace .commercial-ledger-row>.status-badge{font-size:12px}
+.sales-workspace .commercial-refund-activity{border:0;border-radius:12px;padding:12px;background:#fcf0e7}
+.sales-workspace .sales-disclosure{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:#e7f1e8;color:#2b5f4c;border:1px solid #cadcc9;border-radius:12px;text-align:left;padding:10px 14px}
+.sales-workspace .sales-action-panel{display:grid;gap:10px}
+.sales-workspace .sale-related{padding-top:0;border-top:0}
+.sales-workspace .sale-related p{grid-template-columns:minmax(0,1fr) auto auto;font-size:13px;gap:10px}
+.sales-workspace form.card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px;margin:0;border:1px solid #e4e6d9;border-radius:16px;background:#fffefb;box-shadow:none}
+.sales-workspace form.card>:is(h3,h5,h6,p,button){grid-column:1/-1;margin:0}
+.sales-workspace form.card>:is(h3,h5,h6){font-size:18px}
+.sales-workspace form.card>button{justify-self:start}
+.sales-workspace form.card>.card{margin:0;padding:12px;box-shadow:none;align-self:start}
+.sales-workspace form .row{display:block;width:100%;padding:10px;text-align:left;line-height:1.65}
+.sales-workspace .field{margin:0;font-size:14px}
+.sales-workspace :is(input,select){width:100%;min-width:0;box-sizing:border-box}
+.sales-workspace .date-control .calendar-button{width:44px;min-width:44px;min-height:44px}
+@media(min-width:1400px) and (orientation:landscape){
+  .sales-workspace .sale-detail-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+  .sales-workspace .sale-history{grid-column:1/-1}
+  .sales-workspace .sale-next-action form.card{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:840px),(orientation:portrait){
+  .sales-workspace .sale-detail-grid,.sales-workspace form.card{grid-template-columns:minmax(0,1fr)}
+  .sales-summary>div{display:grid;gap:5px;padding:12px}
+  .sales-workspace :is(.sale-registry-row,.reservation-row){grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px;padding:16px;position:relative}
+  .sales-workspace :is(.sale-registry-row,.reservation-row)>.sales-bird-identity{grid-column:1;grid-row:1}
+  .sales-workspace :is(.sale-registry-row,.reservation-row)>.sales-customer-identity{grid-column:2;grid-row:1;display:grid}
+  .sales-workspace :is(.sale-registry-state,.reservation-state){grid-column:1;grid-row:2}
+  .sales-workspace .sale-registry-price{grid-column:2;grid-row:2;padding-right:20px}
+  .sales-workspace .sale-registry-open{position:absolute;right:14px;bottom:14px}
+  .sales-workspace .sale-parties{grid-template-columns:minmax(0,1fr);gap:14px}
+  .sales-workspace .commercial-ledger-row{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto}
+  .sales-workspace .commercial-ledger-row>.ledger-sequence{grid-column:1;grid-row:1/3}
+  .sales-workspace .commercial-ledger-row>strong{grid-column:2;grid-row:1}
+  .sales-workspace .commercial-ledger-row>span:nth-child(3){grid-column:2;grid-row:2}
+  .sales-workspace .commercial-ledger-row>span:nth-child(4){display:block;grid-column:3;grid-row:2}
+  .sales-workspace .commercial-ledger-row>.status-badge{grid-column:3;grid-row:1;justify-self:start}
+}
+@media(max-width:480px){
+  .mvp-main:has(.sales-workspace) .app>main{padding:16px 12px 28px}
+  .sales-summary{grid-template-columns:minmax(0,1fr);gap:6px}
+  .sales-summary>div{display:flex;padding:8px 12px}
+  .sales-workspace :is(.sales-registry,.reservation-registry,.commercial-ledger,.sale-next-action,.sale-history,.sale-detail-hero){padding:12px}
+  .sales-workspace .sale-detail-hero{grid-template-columns:minmax(0,1fr)}
+  .sales-workspace .sale-related p{grid-template-columns:minmax(0,1fr)}
+}

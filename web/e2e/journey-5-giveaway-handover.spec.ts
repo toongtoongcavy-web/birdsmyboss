@@ -52,9 +52,11 @@ test("JOURNEY-5 active Bird completes Giveaway Handover and becomes historically
   await expect(page.getByLabel("นกสำหรับ Giveaway").getByRole("option", { name: new RegExp(ringId) })).toHaveCount(0);
 
   await page.getByRole("button", { name: "การขาย", exact: true }).click();
+  await page.getByRole("group", { name: "เลือกสร้างรายการ" }).getByRole("button", { name: "สร้างการจอง", exact: true }).click();
   const reservationForm = formByHeading(page, "สร้างการจอง");
   await reservationForm.getByLabel("ค้นหานก", { exact: true }).fill(ringId);
   await expect(reservationForm.getByRole("option", { name: new RegExp(ringId) })).toHaveCount(0);
+  await page.getByRole("group", { name: "เลือกสร้างรายการ" }).getByRole("button", { name: "ขายโดยตรง", exact: true }).click();
   const directSaleForm = formByHeading(page, "สร้างการขายโดยตรง");
   await directSaleForm.getByLabel("ค้นหานก", { exact: true }).fill(ringId);
   await expect(directSaleForm.getByRole("option", { name: new RegExp(ringId) })).toHaveCount(0);
@@ -91,9 +93,11 @@ test("JOURNEY-5 active Bird completes Giveaway Handover and becomes historically
   await expect(page.getByText("วันที่ส่งมอบ: 05/10/2026", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "การขาย", exact: true }).click();
+  await page.getByRole("group", { name: "เลือกสร้างรายการ" }).getByRole("button", { name: "สร้างการจอง", exact: true }).click();
   const terminalReservationForm = formByHeading(page, "สร้างการจอง");
   await terminalReservationForm.getByLabel("ค้นหานก", { exact: true }).fill(ringId);
   await expect(terminalReservationForm.getByRole("option", { name: new RegExp(ringId) })).toHaveCount(0);
+  await page.getByRole("group", { name: "เลือกสร้างรายการ" }).getByRole("button", { name: "ขายโดยตรง", exact: true }).click();
   const terminalDirectSaleForm = formByHeading(page, "สร้างการขายโดยตรง");
   await terminalDirectSaleForm.getByLabel("ค้นหานก", { exact: true }).fill(ringId);
   await expect(terminalDirectSaleForm.getByRole("option", { name: new RegExp(ringId) })).toHaveCount(0);
