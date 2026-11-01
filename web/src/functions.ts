@@ -29,6 +29,7 @@ export const thaiError = (e: unknown) => {
   const error = (e ?? {}) as { code?: unknown; message?: unknown };
   const message = String(error.message ?? "").replace(/\s+/g, " ").trim();
   const code = String(error.code ?? "").replace(/^functions\//, "").replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
+  if (message.includes("Retained reservation money requires an explicit cancellation disposition")) return "การจองนี้มีเงินที่รับไว้ กรุณาระบุวิธีจัดการเงินก่อนยกเลิกการจอง";
   if (message.includes("ringId")) return "รหัสห่วงขานี้มีอยู่ในระบบแล้ว";
   if (message.includes("active reservation")) return "นกตัวนี้มีการจองที่ยังใช้งานอยู่";
   if (message.includes("active pair")) return "นกตัวนี้อยู่ในคู่ผสมพันธุ์ที่กำลังใช้งานอยู่";

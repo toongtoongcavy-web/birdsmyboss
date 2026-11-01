@@ -83,7 +83,11 @@ for(const [width,height] of [[1194,834],[834,1194],[768,1024]]){
     await noOverflow(page);await touchTargets(page);
     await page.screenshot({path:testInfo.outputPath('reservation-detail.png'),fullPage:true});
     await page.getByRole('button',{name:'ยกเลิกการจอง',exact:true}).click();
-    await expect(page.getByText('เงินที่ยังถืออยู่: 300 THB',{exact:false})).toBeVisible();
+    const cancellation=page.getByRole('heading',{name:'จัดการเงินก่อนยกเลิกการจอง'}).locator('..');
+    const columns=await cancellation.evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    expect(columns).toBeLessThanOrEqual(2);
+    if(width<=840)expect(columns).toBe(1);
+    await expect(page.getByText('ยอดที่ต้องจัดการ: 300 THB',{exact:false})).toBeVisible();
     await page.getByLabel('การจัดการเงิน').selectOption('partial_refund');
     await expect(page.getByLabel('จำนวนเงินคืนเมื่อยกเลิก')).toBeVisible();
     await noOverflow(page);await touchTargets(page);

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { thaiError } from "./functions";
 
 describe("thaiError", () => {
+  it("translates retained reservation money rejection without leaking raw details",()=>{
+    expect(thaiError({code:"functions/failed-precondition",message:"Retained reservation money requires an explicit cancellation disposition."})).toBe("การจองนี้มีเงินที่รับไว้ กรุณาระบุวิธีจัดการเงินก่อนยกเลิกการจอง");
+  });
   it("keeps known Reservation conversion failures friendly and diagnostic", () => {
     expect(thaiError({
       code: "functions/invalid-argument",

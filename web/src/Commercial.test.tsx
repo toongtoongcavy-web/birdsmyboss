@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { Commercial } from "./Commercial";
 
 const mocks=vi.hoisted(()=>({invoke:vi.fn()}));
-vi.mock("./functions",()=>({invoke:mocks.invoke,thaiError:()=>"บันทึกไม่สำเร็จ"}));
+vi.mock("./functions",async importOriginal=>({...await importOriginal<typeof import("./functions")>(),invoke:mocks.invoke}));
 
 const birds=[{birdId:"bird-secret-1",ringId:"TH-001",displayName:"Sunny",mutation:"Lutino",currentSex:"male",status:"active",origin:"farm_hatched"},{birdId:"bird-secret-2",ringId:"TH-002",displayName:"Moon",mutation:"Normal",currentSex:"female",status:"active",origin:"external"}];
 const customers=[{customerId:"customer-secret-1",displayName:"สมชาย",phone:"0812345678",email:"somchai@example.com",status:"active"}];
@@ -15,22 +15,64 @@ const props={birds,customers,reservations,payments,refunds,sales,giveaways:[],on
 
 afterEach(()=>{cleanup();vi.clearAllMocks();});
 
+it.each([false,true])("shows the 5000/2000/0/2000 summary and requires a new decision despite prior no_refund=%s",async prior=>{
+  mocks.invoke.mockResolvedValue({});
+  render(<Commercial {...props} reservations={[{...reservations[0],agreedPrice:5000,currency:"THB"}]} payments={[{...payments[0],amount:2000}]} refunds={prior?[{...refunds[0],amount:0,outcome:"no_refund"}]:[]}/>);
+  fireEvent.click(screen.getByRole("button",{name:/Sunny.*14\/08\/2026/}));
+  if(prior){const history=screen.getByRole("region",{name:"ประวัติการคืนเงิน"});expect(history.textContent).toContain("ไม่คืนเงิน");expect(history.textContent).not.toContain("0 THB");}
+  fireEvent.click(screen.getByRole("button",{name:"ยกเลิกการจอง"}));
+  expect(mocks.invoke).not.toHaveBeenCalled();
+  const form=screen.getByRole("heading",{name:"จัดการเงินก่อนยกเลิกการจอง"}).closest("form")!;
+  expect(form.textContent).toContain("5000 THB");
+  expect(form.textContent).toContain("รับเงินทั้งหมด: 2000 THB · คืนแล้ว: 0 THB · ยอดที่ต้องจัดการ: 2000 THB");
+  fireEvent.change(within(form).getByLabelText("การจัดการเงิน"),{target:{value:"partial_refund"}});
+  fireEvent.submit(form);expect(mocks.invoke).not.toHaveBeenCalled();
+  fireEvent.change(within(form).getByLabelText("เหตุผลยกเลิกการจอง"),{target:{value:"เปลี่ยนแผน"}});
+  fireEvent.submit(form);expect(mocks.invoke).not.toHaveBeenCalled();
+  fireEvent.change(within(form).getByLabelText("วันที่มีผล / คืนเงิน"),{target:{value:"01112026"}});
+  for(const value of ["","0","-1","2000"]){fireEvent.change(within(form).getByLabelText("จำนวนเงินคืนเมื่อยกเลิก"),{target:{value}});fireEvent.submit(form);expect(mocks.invoke).not.toHaveBeenCalled();}
+  fireEvent.change(within(form).getByLabelText("จำนวนเงินคืนเมื่อยกเลิก"),{target:{value:"500"}});
+  fireEvent.submit(form);
+  await waitFor(()=>expect(props.onRefresh).toHaveBeenCalledTimes(1));
+  expect(mocks.invoke).toHaveBeenCalledWith("cancelReservation",{reservationId:reservations[0].reservationId,disposition:{outcome:"partial_refund",reason:"เปลี่ยนแผน",refundedOn:"2026-11-01",amount:500}});
+});
+
+it("recovers from a retained-money rejection with Thai guidance and mandatory disposition instead of repeating the zero-net call",async()=>{
+  mocks.invoke.mockRejectedValueOnce(new Error("Retained reservation money requires an explicit cancellation disposition.")).mockResolvedValue({});
+  render(<Commercial {...props} payments={[]} refunds={[]}/>);
+  fireEvent.click(screen.getByRole("button",{name:/Sunny.*14\/08\/2026/}));
+  fireEvent.click(screen.getByRole("button",{name:"ยกเลิกการจอง"}));
+  fireEvent.click(screen.getByRole("button",{name:"ยืนยันยกเลิกการจอง"}));
+  const heading=await screen.findByRole("heading",{name:"จัดการเงินก่อนยกเลิกการจอง"});
+  const form=heading.closest("form")!;
+  expect(form.textContent).toContain("การจองนี้มีเงินที่รับไว้ กรุณาระบุวิธีจัดการเงินก่อนยกเลิกการจอง");
+  expect(form.textContent).not.toContain("Retained reservation");
+  expect(form.textContent).not.toContain("ยอดที่ต้องจัดการ: 0");
+  fireEvent.submit(form);expect(mocks.invoke).toHaveBeenCalledTimes(1);
+  fireEvent.change(within(form).getByLabelText("การจัดการเงิน"),{target:{value:"no_refund"}});
+  fireEvent.change(within(form).getByLabelText("เหตุผลยกเลิกการจอง"),{target:{value:"ข้อตกลงการยกเลิก"}});
+  fireEvent.change(within(form).getByLabelText("วันที่มีผล / คืนเงิน"),{target:{value:"01112026"}});
+  fireEvent.submit(form);
+  await waitFor(()=>expect(props.onRefresh).toHaveBeenCalledTimes(1));
+  expect(mocks.invoke).toHaveBeenLastCalledWith("cancelReservation",{reservationId:reservations[0].reservationId,disposition:{outcome:"no_refund",reason:"ข้อตกลงการยกเลิก",refundedOn:"2026-11-01"}});
+});
+
 it.each(["full_refund","partial_refund","no_refund"])("requires explicit %s disposition before paid cancellation and preserves failed input",async outcome=>{
   mocks.invoke.mockRejectedValue(new Error("failed"));
   render(<Commercial {...props}/>);
   fireEvent.click(screen.getByRole("button",{name:/Sunny.*14\/08\/2026/}));
-  expect(screen.queryByRole("heading",{name:"ยืนยันยกเลิกการจอง"})).toBeNull();
+  expect(screen.queryByRole("heading",{name:"จัดการเงินก่อนยกเลิกการจอง"})).toBeNull();
   fireEvent.click(screen.getByRole("button",{name:"ยกเลิกการจอง"}));
   expect(mocks.invoke).not.toHaveBeenCalled();
-  const form=screen.getByRole("heading",{name:"ยืนยันยกเลิกการจอง"}).closest("form")!;
-  expect(form.textContent).toContain("เงินที่ยังถืออยู่: 900 THB");
+  const form=screen.getByRole("heading",{name:"จัดการเงินก่อนยกเลิกการจอง"}).closest("form")!;
+  expect(form.textContent).toContain("ยอดที่ต้องจัดการ: 900 THB");
   fireEvent.submit(form);expect(mocks.invoke).not.toHaveBeenCalled();
   fireEvent.change(within(form).getByLabelText("การจัดการเงิน"),{target:{value:outcome}});
   if(outcome==="partial_refund")fireEvent.change(within(form).getByLabelText("จำนวนเงินคืนเมื่อยกเลิก"),{target:{value:"250"}});
   fireEvent.change(within(form).getByLabelText("เหตุผลยกเลิกการจอง"),{target:{value:"เปลี่ยนแผน"}});
   fireEvent.change(within(form).getByLabelText("วันที่มีผล / คืนเงิน"),{target:{value:"30102026"}});
   fireEvent.submit(form);
-  await waitFor(()=>expect(within(form).getByRole("status").textContent).toContain("บันทึกไม่สำเร็จ"));
+  await waitFor(()=>expect(within(form).getByRole("status").textContent).toContain("ไม่สามารถบันทึกข้อมูลได้"));
   expect(mocks.invoke).toHaveBeenCalledWith("cancelReservation",{reservationId:reservations[0].reservationId,disposition:{outcome,reason:"เปลี่ยนแผน",refundedOn:"2026-10-30",...(outcome==="partial_refund"?{amount:250}:{})}});
   expect((within(form).getByLabelText("เหตุผลยกเลิกการจอง") as HTMLInputElement).value).toBe("เปลี่ยนแผน");
   expect(props.onRefresh).not.toHaveBeenCalled();
@@ -58,8 +100,8 @@ it("numbers canonical same-day payments 100/196/104 and retains order after refu
   view.rerender(<Commercial {...props} payments={ordered} refunds={[{...refunds[0],paymentId:"ordered-0",amount:100,outcome:"full_refund"}]}/>);
   expect(rows()).toEqual(before);
   fireEvent.click(screen.getByRole("button",{name:"ยกเลิกการจอง"}));
-  const form=screen.getByRole("heading",{name:"ยืนยันยกเลิกการจอง"}).closest("form")!;
-  expect(form.textContent).toContain("รับเงินทั้งหมด: 400 THB · คืนแล้ว: 100 THB · เงินที่ยังถืออยู่: 300 THB");
+  const form=screen.getByRole("heading",{name:"จัดการเงินก่อนยกเลิกการจอง"}).closest("form")!;
+  expect(form.textContent).toContain("รับเงินทั้งหมด: 400 THB · คืนแล้ว: 100 THB · ยอดที่ต้องจัดการ: 300 THB");
 });
 
 // Follow the same expand step as a user; all original payload/rule assertions remain.

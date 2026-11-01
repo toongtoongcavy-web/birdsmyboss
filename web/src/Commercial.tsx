@@ -49,17 +49,23 @@ function RefundForm({payment,refunds,onSaved}:{payment:Row;refunds:Row[];onSaved
 function CancelReservationForm({reservation,payments,refunds,onSaved}:{reservation:Row;payments:Row[];refunds:Row[];onSaved:Refresh}){
   const rows=payments.filter(row=>row.reservationId===reservation.reservationId&&row.status==="received");
   const received=rows.reduce((sum,row)=>sum+Number(row.amount||0),0),refunded=refunds.filter(row=>rows.some(payment=>payment.paymentId===row.paymentId)).reduce((sum,row)=>sum+Number(row.amount||0),0),retained=received-refunded;
+  const [serverRequiresDisposition,setServerRequiresDisposition]=useState(false);
+  const needsDisposition=retained>0||serverRequiresDisposition;
   const [outcome,setOutcome]=useState(""),[amount,setAmount]=useState(""),[reason,setReason]=useState(""),[date,setDate]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   const submit=async(event:FormEvent)=>{
     event.preventDefault();
     const numeric=Number(amount);
-    if(retained>0&&(!["full_refund","partial_refund","no_refund"].includes(outcome)||!reason.trim()||!date||(outcome==="partial_refund"&&(!Number.isFinite(numeric)||numeric<=0||numeric>=retained)))){setMessage("กรุณาระบุการจัดการเงิน เหตุผล และวันที่ให้ครบถ้วน");return;}
+    if(needsDisposition&&(!["full_refund","partial_refund","no_refund"].includes(outcome)||!reason.trim()||!date||(outcome==="partial_refund"&&(!Number.isFinite(numeric)||numeric<=0||(retained>0&&numeric>=retained))))){setMessage("กรุณาระบุการจัดการเงิน เหตุผล และวันที่ให้ครบถ้วน");return;}
     setBusy(true);setMessage("");
-    try{await invoke("cancelReservation",{reservationId:reservation.reservationId,...(retained>0?{disposition:{outcome,reason:reason.trim(),refundedOn:date,...(outcome==="partial_refund"?{amount:numeric}:{})}}:{})});await onSaved();}
-    catch(error){setMessage(thaiError(error));}finally{setBusy(false);}
+    try{await invoke("cancelReservation",{reservationId:reservation.reservationId,...(needsDisposition?{disposition:{outcome,reason:reason.trim(),refundedOn:date,...(outcome==="partial_refund"?{amount:numeric}:{})}}:{})});await onSaved();}
+    catch(error){
+      if(String((error as {message?:unknown})?.message??"").includes("Retained reservation money requires an explicit cancellation disposition"))setServerRequiresDisposition(true);
+      setMessage(thaiError(error));
+    }finally{setBusy(false);}
   };
-  return <form className="card" onSubmit={submit}><h5>ยืนยันยกเลิกการจอง</h5><PriceSnapshot record={reservation}/><p>รับเงินทั้งหมด: {received} THB · คืนแล้ว: {refunded} THB · เงินที่ยังถืออยู่: {retained} THB</p>
-    {retained>0?<><label className="field">การจัดการเงิน *<select required aria-label="การจัดการเงิน" value={outcome} onChange={e=>setOutcome(e.target.value)}><option value="" disabled>เลือก</option><option value="full_refund">คืนเต็มจำนวน</option><option value="partial_refund">คืนบางส่วน</option><option value="no_refund">ไม่คืนเงิน</option></select></label>
+  return <form className="card" onSubmit={submit}><h5>{needsDisposition?"จัดการเงินก่อนยกเลิกการจอง":"ยืนยันยกเลิกการจอง"}</h5><PriceSnapshot record={reservation}/>
+    {serverRequiresDisposition?<p>ยอดเงินล่าสุดไม่ตรงกับข้อมูลที่แสดง กรุณาตรวจสอบยอดรับและคืนเงินก่อนยืนยัน</p>:<p>รับเงินทั้งหมด: {received} THB · คืนแล้ว: {refunded} THB · ยอดที่ต้องจัดการ: {retained} THB</p>}
+    {needsDisposition?<><label className="field">การจัดการเงิน *<select required aria-label="การจัดการเงิน" value={outcome} onChange={e=>setOutcome(e.target.value)}><option value="" disabled>เลือก</option><option value="full_refund">คืนเต็มจำนวน</option><option value="partial_refund">คืนบางส่วน</option><option value="no_refund">ไม่คืนเงิน</option></select></label>
       {outcome==="partial_refund"&&<label className="field">จำนวนเงินคืน *<input required type="number" step="any" aria-label="จำนวนเงินคืนเมื่อยกเลิก" value={amount} onChange={e=>setAmount(e.target.value)}/></label>}
       <label className="field">เหตุผล *<input required aria-label="เหตุผลยกเลิกการจอง" value={reason} onChange={e=>setReason(e.target.value)}/></label><DateInput label="วันที่มีผล / คืนเงิน" required value={date} onChange={value=>setDate(value??"")}/><p>บันทึกผลการจัดการเงินพร้อมยกเลิกการจอง กรุณาตรวจสอบก่อนยืนยัน</p></>:<p>ไม่มีเงินคงค้าง ยืนยันยกเลิกการจองนี้หรือไม่</p>}
     <button disabled={busy}>{busy?"กำลังบันทึก…":"ยืนยันยกเลิกการจอง"}</button>{message&&<p role="status">{message}</p>}
@@ -72,7 +78,7 @@ function Payments({ownerType,owner,payments,refunds,onSaved,context,blocked=fals
     <header><span><small>การชำระเงิน</small><h5>รายการชำระเงิน</h5></span><strong>{rows.length}</strong></header>
     {hasAgreement&&<p className="sales-truth-note"><strong>ราคาที่ตกลง:</strong> {show(owner.agreedPrice)} {show(owner.currency)} · <strong>รับชำระสุทธิ:</strong> {show(paid)} {show(owner.currency)} · <strong>คงเหลือ:</strong> {show(remaining)} {show(owner.currency)}</p>}
     {rows.length?<div className="commercial-ledger-rows">{rows.map((payment,index)=><button type="button" className="commercial-ledger-row" aria-pressed={selectedId===String(payment.paymentId)} key={payment.paymentId} onClick={()=>{setSelectedId(String(payment.paymentId));setAction(null);}}><span className="ledger-sequence">{String(index+1).padStart(2,"0")}</span><strong>{show(payment.amount)} {show(payment.currency)}</strong><span>{isoToThaiDisplay(payment.receivedOn)||"-"}</span><span>{show(payment.paymentMethod)}</span><StatusBadge status={payment.status}/></button>)}</div>:<p className="commercial-ledger-empty">ยังไม่มีรายการชำระเงินที่บันทึกไว้</p>}
-    {refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).length>0&&<section className="sale-related" aria-label="ประวัติการคืนเงิน"><h4>ประวัติการคืนเงิน</h4>{refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).map(refund=><p key={refund.refundId}><span>{isoToThaiDisplay(refund.refundedOn)||"-"} · {show(refund.outcome)}</span><strong>{show(refund.amount)} {show(rows.find(row=>row.paymentId===refund.paymentId)?.currency)}</strong></p>)}</section>}
+    {refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).length>0&&<section className="sale-related" aria-label="ประวัติการคืนเงิน"><h4>ประวัติการคืนเงิน</h4>{refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).map(refund=><p key={refund.refundId}><span>{isoToThaiDisplay(refund.refundedOn)||"-"} · {show(refund.outcome)}</span>{refund.outcome==="no_refund"?<span>{refund.reason?`เหตุผล: ${refund.reason}`:"บันทึกการตัดสินใจไม่คืนเงิน"}</span>:<strong>{show(refund.amount)} {show(rows.find(row=>row.paymentId===refund.paymentId)?.currency)}</strong>}</p>)}</section>}
     <div className="sales-payment-actions">
       {blocked?<p className="sales-truth-note">สร้างการขายแล้ว กรุณารับชำระเงินต่อในรายการขาย</p>:remaining!==undefined&&remaining<=0?<p className="sales-truth-note"><strong>ชำระครบแล้ว</strong></p>:<button type="button" aria-expanded={action==="payment"} aria-controls={`${panelId}-payment`} onClick={()=>setAction(action==="payment"?null:"payment")}>รับชำระเงิน</button>}
       {selected&&<button type="button" aria-expanded={action==="refund"} aria-controls={`${panelId}-refund`} onClick={()=>setAction(action==="refund"?null:"refund")}>คืนเงิน</button>}
