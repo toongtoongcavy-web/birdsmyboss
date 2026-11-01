@@ -143,6 +143,7 @@ export const recordPayment = async (db: Firestore, input: Record<string, unknown
   return db.runTransaction(async (tx) => {
     const owner = await tx.get(ref(db, reservationId ? "reservations" : "sales", reservationId ?? saleId!)); if (!owner.exists) fail("not-found", "Payment owner not found.");
     const ownerData = owner.data() as Record<string, unknown>;
+    if (saleId && ownerData.status === "cancelled") fail("failed-precondition", "Cancelled sale cannot receive payments.");
     if (reservationId) {
       if (ownerData.status !== "active" || (typeof ownerData.expiresOn === "string" && ownerData.expiresOn < today())) fail("failed-precondition", "Reservation is expired or inactive.");
       const linkedSales = await tx.get(db.collection("sales").where("reservationId", "==", reservationId));
@@ -169,6 +170,15 @@ export const refundPayment = async (db: Firestore, input: Record<string, unknown
   const reason = requireId(input.reason, "reason"); const refundedOn = requireDate(input.refundedOn, "refundedOn");
   return db.runTransaction(async (tx) => {
     const payment = await tx.get(ref(db, "payments", paymentId)); if (!payment.exists) fail("not-found", "Payment not found.");
+    const paymentData = payment.data()!;
+    const owners = typeof paymentData.saleId === "string"
+      ? [await tx.get(ref(db, "sales", paymentData.saleId))]
+      : typeof paymentData.reservationId === "string"
+        ? (await tx.get(db.collection("sales").where("reservationId", "==", paymentData.reservationId))).docs : [];
+    if (owners.some(owner => {
+      const sale = owner.data();
+      return sale?.status === "cancelled" && (paymentData.saleId || !Array.isArray(sale.cancellationPaymentIds) || sale.cancellationPaymentIds.includes(paymentId));
+    })) fail("failed-precondition", "Cancelled sale refunds require an explicit settlement workflow.");
     const prior = await tx.get(db.collection("refunds").where("paymentId", "==", paymentId));
     if (outcome === "no_refund" && prior.docs.some((doc) => doc.data().outcome === "no_refund")) fail("failed-precondition", "Payment already has a no_refund decision.");
     const paid = Number(payment.data()?.amount); const refunded = prior.docs.reduce((sum, doc) => sum + Number(doc.data().amount ?? 0), 0); const remaining = paid - refunded;
@@ -247,11 +257,64 @@ export const completeSale = async (db: Firestore, input: Record<string, unknown>
   });
 };
 
+const saleCancellationMoney = async (tx: Transaction, db: Firestore, saleId: string, sale: FirebaseFirestore.DocumentData) => {
+  const [direct, inherited] = await Promise.all([
+    tx.get(db.collection("payments").where("saleId", "==", saleId)),
+    typeof sale.reservationId === "string" ? tx.get(db.collection("payments").where("reservationId", "==", sale.reservationId)) : Promise.resolve(undefined),
+  ]);
+  const payments = [...new Map([...direct.docs, ...(inherited?.docs ?? [])].map(payment => [payment.id, payment])).values()]
+    .filter(payment => payment.data().status === "received" && (sale.status !== "cancelled" || !Array.isArray(sale.cancellationPaymentIds) || sale.cancellationPaymentIds.includes(payment.id)))
+    .sort(compareFinancialRecords("receivedOn"));
+  const histories = await Promise.all(payments.map(payment => tx.get(db.collection("refunds").where("paymentId", "==", payment.id))));
+  const balances = payments.map((payment, index) => Number(payment.data().amount) - histories[index].docs.reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0));
+  if (balances.some(balance => !Number.isFinite(balance) || balance < 0)) fail("failed-precondition", "Sale payment balances require review.");
+  const grossReceived = payments.reduce((sum, payment) => sum + Number(payment.data().amount), 0);
+  const refundTotal = histories.flatMap(history => history.docs).reduce((sum, refund) => sum + Number(refund.data().amount ?? 0), 0);
+  return { payments, histories, balances, grossReceived, refundTotal, netRetained: grossReceived - refundTotal };
+};
+
+export const readSaleCancellationSummary = async (db: Firestore, input: Record<string, unknown>) => {
+  const saleId = requireId(input.saleId, "saleId");
+  return db.runTransaction(async tx => {
+    const sale = await tx.get(ref(db, "sales", saleId));
+    if (!sale.exists) fail("not-found", "Sale not found.");
+    const money = await saleCancellationMoney(tx, db, saleId, sale.data()!);
+    return { saleId, status: sale.data()!.status, ...(typeof sale.data()!.agreedPrice === "number" ? { agreedPrice: sale.data()!.agreedPrice, currency: sale.data()!.currency } : {}), cancellationSummary: { grossReceived: money.grossReceived, refundTotal: money.refundTotal, netRetained: money.netRetained } };
+  });
+};
+
 export const cancelSale = async (db: Firestore, input: Record<string, unknown>) => {
   const saleId = requireId(input.saleId, "saleId");
   return db.runTransaction(async (tx) => {
     const saleRef = ref(db, "sales", saleId); const sale = await tx.get(saleRef); if (!sale.exists) fail("not-found", "Sale not found."); if (!openSaleStatuses.includes(String(sale.data()?.status))) fail("failed-precondition", "Only a draft or confirmed sale can be cancelled.");
-    const handovers = await tx.get(db.collection("handovers").where("saleId", "==", saleId).where("status", "==", "completed")); if (!handovers.empty) fail("failed-precondition", "Sale with a completed handover cannot be cancelled.");
-    tx.update(saleRef, { status: "cancelled", ...(typeof input.cancelReason === "string" && input.cancelReason.trim() ? { cancelReason: input.cancelReason.trim() } : {}), updatedAt: now() }); return { saleId, status: "cancelled" };
+    const handovers = await tx.get(db.collection("handovers").where("saleId", "==", saleId));
+    if (handovers.docs.some(handover => handover.data().status !== "cancelled")) fail("failed-precondition", "Sale with a non-cancelled handover cannot be cancelled.");
+    const money = await saleCancellationMoney(tx, db, saleId, sale.data()!);
+    if (input.expectedNetRetained !== undefined && input.expectedNetRetained !== money.netRetained) fail("failed-precondition", "Sale cancellation balance changed; review the current balance.");
+    let decision: Record<string, unknown> | undefined;
+    if (money.netRetained > 0) {
+      const disposition = input.disposition as Record<string, unknown> | undefined;
+      if (!disposition || !["full_refund", "partial_refund", "no_refund"].includes(String(disposition.outcome))) fail("failed-precondition", "Retained sale money requires an explicit cancellation disposition.");
+      const outcome = String(disposition!.outcome), reason = requireId(disposition!.reason, "reason"), refundedOn = requireDate(disposition!.refundedOn, "refundedOn");
+      const refundAmount = outcome === "full_refund" ? money.netRetained : outcome === "no_refund" ? 0 : requirePositive(disposition!.amount, "amount");
+      if (outcome === "partial_refund" && refundAmount >= money.netRetained) fail("invalid-argument", "Sale cancellation partial refund must be less than the retained balance.");
+      if (money.payments.some(payment => payment.data().currency !== "THB")) fail("failed-precondition", "Sale payment balances require review.");
+      let toRefund = refundAmount;
+      const refundIds: string[] = [];
+      money.payments.forEach((payment, index) => {
+        const balance = money.balances[index]; if (balance <= 0) return;
+        const amount = Math.min(balance, toRefund); toRefund -= amount;
+        const paymentOutcome = amount === balance ? "full_refund" : amount > 0 ? "partial_refund" : "no_refund";
+        const existing = paymentOutcome === "no_refund" ? money.histories[index].docs.find(doc => doc.data().outcome === "no_refund") : undefined;
+        const refundId = existing?.id ?? id(); refundIds.push(refundId);
+        if (!existing) tx.create(ref(db, "refunds", refundId), { paymentId: payment.id, amount, outcome: paymentOutcome, reason, refundedOn, createdAt: now(), updatedAt: now() });
+        tx.update(payment.ref, { updatedAt: now() });
+      });
+      decision = { outcome, reason, refundedOn, refundIds };
+    }
+    const cancellationPaymentIds = money.payments.map(payment => payment.id);
+    tx.update(saleRef, { status: "cancelled", cancellationPaymentIds, ...(decision ? { cancellationDisposition: decision } : {}), ...(typeof input.cancelReason === "string" && input.cancelReason.trim() ? { cancelReason: input.cancelReason.trim() } : {}), updatedAt: now() });
+    timeline(tx, db, saleId, "sale_cancelled", { cancellationPaymentIds, ...(decision ? { disposition: decision } : {}) });
+    return { saleId, status: "cancelled" };
   });
 };

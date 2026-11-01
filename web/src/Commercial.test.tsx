@@ -15,6 +15,83 @@ const props={birds,customers,reservations,payments,refunds,sales,giveaways:[],on
 
 afterEach(()=>{cleanup();vi.clearAllMocks();});
 
+const saleCancellationSummary=(net=5000)=>({saleId:sales[0].saleId,status:"confirmed",agreedPrice:5000,currency:"THB",cancellationSummary:{grossReceived:5500,refundTotal:5500-net,netRetained:net}});
+const openSaleCancellation=async(net=5000)=>{
+  mocks.invoke.mockImplementation(async(name:string)=>name==="listSales"?[saleCancellationSummary(net)]:[]);
+  render(<Commercial {...props} sales={[{...sales[0],status:"confirmed",agreedPrice:5000,currency:"THB"}]} payments={[]} refunds={[]}/>);
+  fireEvent.click(screen.getByRole("button",{name:/Moon.*14\/08\/2026/}));
+  expect(screen.queryByRole("heading",{name:"จัดการเงินก่อนยกเลิกการขาย"})).toBeNull();
+  fireEvent.click(screen.getByRole("button",{name:"ยกเลิกการขาย"}));
+  const heading=await screen.findByRole("heading",{name:net>0?"จัดการเงินก่อนยกเลิกการขาย":"ยืนยันยกเลิกการขาย"});
+  await waitFor(()=>expect(screen.getByRole("button",{name:"ยืนยันยกเลิกการขาย"}).hasAttribute("disabled")).toBe(false));
+  return heading.closest("form")!;
+};
+
+it.each(["full_refund","partial_refund","no_refund"])("Sale cancellation loads authoritative totals and submits explicit %s without a separate refund call",async outcome=>{
+  const form=await openSaleCancellation();
+  expect(mocks.invoke).toHaveBeenCalledWith("listSales",{saleId:sales[0].saleId,cancellationSummary:true});
+  expect(mocks.invoke.mock.calls.some(call=>call[0]==="cancelSale")).toBe(false);
+  expect(form.textContent).toContain("รับเงินทั้งหมด: 5500 THB · คืนแล้ว: 500 THB · ยอดที่ต้องจัดการ: 5000 THB");
+  expect(form.textContent).not.toMatch(/sale-secret|bird-secret|customer-secret/);
+  fireEvent.change(within(form).getByLabelText("การจัดการเงินก่อนยกเลิกการขาย"),{target:{value:outcome}});
+  fireEvent.submit(form);
+  expect(mocks.invoke.mock.calls.some(call=>call[0]==="cancelSale")).toBe(false);
+  fireEvent.change(within(form).getByLabelText("เหตุผลยกเลิกการขาย"),{target:{value:"ลูกค้าไม่รับนก"}});
+  fireEvent.submit(form);
+  expect(mocks.invoke.mock.calls.some(call=>call[0]==="cancelSale")).toBe(false);
+  fireEvent.change(within(form).getByLabelText("วันที่มีผล / คืนเงิน"),{target:{value:"01112026"}});
+  if(outcome==="partial_refund"){
+    for(const value of ["","0","-1","5000"]){fireEvent.change(within(form).getByLabelText("จำนวนเงินคืนเมื่อยกเลิกการขาย"),{target:{value}});fireEvent.submit(form);expect(mocks.invoke.mock.calls.some(call=>call[0]==="cancelSale")).toBe(false);}
+    fireEvent.change(within(form).getByLabelText("จำนวนเงินคืนเมื่อยกเลิกการขาย"),{target:{value:"4500"}});
+  }
+  fireEvent.submit(form);
+  await waitFor(()=>expect(props.onRefresh).toHaveBeenCalledTimes(1));
+  expect(mocks.invoke).toHaveBeenCalledWith("cancelSale",{saleId:sales[0].saleId,expectedNetRetained:5000,disposition:{outcome,reason:"ลูกค้าไม่รับนก",refundedOn:"2026-11-01",...(outcome==="partial_refund"?{amount:4500}:{})}});
+  expect(mocks.invoke.mock.calls.some(call=>call[0]==="refundPayment")).toBe(false);
+});
+
+it("zero-net Sale cancellation uses simple confirmation",async()=>{
+  const form=await openSaleCancellation(0);
+  expect(within(form).queryByLabelText("การจัดการเงินก่อนยกเลิกการขาย")).toBeNull();
+  fireEvent.submit(form);
+  await waitFor(()=>expect(props.onRefresh).toHaveBeenCalledTimes(1));
+  expect(mocks.invoke).toHaveBeenCalledWith("cancelSale",{saleId:sales[0].saleId,expectedNetRetained:0});
+});
+
+it("blocks submission if authoritative summary cannot load",async()=>{
+  mocks.invoke.mockImplementation(async(name:string)=>{if(name==="listSales")throw new Error("private backend detail");return [];});
+  render(<Commercial {...props}/>);
+  fireEvent.click(screen.getByRole("button",{name:/Moon.*14\/08\/2026/}));
+  fireEvent.click(screen.getByRole("button",{name:"ยกเลิกการขาย"}));
+  await screen.findByText("โหลดข้อมูลเงินล่าสุดไม่สำเร็จ กรุณาลองอีกครั้ง");
+  expect(screen.getByRole("button",{name:"ยืนยันยกเลิกการขาย"}).hasAttribute("disabled")).toBe(true);
+  expect(document.body.textContent).not.toContain("private backend detail");
+  expect(mocks.invoke.mock.calls.some(call=>call[0]==="cancelSale")).toBe(false);
+});
+
+it("shows Thai stale-balance errors and reloads authoritative money before retry",async()=>{
+  const form=await openSaleCancellation(0);
+  mocks.invoke.mockImplementation(async(name:string)=>{if(name==="cancelSale")throw new Error("Sale cancellation balance changed; review the current balance.");return name==="listSales"?[saleCancellationSummary(5000)]:[];});
+  fireEvent.submit(form);
+  await screen.findByRole("heading",{name:"จัดการเงินก่อนยกเลิกการขาย"});
+  expect(form.textContent).toContain("ยอดเงินเปลี่ยนแปลง กรุณาตรวจสอบยอดล่าสุดก่อนยืนยันยกเลิกการขาย");
+  expect(form.textContent).not.toContain("Sale cancellation balance changed");
+  expect(props.onRefresh).not.toHaveBeenCalled();
+});
+
+it("cancelled Sale keeps scoped financial history read-only and no_refund has no misleading zero amount",()=>{
+  mocks.invoke.mockResolvedValue([]);
+  const prior={...payments[0],paymentId:"scope-payment",saleId:sales[0].saleId,amount:5000};
+  render(<Commercial {...props} sales={[{...sales[0],status:"cancelled",reservationId:reservations[0].reservationId,cancellationPaymentIds:[prior.paymentId]}]} payments={[prior,{...payments[0],paymentId:"future-payment",amount:777}]} refunds={[{...refunds[0],paymentId:prior.paymentId,amount:0,outcome:"no_refund",reason:"ข้อตกลงยกเลิก"}]}/>);
+  fireEvent.click(screen.getByRole("button",{name:/Moon.*14\/08\/2026/}));
+  expect(screen.queryByRole("button",{name:"รับชำระเงิน"})).toBeNull();
+  fireEvent.click(screen.getByRole("button",{name:/5000 THB/}));
+  expect(screen.queryByRole("button",{name:"คืนเงิน"})).toBeNull();
+  expect(screen.queryByRole("button",{name:/777 THB/})).toBeNull();
+  const history=screen.getByRole("region",{name:"ประวัติการคืนเงิน"});
+  expect(history.textContent).toContain("ไม่คืนเงิน");expect(history.textContent).toContain("ข้อตกลงยกเลิก");expect(history.textContent).not.toContain("0 THB");
+});
+
 it.each([false,true])("shows the 5000/2000/0/2000 summary and requires a new decision despite prior no_refund=%s",async prior=>{
   mocks.invoke.mockResolvedValue({});
   render(<Commercial {...props} reservations={[{...reservations[0],agreedPrice:5000,currency:"THB"}]} payments={[{...payments[0],amount:2000}]} refunds={prior?[{...refunds[0],amount:0,outcome:"no_refund"}]:[]}/>);

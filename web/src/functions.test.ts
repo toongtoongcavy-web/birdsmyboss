@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { thaiError } from "./functions";
 
 describe("thaiError", () => {
+  it.each([
+    "Retained sale money requires an explicit cancellation disposition.",
+    "Sale cancellation balance changed; review the current balance.",
+    "Sale cancellation partial refund must be less than the retained balance.",
+    "Cancelled sale cannot receive payments.",
+    "Cancelled sale refunds require an explicit settlement workflow.",
+    "Sale with a non-cancelled handover cannot be cancelled.",
+  ])("maps Sale cancellation integrity errors to Thai: %s",message=>{
+    const result=thaiError({code:"functions/failed-precondition",message});
+    expect(result).toMatch(/[ก-๙]/);expect(result).not.toContain(message);
+  });
   it("translates retained reservation money rejection without leaking raw details",()=>{
     expect(thaiError({code:"functions/failed-precondition",message:"Retained reservation money requires an explicit cancellation disposition."})).toBe("การจองนี้มีเงินที่รับไว้ กรุณาระบุวิธีจัดการเงินก่อนยกเลิกการจอง");
   });

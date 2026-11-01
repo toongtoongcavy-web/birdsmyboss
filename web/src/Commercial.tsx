@@ -72,19 +72,49 @@ function CancelReservationForm({reservation,payments,refunds,onSaved}:{reservati
   </form>;
 }
 
+function CancelSaleForm({sale,onSaved}:{sale:Row;onSaved:Refresh}){
+  const [summary,setSummary]=useState<Row|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+  const [outcome,setOutcome]=useState(""),[amount,setAmount]=useState(""),[reason,setReason]=useState(""),[date,setDate]=useState("");
+  const load=async()=>{setLoading(true);try{
+    const result=await invoke("listSales",{saleId:sale.saleId,cancellationSummary:true}) as Row[];
+    const row=Array.isArray(result)?result.find(row=>row.saleId===sale.saleId):undefined;
+    if(!row?.cancellationSummary||!["grossReceived","refundTotal","netRetained"].every(key=>Number.isFinite(row.cancellationSummary[key])))throw new Error("summary");
+    setSummary(row);
+  }catch{setSummary(null);setMessage("โหลดข้อมูลเงินล่าสุดไม่สำเร็จ กรุณาลองอีกครั้ง");}finally{setLoading(false);}};
+  useEffect(()=>{void load();},[sale.saleId]);
+  const money=summary?.cancellationSummary,paid=Boolean(money&&money.netRetained>0);
+  const submit=async(event:FormEvent)=>{event.preventDefault();if(!money||loading||busy)return;
+    const numeric=Number(amount);
+    if(paid&&(!["full_refund","partial_refund","no_refund"].includes(outcome)||!reason.trim()||!date||(outcome==="partial_refund"&&(!Number.isFinite(numeric)||numeric<=0||numeric>=money.netRetained)))){setMessage("กรุณาระบุวิธีจัดการเงิน เหตุผล วันที่ และจำนวนเงินคืนให้ถูกต้อง");return;}
+    setBusy(true);setMessage("");
+    try{await invoke("cancelSale",{saleId:sale.saleId,expectedNetRetained:money.netRetained,...(paid?{disposition:{outcome,reason:reason.trim(),refundedOn:date,...(outcome==="partial_refund"?{amount:numeric}:{})}}:{})});await onSaved();}
+    catch(error){setMessage(thaiError(error));await load();}finally{setBusy(false);}
+  };
+  return <form className="card" onSubmit={submit}><h5>{paid?"จัดการเงินก่อนยกเลิกการขาย":"ยืนยันยกเลิกการขาย"}</h5>
+    {loading?<p role="status">กำลังตรวจสอบยอดเงินล่าสุด…</p>:summary&&money?<><PriceSnapshot record={summary}/><p>รับเงินทั้งหมด: {money.grossReceived} THB · คืนแล้ว: {money.refundTotal} THB · ยอดที่ต้องจัดการ: {money.netRetained} THB</p>
+    {paid?<><label className="field">การจัดการเงิน *<select required aria-label="การจัดการเงินก่อนยกเลิกการขาย" value={outcome} onChange={e=>setOutcome(e.target.value)}><option value="" disabled>เลือก</option><option value="full_refund">คืนเต็มจำนวน</option><option value="partial_refund">คืนบางส่วน</option><option value="no_refund">ไม่คืนเงิน</option></select></label>
+    {outcome==="partial_refund"&&<label className="field">จำนวนเงินคืน *<input required type="number" step="any" aria-label="จำนวนเงินคืนเมื่อยกเลิกการขาย" value={amount} onChange={e=>setAmount(e.target.value)}/></label>}
+    <label className="field">เหตุผล *<input required aria-label="เหตุผลยกเลิกการขาย" value={reason} onChange={e=>setReason(e.target.value)}/></label><DateInput label="วันที่มีผล / คืนเงิน" required value={date} onChange={value=>setDate(value??"")}/><p>บันทึกการจัดการเงินและยกเลิกการขายพร้อมกัน กรุณาตรวจสอบก่อนยืนยัน</p></>:<p>ไม่มีเงินคงค้าง ยืนยันยกเลิกการขายนี้หรือไม่</p>}</>:null}
+    <button disabled={loading||busy||!summary||!["draft","confirmed"].includes(String(summary?.status))}>{busy?"กำลังบันทึก…":"ยืนยันยกเลิกการขาย"}</button>
+    {!loading&&!summary&&<button type="button" onClick={()=>void load()}>โหลดข้อมูลเงินอีกครั้ง</button>}{message&&<p role="status">{message}</p>}
+  </form>;
+}
+
+const inCancellationScope=(owner:Row,payment:Row)=>owner.status!=="cancelled"||!Array.isArray(owner.cancellationPaymentIds)||owner.cancellationPaymentIds.includes(payment.paymentId);
+
 function Payments({ownerType,owner,payments,refunds,onSaved,context,blocked=false}:{ownerType:"reservation"|"sale";owner:Row;payments:Row[];refunds:Row[];onSaved:Refresh;context:string;blocked?:boolean}){
-  const ownerId=owner[ownerType==="reservation"?"reservationId":"saleId"],rows=payments.filter(payment=>payment[ownerType==="reservation"?"reservationId":"saleId"]===ownerId||(ownerType==="sale"&&owner.reservationId&&payment.reservationId===owner.reservationId));const panelId=useId();const [action,setAction]=useState<"payment"|"refund"|null>(null);const [selectedId,setSelectedId]=useState<string|null>(null),selected=rows.find(row=>row.paymentId===selectedId);const received=rows.filter(row=>row.status==="received").reduce((sum,row)=>sum+Number(row.amount||0),0),refunded=refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).reduce((sum,row)=>sum+Number(row.amount||0),0),paid=received-refunded,hasAgreement=typeof owner.agreedPrice==="number"&&Number.isFinite(owner.agreedPrice),remaining=hasAgreement?Math.max(0,owner.agreedPrice-paid):undefined;
+  const ownerId=owner[ownerType==="reservation"?"reservationId":"saleId"],rows=payments.filter(payment=>payment[ownerType==="reservation"?"reservationId":"saleId"]===ownerId||(ownerType==="sale"&&owner.reservationId&&payment.reservationId===owner.reservationId)).filter(payment=>ownerType!=="sale"||inCancellationScope(owner,payment));const panelId=useId();const [action,setAction]=useState<"payment"|"refund"|null>(null);const [selectedId,setSelectedId]=useState<string|null>(null),selected=rows.find(row=>row.paymentId===selectedId);const received=rows.filter(row=>row.status==="received").reduce((sum,row)=>sum+Number(row.amount||0),0),refunded=refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).reduce((sum,row)=>sum+Number(row.amount||0),0),paid=received-refunded,hasAgreement=typeof owner.agreedPrice==="number"&&Number.isFinite(owner.agreedPrice),remaining=hasAgreement?Math.max(0,owner.agreedPrice-paid):undefined;
   return <section className="commercial-ledger">
     <header><span><small>การชำระเงิน</small><h5>รายการชำระเงิน</h5></span><strong>{rows.length}</strong></header>
-    {hasAgreement&&<p className="sales-truth-note"><strong>ราคาที่ตกลง:</strong> {show(owner.agreedPrice)} {show(owner.currency)} · <strong>รับชำระสุทธิ:</strong> {show(paid)} {show(owner.currency)} · <strong>คงเหลือ:</strong> {show(remaining)} {show(owner.currency)}</p>}
+    {ownerType==="sale"&&owner.status==="cancelled"?<p className="sales-truth-note">รับเงินทั้งหมด: {received} THB · คืนแล้ว: {refunded} THB · ยอดที่คงไว้: {paid} THB</p>:hasAgreement&&<p className="sales-truth-note"><strong>ราคาที่ตกลง:</strong> {show(owner.agreedPrice)} {show(owner.currency)} · <strong>รับชำระสุทธิ:</strong> {show(paid)} {show(owner.currency)} · <strong>คงเหลือ:</strong> {show(remaining)} {show(owner.currency)}</p>}
     {rows.length?<div className="commercial-ledger-rows">{rows.map((payment,index)=><button type="button" className="commercial-ledger-row" aria-pressed={selectedId===String(payment.paymentId)} key={payment.paymentId} onClick={()=>{setSelectedId(String(payment.paymentId));setAction(null);}}><span className="ledger-sequence">{String(index+1).padStart(2,"0")}</span><strong>{show(payment.amount)} {show(payment.currency)}</strong><span>{isoToThaiDisplay(payment.receivedOn)||"-"}</span><span>{show(payment.paymentMethod)}</span><StatusBadge status={payment.status}/></button>)}</div>:<p className="commercial-ledger-empty">ยังไม่มีรายการชำระเงินที่บันทึกไว้</p>}
     {refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).length>0&&<section className="sale-related" aria-label="ประวัติการคืนเงิน"><h4>ประวัติการคืนเงิน</h4>{refunds.filter(refund=>rows.some(row=>row.paymentId===refund.paymentId)).map(refund=><p key={refund.refundId}><span>{isoToThaiDisplay(refund.refundedOn)||"-"} · {show(refund.outcome)}</span>{refund.outcome==="no_refund"?<span>{refund.reason?`เหตุผล: ${refund.reason}`:"บันทึกการตัดสินใจไม่คืนเงิน"}</span>:<strong>{show(refund.amount)} {show(rows.find(row=>row.paymentId===refund.paymentId)?.currency)}</strong>}</p>)}</section>}
-    <div className="sales-payment-actions">
+    {ownerType==="sale"&&owner.status==="cancelled"?<p>รายการขายนี้ยกเลิกแล้ว แสดงประวัติการเงินเพื่อการตรวจสอบ</p>:<><div className="sales-payment-actions">
       {blocked?<p className="sales-truth-note">สร้างการขายแล้ว กรุณารับชำระเงินต่อในรายการขาย</p>:remaining!==undefined&&remaining<=0?<p className="sales-truth-note"><strong>ชำระครบแล้ว</strong></p>:<button type="button" aria-expanded={action==="payment"} aria-controls={`${panelId}-payment`} onClick={()=>setAction(action==="payment"?null:"payment")}>รับชำระเงิน</button>}
       {selected&&<button type="button" aria-expanded={action==="refund"} aria-controls={`${panelId}-refund`} onClick={()=>setAction(action==="refund"?null:"refund")}>คืนเงิน</button>}
     </div>
     {!blocked&&(remaining===undefined||remaining>0)&&<div id={`${panelId}-payment`} hidden={action!=="payment"}><PaymentForm ownerType={ownerType} owner={owner} context={context} onSaved={onSaved} maxAmount={remaining}/></div>}
-    {selected&&<section id={`${panelId}-refund`} hidden={action!=="refund"} className="commercial-refund-activity" key={selected.paymentId}><RefundForm payment={selected} refunds={refunds.filter(refund=>refund.paymentId===selected.paymentId)} onSaved={onSaved}/></section>}
+    {selected&&<section id={`${panelId}-refund`} hidden={action!=="refund"} className="commercial-refund-activity" key={selected.paymentId}><RefundForm payment={selected} refunds={refunds.filter(refund=>refund.paymentId===selected.paymentId)} onSaved={onSaved}/></section>}</>}
   </section>;
 }
 
@@ -101,7 +131,7 @@ function ExpireReservationForm({reservation,onSaved}:{reservation:Row;onSaved:Re
 export function Commercial({birds,customers,reservations,payments,refunds,sales,giveaways,deliveries=[],handovers=[],onRefresh}:{birds:Row[];customers:Row[];reservations:Row[];payments:Row[];refunds:Row[];sales:Row[];giveaways:Row[];deliveries?:Row[];handovers?:Row[];onRefresh:Refresh}){
   const [createMode,setCreateMode]=useState<"reservation"|"sale"|null>(null);
   const [selectedReservationId,setSelectedReservationId]=useState<string|null>(null),[selectedSaleId,setSelectedSaleId]=useState<string|null>(null);const selectedReservation=reservations.find(row=>row.reservationId===selectedReservationId),selectedSaleRecord=sales.find(row=>row.saleId===selectedSaleId);const birdOf=(id:unknown)=>birds.find(row=>row.birdId===id),customerOf=(id:unknown)=>customers.find(row=>row.customerId===id);
-  const selectedPayments=selectedSaleRecord?payments.filter(row=>row.saleId===selectedSaleRecord.saleId||(selectedSaleRecord.reservationId&&row.reservationId===selectedSaleRecord.reservationId)):[],selectedReceived=selectedPayments.filter(row=>row.status==="received").reduce((sum,row)=>sum+Number(row.amount||0),0),selectedRefunded=refunds.filter(refund=>selectedPayments.some(payment=>payment.paymentId===refund.paymentId)).reduce((sum,row)=>sum+Number(row.amount||0),0),selectedSale:Row|undefined=selectedSaleRecord?{...selectedSaleRecord,remainingBalance:typeof selectedSaleRecord.agreedPrice==="number"&&Number.isFinite(selectedSaleRecord.agreedPrice)?Math.max(0,selectedSaleRecord.agreedPrice-(selectedReceived-selectedRefunded)):undefined}:undefined;
+  const selectedPayments=selectedSaleRecord?payments.filter(row=>row.saleId===selectedSaleRecord.saleId||(selectedSaleRecord.reservationId&&row.reservationId===selectedSaleRecord.reservationId)).filter(row=>inCancellationScope(selectedSaleRecord,row)):[],selectedReceived=selectedPayments.filter(row=>row.status==="received").reduce((sum,row)=>sum+Number(row.amount||0),0),selectedRefunded=refunds.filter(refund=>selectedPayments.some(payment=>payment.paymentId===refund.paymentId)).reduce((sum,row)=>sum+Number(row.amount||0),0),selectedSale:Row|undefined=selectedSaleRecord?{...selectedSaleRecord,remainingBalance:typeof selectedSaleRecord.agreedPrice==="number"&&Number.isFinite(selectedSaleRecord.agreedPrice)?Math.max(0,selectedSaleRecord.agreedPrice-(selectedReceived-selectedRefunded)):undefined}:undefined;
   const reservationContext=(row:Row)=>`${identity(birdOf(row.birdId)??{})} / ลูกค้า: ${customerIdentity(customerOf(row.customerId)??{})}`;
   const selectedBird=selectedSale?birdOf(selectedSale.birdId)??{}:{},selectedCustomer=selectedSale?customerOf(selectedSale.customerId)??{}:{};
   const activeReservations=reservations.filter(reservation=>reservation.status==="active"&&!sales.some(sale=>sale.reservationId===reservation.reservationId&&sale.status!=="cancelled"));
@@ -157,9 +187,9 @@ export function Commercial({birds,customers,reservations,payments,refunds,sales,
         {["draft","confirmed"].includes(selectedSale.status)&&<aside className="sale-next-action"><h3>ดำเนินการต่อ</h3>
           {selectedSale.status==="draft"&&<LifecycleAction operation="confirmSale" payload={{saleId:selectedSale.saleId}} label="ยืนยันการขาย" onSaved={onRefresh}/>}
           {selectedSale.status==="confirmed"&&(selectedSale.remainingBalance===0?<ActionPanel label="ปิดการขาย"><CompleteSaleForm sale={selectedSale} onSaved={onRefresh}/></ActionPanel>:<p className="sales-truth-note">ยังมียอดคงเหลือ ต้องชำระครบก่อนปิดการขาย</p>)}
-          <LifecycleAction operation="cancelSale" payload={{saleId:selectedSale.saleId}} label="ยกเลิกการขาย" onSaved={onRefresh}/>
+          <ActionPanel label="ยกเลิกการขาย"><CancelSaleForm sale={selectedSale} onSaved={onRefresh}/></ActionPanel>
         </aside>}
-        <div className="sale-history"><SaleTimeline saleId={String(selectedSale.saleId)}/>
+        <div className="sale-history"><SaleTimeline key={`${selectedSale.saleId}-${selectedSale.status}`} saleId={String(selectedSale.saleId)}/>
           {saleDeliveries.length>0&&<section className="sale-related"><h4>การจัดส่ง</h4>{saleDeliveries.map(row=><p key={row.deliveryId}><span>{isoToThaiDisplay(row.createdOn)||"-"} · {show(row.distanceKm)} km</span><strong>{show(row.shippingFee)} {show(row.currency)}</strong><StatusBadge status={row.status}/></p>)}</section>}
           {saleHandovers.length>0&&<section className="sale-related"><h4>การส่งมอบ</h4>{saleHandovers.map(row=><p key={row.handoverId}><span>{isoToThaiDisplay(row.handoverOn)||"-"} · {show(row.recipientSnapshot?.name)}</span><StatusBadge status={row.status}/></p>)}</section>}
           {saleDeliveries.length===0&&saleHandovers.length===0&&<p className="sales-truth-note">ยังไม่มีข้อมูลการจัดส่งหรือส่งมอบที่เชื่อมกับการขายนี้</p>}

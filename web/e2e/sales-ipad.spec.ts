@@ -8,7 +8,7 @@ const ringId="BMB-TH-2026-LONG-RING-IDENTITY-000001";
 const records={
   listBirds:[{birdId:"bird-fixture",displayName:birdName,ringId,status:"active",currentSex:"male",origin:"external"},{birdId:"reserved-bird",displayName:"น้องใบเตย",ringId:"BMB-TH-002",status:"active"},{birdId:"available-bird",displayName:"น้องฟ้า",ringId:"BMB-TH-003",status:"active"}],
   listCustomers:[{customerId:"customer-fixture",displayName:customerName,phone:"0812345678",email:"long.customer@example.test",status:"active"}],
-  listSales:[{saleId:"sale-fixture",birdId:"bird-fixture",customerId:"customer-fixture",agreedPrice:2000,currency:"THB",status:"confirmed",createdOn:"2026-10-03"}],
+  listSales:[{saleId:"sale-fixture",birdId:"bird-fixture",customerId:"customer-fixture",agreedPrice:2000,currency:"THB",status:"confirmed",createdOn:"2026-10-03",cancellationSummary:{grossReceived:500,refundTotal:0,netRetained:500}}],
   listReservations:[{reservationId:"reservation-fixture",birdId:"reserved-bird",customerId:"customer-fixture",agreedPrice:1500,currency:"THB",status:"active",reservedOn:"2026-10-03",expiresOn:"2026-10-10"}],
   listPayments:[{paymentId:"payment-fixture",saleId:"sale-fixture",amount:500,currency:"THB",paymentMethod:"transfer",status:"received",receivedOn:"2026-10-03"},{paymentId:"deposit-fixture",reservationId:"reservation-fixture",amount:300,currency:"THB",paymentMethod:"transfer",status:"received",receivedOn:"2026-10-03"}],
   listRefunds:[],listSaleTimeline:[{saleTimelineId:"event-fixture",eventType:"sale_created",occurredAt:"2026-10-03"}],
@@ -67,6 +67,15 @@ for(const [width,height] of [[1194,834],[834,1194],[768,1024]]){
     if(width<=840)expect(await page.locator('.sale-detail-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(1);
     await noOverflow(page);await touchTargets(page);
     await page.screenshot({path:testInfo.outputPath('sale-detail.png'),fullPage:true});
+    await page.getByRole('button',{name:'ยกเลิกการขาย',exact:true}).click();
+    const saleCancellation=page.getByRole('heading',{name:'จัดการเงินก่อนยกเลิกการขาย'}).locator('..');
+    await expect(saleCancellation).toContainText('ยอดที่ต้องจัดการ: 500 THB');
+    await saleCancellation.getByLabel('การจัดการเงินก่อนยกเลิกการขาย').selectOption('partial_refund');
+    const saleColumns=await saleCancellation.evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    expect(saleColumns).toBeLessThanOrEqual(2);if(width<=840)expect(saleColumns).toBe(1);
+    await noOverflow(page);await touchTargets(page);
+    await page.screenshot({path:testInfo.outputPath('sale-cancellation.png'),fullPage:true});
+    await page.getByRole('button',{name:'ยกเลิกการขาย',exact:true}).click();
     await page.getByRole('button',{name:'รับชำระเงิน',exact:true}).click();
     await expect(page.getByRole('textbox',{name:'วันที่รับเงิน',exact:true})).toBeVisible();
     await noOverflow(page);await touchTargets(page);

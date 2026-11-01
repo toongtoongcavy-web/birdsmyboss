@@ -3,6 +3,7 @@ import { fail } from "../domain/errors.js";
 import { orderedSexHistory, resolveCurrentSex, sexHistoryEntry } from "../domain/sex-history.js";
 import { requireId } from "../domain/validation.js";
 import { compareFinancialRecords } from "../domain/financial-order.js";
+import { readSaleCancellationSummary } from "./commercial.js";
 import { createOperatorPhotoHandle, operatorPhotoUrl } from "./public-media.js";
 
 const limitOf = (value: unknown) => typeof value === "number" && Number.isInteger(value) && value > 0 ? Math.min(value, 50) : 25;
@@ -14,7 +15,7 @@ const financialList = async (db: Firestore, collection: string, dateField: strin
 const bird = (id: string, d: Record<string, unknown>) => ({ birdId: id, ringId: d.ringId, displayName: d.displayName, mutation: d.mutation ?? null, origin: d.origin, status: d.status, hatchedOn: d.hatchedOn ?? null, eggId: d.eggId ?? null, passportStatus: d.passportStatus ?? "draft" });
 const customer = (id: string, d: Record<string, unknown>) => ({ customerId: id, displayName: d.displayName, phone: d.phone ?? null, email: d.email ?? null, status: d.status });
 const priceSnapshot = (d: Record<string, unknown>) => typeof d.agreedPrice === "number" && d.currency === "THB" ? { agreedPrice: d.agreedPrice, currency: "THB" } : {};
-const sale = (id: string, d: Record<string, unknown>) => ({ saleId: id, birdId: d.birdId, customerId: d.customerId, reservationId: d.reservationId ?? null, ...priceSnapshot(d), status: d.status, createdOn: d.createdOn, completedOn: d.completedOn ?? null });
+const sale = (id: string, d: Record<string, unknown>) => ({ saleId: id, birdId: d.birdId, customerId: d.customerId, reservationId: d.reservationId ?? null, ...priceSnapshot(d), status: d.status, createdOn: d.createdOn, completedOn: d.completedOn ?? null, ...(Array.isArray(d.cancellationPaymentIds) ? { cancellationPaymentIds: d.cancellationPaymentIds } : {}) });
 const timestampValue = (value: unknown) => value && typeof (value as { toMillis?: unknown }).toMillis === "function" ? (value as { toMillis: () => number }).toMillis() : new Date(String(value ?? 0)).getTime();
 const optionalTimestampValue = (value: unknown) => {
   if (value && typeof (value as { toMillis?: unknown }).toMillis === "function") return (value as { toMillis: () => number }).toMillis();
@@ -104,7 +105,8 @@ export const listReservations = async (db: Firestore, input: Record<string, unkn
     return { reservationId: reservation.id, birdId: current.birdId, customerId: current.customerId, reservedOn: current.reservedOn, expiresOn: current.expiresOn ?? null, ...priceSnapshot(current), status: current.status };
   }));
 };
-export const listSales = (db: Firestore, input: Record<string, unknown>) => list(db, "sales", input, sale);
+export const listSales = async (db: Firestore, input: Record<string, unknown>) => input.cancellationSummary === true
+  ? [await readSaleCancellationSummary(db, input)] : list(db, "sales", input, sale);
 export const listBirdPriceHistory = async (db: Firestore, input: Record<string, unknown>) => {
   const birdId = requireId(input.birdId, "birdId");
   const records = await db.collection("priceHistory").where("birdId", "==", birdId).limit(50).get();

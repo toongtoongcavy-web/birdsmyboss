@@ -112,6 +112,7 @@ const saleTimelineEventLabels: Record<string, string> = {
   payment_recorded: "บันทึกการชำระเงิน",
   refund_decision_recorded: "บันทึกผลการคืนเงิน",
   sale_completed: "ปิดการขาย",
+  sale_cancelled: "ยกเลิกการขาย",
 };
 export const displaySaleTimelineEvent = (value: unknown) => saleTimelineEventLabels[String(value)] ?? String(value ?? "-").replace(/_/g, " ");
 export const displayFieldName = (value: string) => fieldLabels[value] ?? value.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, letter => letter.toUpperCase());

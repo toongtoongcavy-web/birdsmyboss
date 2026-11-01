@@ -30,6 +30,14 @@ export const thaiError = (e: unknown) => {
   const message = String(error.message ?? "").replace(/\s+/g, " ").trim();
   const code = String(error.code ?? "").replace(/^functions\//, "").replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
   if (message.includes("Retained reservation money requires an explicit cancellation disposition")) return "การจองนี้มีเงินที่รับไว้ กรุณาระบุวิธีจัดการเงินก่อนยกเลิกการจอง";
+  if (message.includes("Retained sale money requires an explicit cancellation disposition")) return "การขายนี้มีเงินที่รับไว้ กรุณาระบุวิธีจัดการเงินก่อนยกเลิกการขาย";
+  if (message.includes("Sale cancellation balance changed")) return "ยอดเงินเปลี่ยนแปลง กรุณาตรวจสอบยอดล่าสุดก่อนยืนยันยกเลิกการขาย";
+  if (message.includes("Sale cancellation partial refund")) return "จำนวนเงินคืนบางส่วนต้องมากกว่าศูนย์และน้อยกว่ายอดที่ต้องจัดการ";
+  if (message.includes("Sale payment balances require review")) return "กรุณาตรวจสอบยอดรับเงินและคืนเงินของการขายนี้ก่อนยกเลิก";
+  if (message.includes("Cancelled sale cannot receive payments")) return "ไม่สามารถรับเงินเพิ่มในรายการขายที่ยกเลิกแล้ว";
+  if (message.includes("Cancelled sale refunds require an explicit settlement workflow")) return "เงินของการขายที่ยกเลิกแล้วต้องจัดการผ่านขั้นตอนยกเลิกหรือเคลียร์ยอดที่ชัดเจน";
+  if (message.includes("Sale with a non-cancelled handover")) return "ไม่สามารถยกเลิกการขายที่มีรายการส่งมอบซึ่งยังไม่ได้ยกเลิก";
+  if (message.includes("Only a draft or confirmed sale can be cancelled")) return "ยกเลิกได้เฉพาะการขายแบบร่างหรือที่ยืนยันแล้วเท่านั้น";
   if (message.includes("ringId")) return "รหัสห่วงขานี้มีอยู่ในระบบแล้ว";
   if (message.includes("active reservation")) return "นกตัวนี้มีการจองที่ยังใช้งานอยู่";
   if (message.includes("active pair")) return "นกตัวนี้อยู่ในคู่ผสมพันธุ์ที่กำลังใช้งานอยู่";
